@@ -4,9 +4,11 @@
 #include <m-lib/m-core.h>
 #include <stdbool.h>
 #include <raylib.h>
+#include "util.h"
 
 typedef enum : char {
     BLOCK_AIR,
+    BLOCK_BARRIER,
     BLOCK_STONE,
     BLOCK_DIRT,
     BLOCK_PLANKS,
@@ -19,7 +21,7 @@ typedef enum : char {
     BLOCK_SAND,
     BLOCK_LEAVES,
     BLOCK_LOG,
-    BLOCK_BLANK,
+    BLOCK_CRAFTING_TABLE,
     BLOCK_COUNT,
 } Block;
 
@@ -29,14 +31,21 @@ typedef enum {
 } Solidness;
 
 typedef struct {
+    Point sides[DIRECTION_COUNT];
+} BlockModel;
+
+typedef struct {
     const char* name;
     Solidness solidness;
     int texCoordX;
     int texCoordY;
     Mesh mesh;
+    BlockModel model;
 } BlockProperties;
 
 extern BlockProperties blocks[BLOCK_COUNT];
+
+void registerBlocks();
 
 #endif
 

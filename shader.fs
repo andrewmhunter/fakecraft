@@ -3,6 +3,7 @@
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 fragNormal;
+in float fragDepth;
 
 uniform sampler2D texture0;
 
@@ -28,6 +29,10 @@ void main()
 
 	float shade = fragNormal.y * 0.25 + abs(fragNormal.x) * 0.05 - abs(fragNormal.z) * 0.15 + 0.75;
 
-	finalColor = texColor * fragColor * vec4(shade, shade, shade, 1.0);
+	//float fog = 1.0 - (fragDepth - 2500.0) / 2000.0;
+	float fog = 1.0;
+
+	finalColor = texColor * fragColor * vec4(shade, shade, shade, fog);
+	//finalColor = vec4(fragDepth / 1000, 0.0, 1.0, 1.0);
 }
 
