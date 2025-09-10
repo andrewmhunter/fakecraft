@@ -4,43 +4,38 @@
 #include <m-lib/m-array.h>
 #include <m-lib/m-dict.h>
 #include "chunk.h"
+#include "config.h"
 #include "util.h"
+#include "entity.h"
 
-ARRAY_DEF(array_chunk, Chunk*, (CLEAR()));
-DICT_DEF2(dict_chunk, Point, (HASH(pointHash), EQUAL(pointEquals)), Chunk*, (CLEAR(), INIT()));
+ARRAY_DEF(array_chunk, Chunk*, (CLEAR()))
+DICT_DEF2(dict_chunk, Point, (HASH(pointHash), EQUAL(pointEquals)), Chunk*, (CLEAR(), INIT()))
 
-#define WORLD_MAX_CHUNK_WIDTH 16
+ARRAY_DEF(array_entity, Entity*, (CLEAR()))
 
 typedef struct World {
     Chunk* chunksArr[WORLD_MAX_CHUNK_WIDTH][WORLD_MAX_CHUNK_WIDTH];
     dict_chunk_t chunks;
+    array_entity_t entities;
     int seed;
     bool showChunkBorders;
 } World;
 
 void worldInit(World* world);
 void worldUnload(World* world);
+void worldUpdate(World* world, float deltaTime);
 void worldDraw(World* world, Material material);
 Block worldGetBlock(const World* world, Point worldPoint);
 void worldSetBlock(World* world, Point worldPoint, Block block);
 Chunk* worldGetChunk(World* world, Point chunkCoords);
 const Chunk* worldGetChunkConst(const World* world, Point chunkCoords);
 
-void placeTree(World* world, Point worldPoint);
-void placeDungeon(World* world, Point worldPoint);
-
 void worldMarkDirty(World* world, Point worldPoint);
 void worldTryPlaceBlock(World* world, Point worldPoint, Block block);
 void worldTryPlaceBox(World* world, Point start, Point end, Block block);
 void worldPlaceBox(World* world, Point start, Point end, Block block);
 
-typedef struct {
-    Vector3 collisionAt;
-    Vector3 collisionBefore;
-    bool collided;
-} Collision;
-
-Collision worldWalkRay(const World* world, Vector3 start, Vector3 direction, float maxLength);
+Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width, float height);
 
 extern int shaderModelUniform;
 

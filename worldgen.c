@@ -1,0 +1,146 @@
+#include <raylib.h>
+#include "chunk.h"
+#include "world.h"
+#include "worldgen.h"
+
+void placeDungeon(World* world, Point worldPoint) {
+    assert(world);
+
+    worldPlaceBox(world, worldPoint, point(10, 6, 10), BLOCK_COBBLESTONE);
+    worldPlaceBox(world, pointAddValue(worldPoint, 1, 1, 1), point(8, 4, 8), BLOCK_AIR);
+}
+
+void placeTree(World* world, Point worldPoint) {
+    assert(world);
+
+    if (worldGetBlock(world, worldPoint) != BLOCK_GRASS) {
+        return;
+    }
+
+    static const Point corners[4] = {
+        {1, 0, 1},
+        {-1, 0, 1},
+        {-1, 0, -1},
+        {1, 0, -1},
+    };
+
+    worldSetBlock(world, worldPoint, BLOCK_DIRT);
+    worldPoint = pointAddY(worldPoint, 1);
+
+    int height = randomRange(5, 7);
+    worldPlaceBox(world, worldPoint, point(1, height, 1), BLOCK_LOG);
+
+    //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), BLOCK_LEAVES);
+
+    worldTryPlaceBox(world, pointAddValue(worldPoint, -2, height - 3, -1), point(5, 2, 3), BLOCK_LEAVES);
+    worldTryPlaceBox(world, pointAddValue(worldPoint, -1, height - 3, -2), point(3, 2, 5), BLOCK_LEAVES);
+
+    for (int i = 0; i < 4; ++i) {
+        Point scaledCorner = pointScale(corners[i], 2);
+        for (int j = height - 3; j < height - 1; ++j) {
+            if (!randomChance(1, 2)) {
+                continue;
+            }
+            worldTryPlaceBlock(world, pointAdd(worldPoint, pointAddY(scaledCorner, j)), BLOCK_LEAVES);
+        }
+    }
+
+    worldTryPlaceBox(world, pointAddValue(worldPoint, -1, height - 1, 0), point(3, 2, 1), BLOCK_LEAVES);
+    worldTryPlaceBox(world, pointAddValue(worldPoint, 0, height - 1, -1), point(1, 2, 3), BLOCK_LEAVES);
+
+    for (int i = 0; i < 4; ++i) {
+        if (!randomChance(1, 2)) {
+            continue;
+        }
+
+        worldTryPlaceBlock(world, pointAdd(worldPoint, pointAddY(corners[i], height - 1)), BLOCK_LEAVES);
+    }
+}
+
+
+void generateTerrain(Chunk* chunk) {
+    assert(chunk);
+
+    World* world = chunk->world;
+    Point coords = chunk->coords;
+
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+            for (int z = 0; z < CHUNK_WIDTH; ++z) {
+                chunk->blocks[x][y][z] = BLOCK_AIR;
+            }
+        }
+    }
+
+#ifndef SUPERFLAT
+    Image noise2 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.06125);
+    Image noise1 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.125);
+    Image noise0 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.25);
+#endif
+
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int z = 0; z < CHUNK_WIDTH; ++z) {
+            int surface = SURFACE_OFFSET;
+#ifndef SUPERFLAT
+            float c2 = GetImageColor(noise2, x, z).r - 128;
+            float c1 = GetImageColor(noise1, x, z).r - 128;
+            float c0 = GetImageColor(noise0, x, z).r - 128;
+
+            surface += c2 / 4 + c1 / 8 + c0 / 16;
+#endif
+            surface = clampInt(surface, 1, CHUNK_HEIGHT - 1);
+
+            surface = surface >= CHUNK_HEIGHT ? CHUNK_HEIGHT - 1 : surface;
+            chunk->surfaceHeight[x][z] = surface;
+
+            chunk->blocks[x][0][z] = BLOCK_BEDROCK;
+
+            Block topLayerBlock = BLOCK_DIRT;
+            Block surfaceBlock = BLOCK_GRASS;
+
+            if (surface < 50) {
+                topLayerBlock = BLOCK_SAND;
+                surfaceBlock = BLOCK_SAND;
+            }
+
+            for (int y = 1; y < surface; ++y) {
+                Block block = topLayerBlock;
+                if (y < surface - DIRT_LAYER) {
+                    block = BLOCK_STONE;
+                }
+                chunk->blocks[x][y][z] = block;
+            }
+
+            for (int y = surface + 1; y <= OCEAN_LEVEL; ++y) {
+                chunk->blocks[x][y][z] = BLOCK_WATER;
+            }
+
+            chunk->blocks[x][surface][z] = surfaceBlock;
+        }
+    }
+
+    chunk->dirty = true;
+
+#ifndef SUPERFLAT
+    UnloadImage(noise2);
+    UnloadImage(noise1);
+    UnloadImage(noise0);
+#endif
+}
+
+void placeFeatures(Chunk* chunk) {
+#ifndef SUPERFLAT
+    int treeCount = randomInt(5);
+    for (int i = 0; i < treeCount; ++i) {
+        Point point = {randomInt(CHUNK_WIDTH), 0, randomInt(CHUNK_WIDTH)};
+        point.y = chunk->surfaceHeight[point.x][point.z];
+
+        placeTree(chunk->world, localToWorld(chunk->coords, point));
+    }
+
+    if (randomChance(1, 20)) {
+        placeDungeon(chunk->world, localToWorld(chunk->coords, point(randomInt(CHUNK_WIDTH), 10, randomInt(CHUNK_WIDTH))));
+    }
+#endif
+}
+

@@ -22,12 +22,14 @@ typedef enum : char {
     BLOCK_LEAVES,
     BLOCK_LOG,
     BLOCK_CRAFTING_TABLE,
+    BLOCK_WATER,
     BLOCK_COUNT,
 } Block;
 
 typedef enum {
     SOLID,
     TRANSPARENT,
+    TRANSLUCENT,
 } Solidness;
 
 typedef struct {

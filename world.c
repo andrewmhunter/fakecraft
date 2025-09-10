@@ -3,6 +3,8 @@
 #include "world.h"
 #include "util.h"
 #include "chunk.h"
+#include "chunk_mesh.h"
+#include "worldgen.h"
 
 void worldTryPlaceBox(World* world, Point start, Point size, Block block) {
     assert(world);
@@ -36,59 +38,18 @@ void worldPlaceBox(World* world, Point start, Point size, Block block) {
     }
 }
 
-void placeDungeon(World* world, Point worldPoint) {
-    assert(world);
-
-    worldPlaceBox(world, worldPoint, point(10, 6, 10), BLOCK_COBBLESTONE);
-    worldPlaceBox(world, pointAddValue(worldPoint, 1, 1, 1), point(8, 4, 8), BLOCK_AIR);
-}
-
-void placeTree(World* world, Point worldPoint) {
-    assert(world);
-
-    static const Point corners[4] = {
-        {1, 0, 1},
-        {-1, 0, 1},
-        {-1, 0, -1},
-        {1, 0, -1},
-    };
-
-    int height = randomRange(5, 7);
-    worldPlaceBox(world, worldPoint, point(1, height, 1), BLOCK_LOG);
-
-    //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), BLOCK_LEAVES);
-
-    worldTryPlaceBox(world, pointAddValue(worldPoint, -2, height - 3, -1), point(5, 2, 3), BLOCK_LEAVES);
-    worldTryPlaceBox(world, pointAddValue(worldPoint, -1, height - 3, -2), point(3, 2, 5), BLOCK_LEAVES);
-
-    for (int i = 0; i < 4; ++i) {
-        Point scaledCorner = pointScale(corners[i], 2);
-        for (int j = height - 3; j < height - 1; ++j) {
-            if (!randomChance(1, 2)) {
-                continue;
-            }
-            worldTryPlaceBlock(world, pointAdd(worldPoint, pointAddY(scaledCorner, j)), BLOCK_LEAVES);
-        }
-    }
-
-    worldTryPlaceBox(world, pointAddValue(worldPoint, -1, height - 1, 0), point(3, 2, 1), BLOCK_LEAVES);
-    worldTryPlaceBox(world, pointAddValue(worldPoint, 0, height - 1, -1), point(1, 2, 3), BLOCK_LEAVES);
-
-    for (int i = 0; i < 4; ++i) {
-        if (!randomChance(1, 2)) {
-            continue;
-        }
-
-        worldTryPlaceBlock(world, pointAdd(worldPoint, pointAddY(corners[i], height - 1)), BLOCK_LEAVES);
-    }
-}
-
 void worldInit(World* world) {
     assert(world);
 
+#ifdef DEFAULT_SET_SEED
+    world->seed = DEFAULT_SET_SEED;
+#else
     world->seed = randomInt(10000);
+#endif
 
     dict_chunk_init(world->chunks);
+
+    array_entity_init(world->entities);
 
     for (int i = 0; i < WORLD_MAX_CHUNK_WIDTH; ++i) {
         for (int j = 0; j < WORLD_MAX_CHUNK_WIDTH; ++j) {
@@ -113,7 +74,7 @@ void worldInit(World* world) {
 
     dict_chunk_it_t it;
     for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
-        chunkPlaceFeatures(dict_chunk_ref(it)->value);
+        placeFeatures(dict_chunk_ref(it)->value);
     }
 
     world->showChunkBorders = false;
@@ -130,13 +91,27 @@ void worldUnload(World* world) {
 
 int shaderModelUniform = 0;
 
+void worldUpdate(World* world, float deltaTime) {
+    assert(world);
+
+    array_entity_it_t entityIt;
+    for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
+        entityUpdate(*array_entity_cref(entityIt), deltaTime);
+    }
+}
+
 void worldDraw(World* world, Material material) {
     assert(world);
     assert(IsMaterialValid(material));
 
-    dict_chunk_it_t it;
-    for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
-        Chunk* chunk = dict_chunk_ref(it)->value;
+    array_entity_it_t entityIt;
+    for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
+        entityDraw(*array_entity_cref(entityIt));
+    }
+
+    dict_chunk_it_t chunkIt;
+    for (dict_chunk_it(chunkIt, world->chunks); !dict_chunk_end_p(chunkIt); dict_chunk_next(chunkIt)) {
+        Chunk* chunk = dict_chunk_ref(chunkIt)->value;
 
         if (chunk->dirty) {
             chunkGenerateMesh(chunk);
@@ -221,29 +196,13 @@ void worldTryPlaceBlock(World* world, Point worldPoint, Block block) {
     chunkTryPlaceBlock(chunk, local.x, local.y, local.z, block);
 }
 
-Collision worldWalkRay(const World* world, Vector3 start, Vector3 direction, float maxLength) {
+
+Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width, float height) {
     assert(world);
 
-    direction = Vector3Normalize(direction);
-    float epsilon = 0.05;
-    Vector3 step = Vector3Scale(direction, epsilon);
-
-    Collision coll;
-    coll.collided = false;
-    coll.collisionBefore = start;
-    coll.collisionAt = start;
-
-    Vector3 walk = {0, 0, 0};
-    while (Vector3Length(walk) <= maxLength) {
-        coll.collisionBefore = coll.collisionAt;
-        walk = Vector3Add(walk, step);
-        coll.collisionAt = Vector3Add(start, walk);
-        if (worldGetBlock(world, vector3ToPoint(coll.collisionAt)) != BLOCK_AIR) {
-            coll.collided = true;
-            break;
-        }
-    }
-
-    return coll;
+    Entity* entity = malloc(sizeof(Entity));
+    array_entity_push_move(world->entities, &entity);
+    entityInit(entity, type, world, position, width, height);
+    return entity;
 }
 

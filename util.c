@@ -15,6 +15,7 @@ void renderText(int x, int y, const char* format, ...) {
     string_init_vprintf(string, format, args);
     va_end(args);
 
+    DrawTextEx(font, string_get_cstr(string), (Vector2){x + 2, y + 2}, 16, 2, GRAY);
     DrawTextEx(font, string_get_cstr(string), (Vector2){x, y}, 16, 2, WHITE);
 
     string_clear(string);
@@ -53,6 +54,6 @@ const char* formatPoint(Point point) {
 }
 
 const char* formatVector3(Vector3 vector) {
-    return TextFormat("x: %.02f, y: %.02f, z: %.02f", vector.x, vector.y, vector.z);
+    return TextFormat("x: %+.02f, y: %+.02f, z: %+.02f", vector.x, vector.y, vector.z);
 }
 

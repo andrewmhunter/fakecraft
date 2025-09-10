@@ -1,8 +1,7 @@
 #include "mesh.h"
 #include "block.h"
+#include "config.h"
 #include <raymath.h>
-
-#define FAST_LEAVES 0
 
 BlockModel blockModelDefault(int texCoordX, int texCoordY) {
     BlockModel model;
@@ -77,9 +76,9 @@ void regBlock(Block block, const char* name, Solidness solid, BlockModel model) 
         .model = model,
     };
 
-    props.mesh = cubeMesh(model.sides[0].x, model.sides[0].y);
-    
     blocks[block] = props;
+
+    blocks[block].mesh = cubeMesh(block);
 }
 
 void registerBlocks() {
@@ -97,13 +96,14 @@ void registerBlocks() {
     regBlock(BLOCK_SAND, "sand", SOLID, blockModelDefault(2, 1));
     regBlock(BLOCK_GLASS, "glass", TRANSPARENT, blockModelDefault(1, 3));
 
-    if (FAST_LEAVES) {
-        regBlock(BLOCK_LEAVES, "leaves", SOLID, blockModelDefault(5, 3));
-    } else {
-        regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, blockModelDefault(4, 3));
-    }
+#ifdef FAST_LEAVES
+    regBlock(BLOCK_LEAVES, "leaves", SOLID, blockModelDefault(5, 3));
+#else
+    regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, blockModelDefault(4, 3));
+#endif
 
     regBlock(BLOCK_LOG, "log", SOLID, blockModelLog(4, 1, 5, 1));
     regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
+    regBlock(BLOCK_WATER, "water", TRANSLUCENT, blockModelDefault(13, 12));
 }
 

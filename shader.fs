@@ -29,10 +29,16 @@ void main()
 
 	float shade = fragNormal.y * 0.25 + abs(fragNormal.x) * 0.05 - abs(fragNormal.z) * 0.15 + 0.75;
 
-	//float fog = 1.0 - (fragDepth - 2500.0) / 2000.0;
-	float fog = 1.0;
+	float fog = 1.0 - (fragDepth - 2500.0) / 2000.0;
 
-	finalColor = texColor * fragColor * vec4(shade, shade, shade, fog);
+	//float fog = 1.0;
+	//float fog = 1.0 - (gl_FragCoord.z - 2500.0) / 2000.0;
+
+	finalColor = texColor * fragColor * vec4(shade, shade, shade, 1.0);
+	//finalColor.a = fog;
+
 	//finalColor = vec4(fragDepth / 1000, 0.0, 1.0, 1.0);
+
+	//finalColor = mix(vec4(1.0), finalColor, fog);
 }
 

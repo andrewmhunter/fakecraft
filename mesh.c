@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include "util.h"
+#include "block.h"
 #include "mesh.h"
 
 void meshVertex(Mesh* mesh, int index, Vector3 position, float texCoordX, float texCoordY, Vector3 normal) {
@@ -89,23 +90,17 @@ void meshFaceSmart(Mesh* mesh, int index, int x, int y, int z, Direction side, i
     meshFace(mesh, meshIndex + 5, lbb, rbb, rbf, lbf, textureX, textureY, (Vector3){0, -1, 0});
 }*/
 
-void meshAddCube(Mesh* mesh, int index, int x, int y, int z, int textureX, int textureY) {
-    int meshIndex = index * 6;
-    // Top
-    meshFaceSmart(mesh, meshIndex + 0, x, y, z, DIRECTION_UP, textureX, textureY);
-    // Front
-    meshFaceSmart(mesh, meshIndex + 1, x, y, z, DIRECTION_SOUTH, textureX, textureY);
-    // Right
-    meshFaceSmart(mesh, meshIndex + 2, x, y, z, DIRECTION_EAST, textureX, textureY);
-    // Back
-    meshFaceSmart(mesh, meshIndex + 3, x, y, z, DIRECTION_NORTH, textureX, textureY);
-    // Left
-    meshFaceSmart(mesh, meshIndex + 4, x, y, z, DIRECTION_WEST, textureX, textureY);
-    // Bottom
-    meshFaceSmart(mesh, meshIndex + 5, x, y, z, DIRECTION_DOWN, textureX, textureY);
+void meshAddCube(Mesh* mesh, int index, int x, int y, int z, Block block) {
+    const Point* sides = blocks[block].model.sides;
+
+    int meshIndex = index;
+    for (int dir = 0; dir < DIRECTION_COUNT; ++dir) {
+        meshFaceSmart(mesh, meshIndex + 0, x, y, z, dir, sides[dir].x, sides[dir].y);
+        meshIndex++;
+    }
 }
 
-Mesh cubeMesh(int textureX, int textureY) {
+Mesh cubeMesh(Block block) {
     int faces = 6;
 
     Mesh mesh = {0};
@@ -116,7 +111,7 @@ Mesh cubeMesh(int textureX, int textureY) {
     mesh.normals = (float*)MemAlloc(mesh.vertexCount * 3 * sizeof(float));
     mesh.indices = (unsigned short*)MemAlloc(mesh.triangleCount * 3 * sizeof(unsigned short));
 
-    meshAddCube(&mesh, 0, 0, 0, 0, textureX, textureY);
+    meshAddCube(&mesh, 0, 0, 0, 0, block);
 
     UploadMesh(&mesh, false);
 
