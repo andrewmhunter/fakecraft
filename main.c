@@ -81,9 +81,6 @@ int main(void) {
         0.5f
     };
 
-    //Entity player;
-    //entityInit(&player, ENTITY_PLAYER, &world, (Vector3){0, worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f, 0}, 0.6f, 1.8f);
-
     Vector3 playerPosition = (Vector3){
         0,
         worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f,
@@ -91,6 +88,7 @@ int main(void) {
     };
 
     Entity* player = spawnEntity(&world, ENTITY_PLAYER, playerPosition, 0.6f, 1.8f);
+    world.player = player;
 
     float lookAngle = 0.f;
     float verticalLookAngle = 0.f;
@@ -123,6 +121,14 @@ int main(void) {
 
         if (IsKeyPressed(KEY_F11)) {
             ToggleBorderlessWindowed();
+        }
+
+        if (IsKeyPressed(KEY_F8)) {
+            world.renderDistance--;
+        }
+
+        if (IsKeyPressed(KEY_F9)) {
+            world.renderDistance++;
         }
 
         if (IsKeyPressed(KEY_F)) {

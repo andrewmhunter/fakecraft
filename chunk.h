@@ -91,7 +91,7 @@ static inline Block chunkGetBlockRaw(const Chunk* chunk, Point local) {
     return chunk->blocks[local.x][local.y][local.z];
 }
 
-void chunkInit(Chunk* chunk, struct World* world, Point coords);
+Chunk* chunkInit(struct World* world, Point coords);
 void chunkUnload(Chunk* chunk);
 
 void chunkPlaceFeatures(Chunk* chunk);

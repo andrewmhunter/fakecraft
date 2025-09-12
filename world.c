@@ -41,6 +41,8 @@ void worldPlaceBox(World* world, Point start, Point size, Block block) {
 void worldInit(World* world) {
     assert(world);
 
+    world->renderDistance = 3;
+
 #ifdef DEFAULT_SET_SEED
     world->seed = DEFAULT_SET_SEED;
 #else
@@ -51,33 +53,32 @@ void worldInit(World* world) {
 
     array_entity_init(world->entities);
 
+#ifdef USE_ARRAY
     for (int i = 0; i < WORLD_MAX_CHUNK_WIDTH; ++i) {
         for (int j = 0; j < WORLD_MAX_CHUNK_WIDTH; ++j) {
             world->chunksArr[i][j] = NULL;
         }
     }
+#endif
 
-    const int renderDistance = 5;
+    const int renderDistance = 1;
 
     for (int x = -renderDistance; x <= renderDistance; ++x) {
         for (int z = -renderDistance; z <= renderDistance; ++z) {
             Point point = {x, 0, z};
-            Chunk* chunk = malloc(sizeof(Chunk));
-            assert(chunk);
 
-            chunkInit(chunk, world, point);
-
-            world->chunksArr[x + WORLD_MAX_CHUNK_WIDTH / 2][z + WORLD_MAX_CHUNK_WIDTH / 2] = chunk;
-            dict_chunk_set_at(world->chunks, point, chunk);
+            chunkInit(world, point);
         }
     }
 
-    dict_chunk_it_t it;
+    /*dict_chunk_it_t it;
     for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
         placeFeatures(dict_chunk_ref(it)->value);
-    }
+    }*/
 
     world->showChunkBorders = false;
+
+    world->player = NULL;
 }
 
 void worldUnload(World* world) {
@@ -98,6 +99,49 @@ void worldUpdate(World* world, float deltaTime) {
     for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
         entityUpdate(*array_entity_cref(entityIt), deltaTime);
     }
+
+    int renderDistance = world->renderDistance;
+
+    if (world->player) {
+        for (int x = -renderDistance; x <= renderDistance; ++x) {
+            for (int z = -renderDistance; z <= renderDistance; ++z) {
+                Point chunkCoord = {x, 0, z};
+                chunkCoord = pointAdd(chunkCoord, worldToChunkV(world->player->position));
+                // This prevents cubic chunks
+                chunkCoord.y = 0;
+
+                Chunk* chunk = worldGetChunk(world, chunkCoord);
+                if (chunk != NULL) {
+                    continue;
+                }
+
+                chunkInit(world, chunkCoord);
+            }
+        }
+    }
+
+    dict_chunk_it_t chunkIt;
+    for (dict_chunk_it(chunkIt, world->chunks); !dict_chunk_end_p(chunkIt); dict_chunk_next(chunkIt)) {
+        Chunk* chunk = dict_chunk_ref(chunkIt)->value;
+
+        Point playerChunk = worldToChunkV(world->player->position);
+        Point distance = pointSubtract(playerChunk, chunk->coords);
+
+        int adjustedRenderDistance = renderDistance + 1;
+
+        if (distance.x < -adjustedRenderDistance
+            || distance.x > adjustedRenderDistance
+            || distance.z < -adjustedRenderDistance
+            || distance.z > adjustedRenderDistance
+        ) {
+            chunkUnload(chunk);
+            continue;
+        }
+
+        if (chunk->dirty) {
+            chunkGenerateMesh(chunk);
+        }
+    }
 }
 
 void worldDraw(World* world, Material material) {
@@ -112,10 +156,6 @@ void worldDraw(World* world, Material material) {
     dict_chunk_it_t chunkIt;
     for (dict_chunk_it(chunkIt, world->chunks); !dict_chunk_end_p(chunkIt); dict_chunk_next(chunkIt)) {
         Chunk* chunk = dict_chunk_ref(chunkIt)->value;
-
-        if (chunk->dirty) {
-            chunkGenerateMesh(chunk);
-        }
 
         drawChunk(chunk, material);
     }
@@ -143,23 +183,39 @@ bool chunkCoordsInArray(const World* world, Point chunkCoords) {
 const Chunk* worldGetChunkConst(const World* world, Point chunkCoords) {
     assert(world);
 
+#ifdef USE_ARRAY
     if (!chunkCoordsInArray(world, chunkCoords)) {
         return NULL;
     }
 
     const Chunk* chunk = world->chunksArr[chunkCoords.x + WORLD_MAX_CHUNK_WIDTH / 2][chunkCoords.z + WORLD_MAX_CHUNK_WIDTH / 2];
     return chunk;
+#else
+    Chunk* const* chunk = dict_chunk_cget(world->chunks, chunkCoords);
+    if (chunk == NULL) {
+        return NULL;
+    }
+    return *chunk;
+#endif
 }
 
 Chunk* worldGetChunk(World* world, Point chunkCoords) {
     assert(world);
 
+#ifdef USE_ARRAY
     if (!chunkCoordsInArray(world, chunkCoords)) {
         return NULL;
     }
 
     Chunk* chunk = world->chunksArr[chunkCoords.x + WORLD_MAX_CHUNK_WIDTH / 2][chunkCoords.z + WORLD_MAX_CHUNK_WIDTH / 2];
     return chunk;
+#else
+    Chunk* const* chunk = dict_chunk_cget(world->chunks, chunkCoords);
+    if (chunk == NULL) {
+        return NULL;
+    }
+    return *chunk;
+#endif
 }
 
 Block worldGetBlock(const World* world, Point worldPoint) {
@@ -201,6 +257,8 @@ Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width
     assert(world);
 
     Entity* entity = malloc(sizeof(Entity));
+    assert(entity);
+
     array_entity_push_move(world->entities, &entity);
     entityInit(entity, type, world, position, width, height);
     return entity;

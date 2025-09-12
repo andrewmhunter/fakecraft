@@ -2,25 +2,6 @@
 #include "collision.h"
 #include <raymath.h>
 
-/*typedef struct {
-    Point collides;
-    Vector3 maxMotion;
-    Vector3 newVelocity;
-} BlockCollision;
-
-BlockCollision aabbCollideBlocks(const World* world, Vector3 position, Vector3 boundingBox, Vector3 velocity) {
-    Vector3 axisVelocity = 
-    int blockSpan = ceil(boundingBox.x) + 1;
-    float increment = boundingBox.x / (blockSpan - 1);
-
-    for (int i = 0; i < blockSpan; ++i) {
-    }
-
-}*/
-
-static inline Vector3 vector3Abs(Vector3 vector) {
-    return (Vector3){fabs(vector.x), fabs(vector.y), fabs(vector.z)};
-}
 
 static Vector3 vector3SmallestAbs(Vector3 vector0, Vector3 vector1) {
     if (fabs(vector1.x) < fabs(vector0.x)) {
@@ -187,7 +168,7 @@ float aabbResolveZ(const World* world, BoundingBox boundingBox, Vector3 velocity
 
     bool willIntersectZ = overlapsZ(bb, worldVector);
 
-    bool isTarget = (blockPosition.z == 0 || blockPosition.z == -1);
+    //bool isTarget = (blockPosition.z == 0 || blockPosition.z == -1);
 
     if (intersectsX && intersectsY && willIntersectZ) {
         if (velocity.z < 0.f && bb.min.z <= worldVector.z + 1.f) {
@@ -206,7 +187,7 @@ float aabbResolveZ(const World* world, BoundingBox boundingBox, Vector3 velocity
     return velocity.z;
 }
 
-inline float absMinf(float a, float b) {
+static inline float absMinf(float a, float b) {
     if (fabs(a) <= fabs(b)) {
         return a;
     }
@@ -264,6 +245,8 @@ void entityInit(Entity* entity, EntityType type, World* world, Vector3 position,
     entity->velocity = Vector3Zero();
     entity->velocityOld = Vector3Zero();
     entity->boundingBox = (Vector3){width, height, width};
+    entity->pitch = 0.f;
+    entity->yaw = 0.f;
 }
 
 void entityUnload(Entity* entity) {
@@ -271,6 +254,11 @@ void entityUnload(Entity* entity) {
 }
 
 #define UPDATE_POSITION_FIRST
+
+
+void playerUpdate(Entity* entity, float deltaTime) {
+
+}
 
 void entityUpdate(Entity* entity, float deltaTime) {
     assert(entity);
@@ -359,4 +347,5 @@ void entityDraw(const Entity* entity) {
 
     DrawBoundingBox(genBoundingBox(entity->position, entity->boundingBox), WHITE);
 }
+
 

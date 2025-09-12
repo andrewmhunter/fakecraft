@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 //#define FAST_LEAVES
-#define USE_IGNORED
+//#define USE_IGNORED
 
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 128
@@ -22,7 +22,7 @@
 
 //#define PROFILING_STARTUP
 
-#define SUPERFLAT
+//#define SUPERFLAT
 
 #ifdef PROFILING_STARTUP
 #ifndef DEFAULT_SET_SEED

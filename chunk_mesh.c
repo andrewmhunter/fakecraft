@@ -5,7 +5,7 @@
 
 #define MESH_MAX_VERTICIES UINT16_MAX
 
-Chunk dummyChunk = {0};
+const Chunk dummyChunk = {0};
 
 void chunkGenerateMesh(Chunk* chunk) {
     assert(chunk);
@@ -89,10 +89,6 @@ void chunkGenerateMesh(Chunk* chunk) {
                 if (block == BLOCK_AIR) {
                     continue;
                 }
-
-                /*if (surroundedBySolid(chunk, point)) {
-                    continue;
-                }*/
 
                 if (faceCount * 4 >= MESH_MAX_VERTICIES - 64 && mesh != NULL) {
                     mesh->vertexCount = faceCount * 4;

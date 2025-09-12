@@ -8,17 +8,23 @@
 #include "util.h"
 #include "entity.h"
 
+//#define USE_ARRAY
+
 ARRAY_DEF(array_chunk, Chunk*, (CLEAR()))
 DICT_DEF2(dict_chunk, Point, (HASH(pointHash), EQUAL(pointEquals)), Chunk*, (CLEAR(), INIT()))
 
 ARRAY_DEF(array_entity, Entity*, (CLEAR()))
 
 typedef struct World {
+#ifdef USE_ARRAY
     Chunk* chunksArr[WORLD_MAX_CHUNK_WIDTH][WORLD_MAX_CHUNK_WIDTH];
+#endif
     dict_chunk_t chunks;
     array_entity_t entities;
     int seed;
     bool showChunkBorders;
+    int renderDistance;
+    Entity* player;
 } World;
 
 void worldInit(World* world);

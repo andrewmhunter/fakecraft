@@ -8,7 +8,7 @@ TARGET := fakecraft
 OBJS := $(SRCS:%.c=$(DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-CFLAGS := -c -g -O2 -Wall -Wextra
+CFLAGS := -c -g -O2 -Wall -Wextra -Wno-unused-parameter
 CPPFLAGS := -MD -MP
 LDFLAGS := -lraylib -lm -fwhole-program
 COMMONFLAGS :=

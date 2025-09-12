@@ -36,12 +36,12 @@ typedef enum {
 #define DIRECTION_CARDINAL_COUNT 4
 
 // https://stackoverflow.com/a/14997413
-inline int positiveModulo(int x, int y) {
+static inline int positiveModulo(int x, int y) {
     return (x % y + y) % y;
 }
 
 //https://www.geeksforgeeks.org/dsa/floor-and-ceil-of-integer-division/
-inline int floorDiv(int x, int y) {
+static inline int floorDiv(int x, int y) {
     int value = x / y;
     if ((x ^ y) < 0 && x % y != 0) {
         value--;
@@ -49,7 +49,7 @@ inline int floorDiv(int x, int y) {
     return value;
 }
 
-inline int floorDivFast(int x, int y) {
+static inline int floorDivFast(int x, int y) {
     int value = x / y;
     value -= (value < 0 && x % y != 0);
     return value;
@@ -61,7 +61,7 @@ typedef struct {
     int z;
 } Point;
 
-inline int sign(int number) {
+static inline int sign(int number) {
     if (number == 0) {
         return 0;
     }
@@ -71,13 +71,13 @@ inline int sign(int number) {
     return 1;
 }
 
-inline int wrapInt(int value, int min, int max) {
+static inline int wrapInt(int value, int min, int max) {
     int range = max - min;
     value = positiveModulo(value - min, range) + min;
     return value;
 }
 
-inline int clampInt(int value, int min, int max) {
+static inline int clampInt(int value, int min, int max) {
     if (value < min) {
         return min;
     }
@@ -87,55 +87,55 @@ inline int clampInt(int value, int min, int max) {
     return value;
 }
 
-inline Point point(int x, int y, int z) {
+static inline Point point(int x, int y, int z) {
     return (Point){x, y, z};
 }
 
-inline Point pointZero() {
+static inline Point pointZero() {
     return (Point){0, 0, 0};
 }
 
-inline Point pointOne() {
+static inline Point pointOne() {
     return (Point){1, 1, 1};
 }
 
-inline Point pointNegate(Point point) {
+static inline Point pointNegate(Point point) {
     return (Point){-point.x, -point.y, -point.z};
 }
 
-inline Point pointAdd(Point lhs, Point rhs) {
+static inline Point pointAdd(Point lhs, Point rhs) {
     return (Point){lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
 }
 
-inline Point pointAddValue(Point lhs, int x, int y, int z) {
+static inline Point pointAddValue(Point lhs, int x, int y, int z) {
     return (Point){lhs.x + x, lhs.y + y, lhs.z + z};
 }
 
-inline Point pointSubtract(Point lhs, Point rhs) {
+static inline Point pointSubtract(Point lhs, Point rhs) {
     return (Point){lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
 }
 
-inline Point pointSubtractValue(Point lhs, int rhs) {
+static inline Point pointSubtractValue(Point lhs, int rhs) {
     return (Point){lhs.x - rhs, lhs.y - rhs, lhs.z - rhs};
 }
 
-inline Point pointMultiply(Point lhs, Point rhs) {
+static inline Point pointMultiply(Point lhs, Point rhs) {
     return (Point){lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
 }
 
-inline Point pointDivide(Point lhs, Point rhs) {
+static inline Point pointDivide(Point lhs, Point rhs) {
     return (Point){lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
 }
 
-inline Point pointScale(Point lhs, int rhs) {
+static inline Point pointScale(Point lhs, int rhs) {
     return (Point){lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
 }
 
-inline Point pointDivideScalar(Point lhs, int rhs) {
+static inline Point pointDivideScalar(Point lhs, int rhs) {
     return (Point){lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
 }
 
-inline Point pointMin(Point lhs, Point rhs) {
+static inline Point pointMin(Point lhs, Point rhs) {
     return (Point) {
         MIN(lhs.x, rhs.x),
         MIN(lhs.y, rhs.y),
@@ -143,7 +143,7 @@ inline Point pointMin(Point lhs, Point rhs) {
     };
 }
 
-inline Point pointMax(Point lhs, Point rhs) {
+static inline Point pointMax(Point lhs, Point rhs) {
     return (Point) {
         MAX(lhs.x, rhs.x),
         MAX(lhs.y, rhs.y),
@@ -151,37 +151,37 @@ inline Point pointMax(Point lhs, Point rhs) {
     };
 }
 
-inline bool pointEquals(Point lhs, Point rhs) {
+static inline bool pointEquals(Point lhs, Point rhs) {
     return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
 }
 
-inline size_t pointHash(Point point) {
+static inline size_t pointHash(Point point) {
     // TODO: Replace with real hash function
     return point.x * 11 + point.y * 7 + point.z * 3;
 }
 
-inline Vector3 pointToVector3(Point point) {
+static inline Vector3 pointToVector3(Point point) {
     return (Vector3){point.x, point.y, point.z};
 }
 
-inline Point vector3ToPoint(Vector3 vector) {
+static inline Point vector3ToPoint(Vector3 vector) {
     return (Point){floor(vector.x), floor(vector.y), floor(vector.z)};
     //return (Point){vector.x, vector.y, vector.z};
 }
 
-inline Point pointAddX(Point point, int x) {
+static inline Point pointAddX(Point point, int x) {
     return (Point){point.x + x, point.y, point.z};
 }
 
-inline Point pointAddY(Point point, int y) {
+static inline Point pointAddY(Point point, int y) {
     return (Point){point.x, point.y + y, point.z};
 }
 
-inline Point pointAddZ(Point point, int z) {
+static inline Point pointAddZ(Point point, int z) {
     return (Point){point.x, point.y, point.z + z};
 }
 
-inline Point directionToPoint(Direction direction) {
+static inline Point directionToPoint(Direction direction) {
     static const Point points[DIRECTION_COUNT] = {
         //[DIRECTION_NONE]  = { 0,  0,  0},
         [DIRECTION_EAST]  = { 1,  0,  0},
@@ -194,7 +194,7 @@ inline Point directionToPoint(Direction direction) {
     return points[direction];
 }
 
-inline Direction invertDirection(Direction direction) {
+static inline Direction invertDirection(Direction direction) {
     static const Direction inverted[DIRECTION_COUNT] = {
         [DIRECTION_UP]    = DIRECTION_DOWN,
         [DIRECTION_SOUTH] = DIRECTION_NORTH,
@@ -206,11 +206,11 @@ inline Direction invertDirection(Direction direction) {
     return inverted[direction];
 }
 
-inline Matrix MatrixTranslateV(Vector3 vector) {
+static inline Matrix MatrixTranslateV(Vector3 vector) {
     return MatrixTranslate(vector.x, vector.y, vector.z);
 }
 
-inline float squaref(float x) {
+static inline float squaref(float x) {
     return x * x;
 }
 
@@ -225,7 +225,7 @@ typedef enum {
     AXIS_COUNT
 } Axis;
 
-inline Axis axisOther0(Axis axis) {
+static inline Axis axisOther0(Axis axis) {
     static const Axis others[AXIS_COUNT] = {
         [AXIS_X] = AXIS_Y,
         [AXIS_Y] = AXIS_X,
@@ -234,7 +234,7 @@ inline Axis axisOther0(Axis axis) {
     return others[axis];
 }
 
-inline Axis axisOther1(Axis axis) {
+static inline Axis axisOther1(Axis axis) {
     static const Axis others[AXIS_COUNT] = {
         [AXIS_X] = AXIS_Z,
         [AXIS_Y] = AXIS_Z,
@@ -243,7 +243,7 @@ inline Axis axisOther1(Axis axis) {
     return others[axis];
 }
 
-inline float vector3GetAxis(Vector3 vector, Axis axis) {
+static inline float vector3GetAxis(Vector3 vector, Axis axis) {
     switch (axis) {
         case AXIS_X:
             return vector.x;
@@ -257,7 +257,7 @@ inline float vector3GetAxis(Vector3 vector, Axis axis) {
     return 0.f;
 }
 
-inline Vector3 vector3SetAxis(Vector3 vector, Axis axis, float value) {
+static inline Vector3 vector3SetAxis(Vector3 vector, Axis axis, float value) {
     switch (axis) {
         case AXIS_X:
             return (Vector3){value, vector.y, vector.z};
@@ -271,7 +271,7 @@ inline Vector3 vector3SetAxis(Vector3 vector, Axis axis, float value) {
     return Vector3Zero();
 }
 
-inline int pointGetAxis(Point point, Axis axis) {
+static inline int pointGetAxis(Point point, Axis axis) {
     switch (axis) {
         case AXIS_X:
             return point.x;
@@ -285,7 +285,7 @@ inline int pointGetAxis(Point point, Axis axis) {
     return 0;
 }
 
-inline Point pointSetAxis(Point point, Axis axis, int value) {
+static inline Point pointSetAxis(Point point, Axis axis, int value) {
     switch (axis) {
         case AXIS_X:
             return (Point){value, point.y, point.z};
