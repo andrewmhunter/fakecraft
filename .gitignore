@@ -1,0 +1,8 @@
+.cache/
+build/
+resources/
+profiling/
+save/
+screenshots/
+fakecraft
+
