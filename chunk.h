@@ -74,7 +74,7 @@ ARRAY_DEF(array_mesh, Mesh, (CLEAR(UnloadMesh), /*INIT_SET(API_6(meshSet)), SET(
 
 struct World;
 
-typedef struct {
+typedef struct Chunk {
     struct World* world;
     Point coords;
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];

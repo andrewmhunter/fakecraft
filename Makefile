@@ -1,6 +1,6 @@
 
 SRCS := main.c mesh.c block.c chunk.c world.c \
-	util.c worldgen.c chunk_mesh.c entity.c collision.c
+	util.c worldgen.c chunk_mesh.c entity.c collision.c serialize.c
 
 DIR := build
 TARGET := fakecraft

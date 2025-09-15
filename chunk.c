@@ -5,11 +5,9 @@
 #include "world.h"
 #include "chunk.h"
 #include "worldgen.h"
+#include "serialize.h"
 
 // Chunk
-
-void saveChunk(Chunk* chunk);
-bool loadChunk(Chunk* chunk);
 
 void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
     assert(chunk);
@@ -42,15 +40,15 @@ Chunk* chunkInit(World* world, Point coords) {
     world->chunksArr[x + WORLD_MAX_CHUNK_WIDTH / 2][z + WORLD_MAX_CHUNK_WIDTH / 2] = chunk;
 #endif
 
-    TraceLog(LOG_INFO, "Chunk %d, %d init", coords.x, coords.z);
-
     if (loadChunk(chunk)) {
+        TraceLog(LOG_WARNING, "Chunk %d, %d loaded from file, %d", chunk->coords.x, chunk->coords.z, pointHash(chunk->coords));
         return chunk;
     }
 
     generateTerrain(chunk);
     placeFeatures(chunk);
 
+    TraceLog(LOG_WARNING, "Chunk %d, %d generated, %d", chunk->coords.x, chunk->coords.z, pointHash(chunk->coords));
     return chunk;
 }
 
@@ -58,68 +56,16 @@ Chunk* chunkInit(World* world, Point coords) {
 void chunkUnload(Chunk* chunk) {
     assert(chunk);
 
-    TraceLog(LOG_INFO, "Chunk %d, %d unload", chunk->coords.x, chunk->coords.z);
-
     saveChunk(chunk);
+    TraceLog(LOG_WARNING, "Chunk %d, %d saved, %d", chunk->coords.x, chunk->coords.z, pointHash(chunk->coords));
 
     array_mesh_clear(chunk->meshes);
-
-    dict_chunk_erase(chunk->world->chunks, chunk->coords);
+    //dict_chunk_erase(chunk->world->chunks, chunk->coords);
 
 #ifdef USE_ARRAY
     world->chunksArr[x + WORLD_MAX_CHUNK_WIDTH / 2][z + WORLD_MAX_CHUNK_WIDTH / 2] = NULL;
 #endif
 
-    free(chunk);
-}
-
-static const char* getChunkFileName(Chunk* chunk) {
-    return TextFormat("save/c%d.%d.bin", chunk->coords.x, chunk->coords.z);
-}
-
-void saveChunk(Chunk* chunk) {
-    assert(chunk);
-
-    const char* fileName = getChunkFileName(chunk);
-    FILE* file = fopen(fileName, "w");
-    assert(file);
-
-    size_t blocksSize = sizeof(chunk->blocks);
-
-    size_t count = fwrite(chunk->blocks, 1, blocksSize, file);
-    assert(count == blocksSize);
-
-    fclose(file);
-}
-
-bool loadChunk(Chunk* chunk) {
-    assert(chunk);
-
-    const char* fileName = getChunkFileName(chunk);
-    FILE* file = fopen(fileName, "r");
-    if (file == NULL) {
-        return false;
-    }
-
-    size_t blocksSize = sizeof(chunk->blocks);
-
-    size_t count = fread(chunk->blocks, 1, blocksSize, file);
-    if (count != blocksSize) {
-        TraceLog(LOG_WARNING, "Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
-        return false;
-    }
-
-    fclose(file);
-
-    for (int x = 0; x < CHUNK_WIDTH; ++x) {
-        for (int z = 0; z < CHUNK_WIDTH; ++z) {
-            chunk->surfaceHeight[x][z] = 65;
-        }
-    }
-
-    chunk->dirty = true;
-
-    return true;
 }
 
 

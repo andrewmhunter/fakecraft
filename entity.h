@@ -10,7 +10,7 @@ typedef enum {
     ENTITY_MOB,
 } EntityType;
 
-typedef struct {
+typedef struct Entity {
     struct World* world;
     EntityType type;
     Vector3 position;
@@ -19,6 +19,9 @@ typedef struct {
     Vector3 boundingBox;
     float pitch;
     float yaw;
+    bool flying;
+    bool onGround;
+    bool noClip;
 } Entity;
 
 void entityInit(Entity* entity, EntityType type, struct World* world, Vector3 position, float width, float height);

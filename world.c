@@ -1,10 +1,11 @@
 #include <raylib.h>
 #include <raymath.h>
+#include <stdint.h>
 #include "world.h"
 #include "util.h"
 #include "chunk.h"
 #include "chunk_mesh.h"
-#include "worldgen.h"
+#include "serialize.h"
 
 void worldTryPlaceBox(World* world, Point start, Point size, Block block) {
     assert(world);
@@ -42,16 +43,29 @@ void worldInit(World* world) {
     assert(world);
 
     world->renderDistance = 3;
+    world->showChunkBorders = false;
+
+
+    dict_chunk_init(world->chunks);
+    array_entity_init(world->entities);
+
+    Vector3 playerPosition = (Vector3){
+        0,
+        SURFACE_OFFSET + 10, // worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f,
+        0
+    };
+
+    world->player = spawnEntity(world, ENTITY_PLAYER, playerPosition, 0.6f, 1.8f);
+
+    if (loadWorld(world)) {
+        return;
+    }
 
 #ifdef DEFAULT_SET_SEED
     world->seed = DEFAULT_SET_SEED;
 #else
     world->seed = randomInt(10000);
 #endif
-
-    dict_chunk_init(world->chunks);
-
-    array_entity_init(world->entities);
 
 #ifdef USE_ARRAY
     for (int i = 0; i < WORLD_MAX_CHUNK_WIDTH; ++i) {
@@ -61,7 +75,7 @@ void worldInit(World* world) {
     }
 #endif
 
-    const int renderDistance = 1;
+    /*const int renderDistance = 1;
 
     for (int x = -renderDistance; x <= renderDistance; ++x) {
         for (int z = -renderDistance; z <= renderDistance; ++z) {
@@ -69,23 +83,23 @@ void worldInit(World* world) {
 
             chunkInit(world, point);
         }
-    }
+    }*/
 
     /*dict_chunk_it_t it;
     for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
         placeFeatures(dict_chunk_ref(it)->value);
     }*/
 
-    world->showChunkBorders = false;
-
-    world->player = NULL;
 }
 
 void worldUnload(World* world) {
+    saveWorld(world);
+
     dict_chunk_it_t it;
     for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
         Chunk* chunk = dict_chunk_ref(it)->value;
         chunkUnload(chunk);
+        free(chunk);
     }
     dict_chunk_clear(world->chunks);
 }
@@ -135,6 +149,8 @@ void worldUpdate(World* world, float deltaTime) {
             || distance.z > adjustedRenderDistance
         ) {
             chunkUnload(chunk);
+            dict_chunk_erase(world->chunks, chunk->coords);
+            free(chunk);
             continue;
         }
 
@@ -223,8 +239,8 @@ Block worldGetBlock(const World* world, Point worldPoint) {
 
     const Chunk* chunk = worldGetChunkConst(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
-        //return BLOCK_BARRIER;
-        return BLOCK_AIR;
+        return BLOCK_BARRIER;
+        //return BLOCK_AIR;
     }
     return chunkGetBlockRaw(chunk, worldToLocal(worldPoint));
 }

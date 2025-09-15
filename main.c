@@ -2,40 +2,41 @@
 #include <raymath.h>
 #include <stdbool.h>
 #include "block.h"
-#include "chunk.h"
 #include "world.h"
 #include "util.h"
 #include "collision.h"
 #include "entity.h"
+#include "serialize.h"
 
 #include <rlgl.h>
-#include <stdio.h>
 
 // Game
 
 int main(void) {
+    SetTraceLogLevel(LOG_WARNING);
+
     ChangeDirectory(GetApplicationDirectory());
-    printf("%s\n", GetWorkingDirectory());
 
     //SetConfigFlags(FLAG_VSYNC_HINT);
-    //SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(1280, 720, "Fakecraft");
     int targetFps = 60;
     SetTargetFPS(targetFps);
 
+
     SetExitKey(KEY_ESCAPE);
     DisableCursor();
 
+    makeSaveDirectories();
 
     Shader shader = LoadShader("shader.vs", "shader.fs");
     assert(IsShaderValid(shader));
     int shaderCamUniform = GetShaderLocation(shader, "camPos");
     shaderModelUniform = GetShaderLocation(shader, "model");
 
-    font = LoadFont("default.png");
+    font = LoadFont("resources/defaultSpritefont.png");
     assert(IsFontValid(font));
 
-    Texture2D terrain = LoadTexture("alphaTerrain.png");
+    Texture2D terrain = LoadTexture("resources/alphaTerrain.png");
     //terrain = LoadTexture("blank.png");
     assert(IsTextureValid(terrain));
 
@@ -45,8 +46,8 @@ int main(void) {
     Camera3D cam = {
         .up = {0.f, 1.f, 0.f},
         .fovy = 90.f,
-        .target = {0.f, 23.f, 1.f},
-        .position = {0.f, 22.62f, 0.f},
+        .target = {0.f, 0.f, 0.f},
+        .position = {0.f, 0.f, 0.f},
         .projection = CAMERA_PERSPECTIVE
     };
 
@@ -75,25 +76,7 @@ int main(void) {
 
     World world;
     worldInit(&world);
-    cam.position = (Vector3) {
-        0.5f,
-        worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + 2.62,
-        0.5f
-    };
-
-    Vector3 playerPosition = (Vector3){
-        0,
-        worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f,
-        0
-    };
-
-    Entity* player = spawnEntity(&world, ENTITY_PLAYER, playerPosition, 0.6f, 1.8f);
-    world.player = player;
-
-    float lookAngle = 0.f;
-    float verticalLookAngle = 0.f;
-
-    bool flying = true;
+    Entity* player = world.player;
 
     float maxY = 0.f;
 
@@ -106,6 +89,11 @@ int main(void) {
         if (IsKeyPressed(KEY_E)) {
             targetFps += 10;
             SetTargetFPS(targetFps);
+        }
+
+
+        if (IsKeyPressed(KEY_R)) {
+            maxY = 0.f;
         }
 
         float deltaTime = GetFrameTime();
@@ -131,70 +119,14 @@ int main(void) {
             world.renderDistance++;
         }
 
-        if (IsKeyPressed(KEY_F)) {
-            flying = !flying;
-        }
-
-        Vector3 movement = Vector3Zero();
-        if (IsKeyDown(KEY_W)) {
-            movement.x += 1.f;
-        }
-
-        if (IsKeyDown(KEY_S)) {
-            movement.x -= 1.f;
-        }
-
-        if (IsKeyDown(KEY_A)) {
-            movement.z -= 1.f;
-        }
-
-        if (IsKeyDown(KEY_D)) {
-            movement.z += 1.f;
-        }
-
-        if (IsKeyPressed(KEY_R)) {
-            maxY = 0.f;
-        }
-
-        if (flying && IsKeyDown(KEY_LEFT_CONTROL)) {
-            movement.y -= 1.f;
-        }
-
-        if (flying && IsKeyDown(KEY_SPACE)) {
-            //movement.y += 0.5f;
-        }
-
-        /*float speed = flying ? 10.79f : 4.317;
-
-        if (IsKeyDown(KEY_LEFT_SHIFT)) {
-            speed = flying ? 21.58f : 5.612;
-        }*/
-        float speed = 0.098f * deltaTime;
-        //float speed = 0.2f * delta;
-
-
-        Vector2 mouseDelta = GetMouseDelta();
-        lookAngle -= mouseDelta.x * SENSITIVITY;
-        verticalLookAngle -= mouseDelta.y * SENSITIVITY;
-        verticalLookAngle = Clamp(verticalLookAngle, -PI / 2 + 0.0001, PI / 2 - 0.0001);
-
-        movement = Vector3RotateByAxisAngle(movement, (Vector3){0.f, 1.f, 0.f}, lookAngle);
-        movement = Vector3Normalize(movement);
-        movement = Vector3Scale(movement, speed);
-
-        if (IsKeyPressed(KEY_SPACE)) {
-            player->velocity.y += 0.5f;
-        }
-
-        player->velocity = Vector3Add(player->velocity, movement);
 
         worldUpdate(&world, deltaTime);
 
         cam.position = Vector3Add(player->position, (Vector3){0, PLAYER_EYE, 0});
 
         Vector3 lookVec = {1.f, 0.f, 0.f};
-        lookVec = Vector3RotateByAxisAngle(lookVec, (Vector3){0.f, 0.f, 1.f}, verticalLookAngle);
-        lookVec = Vector3RotateByAxisAngle(lookVec, (Vector3){0.f, 1.f, 0.f}, lookAngle);
+        lookVec = Vector3RotateByAxisAngle(lookVec, (Vector3){0.f, 0.f, 1.f}, player->pitch);
+        lookVec = Vector3RotateByAxisAngle(lookVec, (Vector3){0.f, 1.f, 0.f}, player->yaw);
 
         cam.target = Vector3Add(cam.position, lookVec);
 
