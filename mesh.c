@@ -13,6 +13,10 @@ void meshVertex(Mesh* mesh, int index, Vector3 position, float texCoordX, float 
     mesh->normals[coordIndex + 1] = normal.y;
     mesh->normals[coordIndex + 2] = normal.z;
 
+    int colorIndex = index * 4;
+    mesh->colors[colorIndex] = 128;
+    mesh->colors[colorIndex + 1] = 128;
+
     int texIndex = index * 2;
     mesh->texcoords[texIndex] = texCoordX;
     mesh->texcoords[texIndex + 1] = texCoordY;
@@ -64,32 +68,6 @@ void meshFaceSmart(Mesh* mesh, int index, int x, int y, int z, Direction side, i
     meshFace(mesh, index, offsets[0], offsets[1], offsets[2], offsets[3], textureX, textureY, normal);
 }
 
-/*void meshAddCube(Mesh* mesh, int index, int x, int y, int z, int textureX, int textureY) {
-    // x = 0 left / 1 right, y = 0 bottom / 1 top, z = 0 back / 1 front
-    Vector3 lbb = {x, y, z};
-    Vector3 lbf = {x, y, z + 1};
-    Vector3 ltb = {x, y + 1, z};
-    Vector3 ltf = {x, y + 1, z + 1};
-    Vector3 rbb = {x + 1, y, z};
-    Vector3 rbf = {x + 1, y, z + 1};
-    Vector3 rtb = {x + 1, y + 1, z};
-    Vector3 rtf = {x + 1, y + 1, z + 1};
-
-    int meshIndex = index * 6;
-    // Top
-    meshFace(mesh, meshIndex + 0, ltf, rtf, rtb, ltb, textureX, textureY, (Vector3){0, 1, 0});
-    // Front
-    meshFace(mesh, meshIndex + 1, lbf, rbf, rtf, ltf, textureX, textureY, (Vector3){0, 0, 1});
-    // Right
-    meshFace(mesh, meshIndex + 2, rbf, rbb, rtb, rtf, textureX, textureY, (Vector3){1, 0, 0});
-    // Back
-    meshFace(mesh, meshIndex + 3, rbb, lbb, ltb, rtb, textureX, textureY, (Vector3){0, 0, -1});
-    // Left
-    meshFace(mesh, meshIndex + 4, lbb, lbf, ltf, ltb, textureX, textureY, (Vector3){-1, 0, 0});
-    // Bottom
-    meshFace(mesh, meshIndex + 5, lbb, rbb, rbf, lbf, textureX, textureY, (Vector3){0, -1, 0});
-}*/
-
 void meshAddCube(Mesh* mesh, int index, int x, int y, int z, Block block) {
     const Point* sides = blocks[block].model.sides;
 
@@ -109,6 +87,7 @@ Mesh cubeMesh(Block block) {
     mesh.vertices = (float*)MemAlloc(mesh.vertexCount * 3 * sizeof(float));
     mesh.texcoords = (float*)MemAlloc(mesh.vertexCount * 2 * sizeof(float));
     mesh.normals = (float*)MemAlloc(mesh.vertexCount * 3 * sizeof(float));
+    mesh.colors = (unsigned char*)MemAlloc(mesh.vertexCount * 4 * sizeof(unsigned char));
     mesh.indices = (unsigned short*)MemAlloc(mesh.triangleCount * 3 * sizeof(unsigned short));
 
     meshAddCube(&mesh, 0, 0, 0, 0, block);

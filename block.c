@@ -1,6 +1,7 @@
 #include "mesh.h"
 #include "block.h"
 #include "config.h"
+#include "logger.h"
 #include <raymath.h>
 
 BlockModel blockModelDefault(int texCoordX, int texCoordY) {
@@ -68,7 +69,7 @@ BlockModel blockModelNone() {
 BlockProperties blocks[BLOCK_COUNT];
 
 void regBlock(Block block, const char* name, Solidness solid, BlockModel model) {
-    assert(name);
+    ASSERT(name);
 
     BlockProperties props = {
         .name = name,
@@ -96,7 +97,7 @@ void registerBlocks() {
     regBlock(BLOCK_SAND, "sand", SOLID, blockModelDefault(2, 1));
     regBlock(BLOCK_GLASS, "glass", TRANSPARENT, blockModelDefault(1, 3));
 
-#ifdef FAST_LEAVES
+#if FAST_LEAVES
     regBlock(BLOCK_LEAVES, "leaves", SOLID, blockModelDefault(5, 3));
 #else
     regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, blockModelDefault(4, 3));
@@ -104,6 +105,7 @@ void registerBlocks() {
 
     regBlock(BLOCK_LOG, "log", SOLID, blockModelLog(4, 1, 5, 1));
     regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
-    regBlock(BLOCK_WATER, "water", TRANSLUCENT, blockModelDefault(13, 12));
+    regBlock(BLOCK_WATER, "water", SOLID, blockModelDefault(13, 12));
+    regBlock(BLOCK_SNOW, "snow", SOLID, blockModelDefault(2, 4));
 }
 

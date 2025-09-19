@@ -1,10 +1,10 @@
 #include <raylib.h>
-#include <libdeflate.h>
 #include <stdio.h>
 #include "serialize.h"
 #include "world.h"
 #include "chunk.h"
 #include "entity.h"
+#include "logger.h"
 
 void saveVector3(Vector3 vector, FILE* file) {
     fwrite(&vector.x, sizeof(float), 1, file);
@@ -22,7 +22,7 @@ void loadVector3(Vector3* vector, FILE* file) {
 static void getChunkFileName(const Chunk* chunk, char* buffer, size_t maxSize) {
     int count = snprintf(buffer, maxSize, "save/level/c%d.%d.bin", chunk->coords.x, chunk->coords.z);
     if (count >= (int)maxSize) {
-        TraceLog(LOG_ERROR, "Buffer not large enough for chunk filename");
+        ERROR("Buffer not large enough for chunk filename");
     }
 }
 
@@ -32,23 +32,23 @@ void makeSaveDirectories(void) {
 }
 
 void saveChunk(const Chunk* chunk) {
-    assert(chunk);
+    ASSERT(chunk);
 
     char fileName[FILENAME_MAX];
     getChunkFileName(chunk, fileName, sizeof(fileName));
     FILE* file = fopen(fileName, "wb");
-    assert(file);
+    ASSERT(file);
 
     size_t blocksSize = sizeof(chunk->blocks);
 
     size_t count = fwrite(chunk->blocks, 1, blocksSize, file);
-    assert(count == blocksSize);
+    ASSERT(count == blocksSize);
 
     fclose(file);
 }
 
 bool loadChunk(Chunk* chunk) {
-    assert(chunk);
+    ASSERT(chunk);
 
     char fileName[FILENAME_MAX];
     getChunkFileName(chunk, fileName, sizeof(fileName));
@@ -59,9 +59,10 @@ bool loadChunk(Chunk* chunk) {
 
     size_t blocksSize = sizeof(chunk->blocks);
 
+    TRACE("Loading blocks array. Chunk: %d, %d", chunk->coords.x, chunk->coords.z);
     size_t count = fread(chunk->blocks, 1, blocksSize, file);
     if (count != blocksSize) {
-        TraceLog(LOG_WARNING, "Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
+        ERROR("Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
         return false;
     }
 
@@ -74,16 +75,16 @@ bool loadChunk(Chunk* chunk) {
     }
 
     chunk->dirty = true;
-
-
-    return true;
+    return verifyChunk(chunk);
 }
 
 void saveWorld(const World* world) {
-    assert(world);
+    ASSERT(world);
+
+    DEBUG("Saving world to file");
 
     FILE* file = fopen("save/world.bin", "wb");
-    assert(file);
+    ASSERT(file);
 
     fwrite(&world->seed, 1, sizeof(world->seed), file);
     saveEntity(world->player, file);
@@ -92,12 +93,14 @@ void saveWorld(const World* world) {
 }
 
 bool loadWorld(World* world) {
-    assert(world);
+    ASSERT(world);
 
     FILE* file = fopen("save/world.bin", "rb");
     if (file == NULL) {
         return false;
     }
+
+    DEBUG("Loading world from file");
 
     fread(&world->seed, 1, sizeof(world->seed), file);
     loadEntity(world->player, file);

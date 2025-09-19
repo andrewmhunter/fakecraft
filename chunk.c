@@ -1,16 +1,18 @@
 #include <raylib.h>
 #include <raymath.h>
+#include "logger.h"
 #include "util.h"
 #include "chunk.h"
 #include "world.h"
 #include "chunk.h"
 #include "worldgen.h"
 #include "serialize.h"
+#include "logger.h"
 
 // Chunk
 
 void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
-    assert(chunk);
+    ASSERT(chunk);
 
     Point point = {x, y, z};
     if (chunkGetBlock(chunk, point) != BLOCK_AIR) {
@@ -21,13 +23,22 @@ void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
 }
 
 Chunk* chunkInit(World* world, Point coords) {
-    assert(world);
+    ASSERT(world);
 
     Chunk* chunk = malloc(sizeof(Chunk));
-    assert(chunk);
+    ASSERT(chunk);
 
     chunk->world = world;
     chunk->coords = coords;
+
+    for (Direction i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
+        Chunk* adjacent = worldGetChunk(world, pointAdd(coords, directionToPoint(i)));
+        chunk->adjacentChunks[i] = chunk;
+        if (adjacent != NULL) {
+            adjacent->adjacentChunks[invertDirection(i)] = chunk;
+        }
+    }
+
     array_mesh_init(chunk->meshes);
 
 #ifdef USE_IGNORED
@@ -41,23 +52,31 @@ Chunk* chunkInit(World* world, Point coords) {
 #endif
 
     if (loadChunk(chunk)) {
-        TraceLog(LOG_WARNING, "Chunk %d, %d loaded from file, %d", chunk->coords.x, chunk->coords.z, pointHash(chunk->coords));
+        DEBUG("Chunk %d, %d loaded from file", chunk->coords.x, chunk->coords.z);
         return chunk;
     }
 
     generateTerrain(chunk);
     placeFeatures(chunk);
 
-    TraceLog(LOG_WARNING, "Chunk %d, %d generated, %d", chunk->coords.x, chunk->coords.z, pointHash(chunk->coords));
+    DEBUG("Chunk %d, %d generated", chunk->coords.x, chunk->coords.z);
     return chunk;
 }
 
 
 void chunkUnload(Chunk* chunk) {
-    assert(chunk);
+    ASSERT(chunk);
+
+    for (Direction i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
+        Chunk* adjacent = chunk->adjacentChunks[i];
+        if (adjacent != NULL) {
+            //INFO("%p", adjacent);
+            //adjacent->adjacentChunks[invertDirection(i)] = NULL;
+        }
+    }
 
     saveChunk(chunk);
-    TraceLog(LOG_WARNING, "Chunk %d, %d saved, %d", chunk->coords.x, chunk->coords.z, pointHash(chunk->coords));
+    DEBUG("Chunk %d, %d saved", chunk->coords.x, chunk->coords.z);
 
     array_mesh_clear(chunk->meshes);
     //dict_chunk_erase(chunk->world->chunks, chunk->coords);
@@ -70,7 +89,7 @@ void chunkUnload(Chunk* chunk) {
 
 
 bool blockInChunk(const Chunk* chunk, Point local) {
-    assert(chunk);
+    ASSERT(chunk);
 
     return local.x >= 0 && local.x < CHUNK_WIDTH
         && local.y >= 0 && local.y < CHUNK_HEIGHT
@@ -78,8 +97,8 @@ bool blockInChunk(const Chunk* chunk, Point local) {
 }
 
 void chunkMarkDirty(Chunk* chunk, Point local) {
-    assert(chunk);
-    assert(blockInChunk(chunk, local));
+    ASSERT(chunk);
+    ASSERT(blockInChunk(chunk, local));
 
     chunk->dirty = true;
 
@@ -89,10 +108,10 @@ void chunkMarkDirty(Chunk* chunk, Point local) {
 }
 
 void chunkSetBlockRaw(Chunk* chunk, Point local, Block block) {
-    assert(chunk);
+    ASSERT(chunk);
 
     if (!blockInChunk(chunk, local)) {
-        TraceLog(LOG_WARNING, "block placed outside of chunk");
+        WARN("Block placed outside of chunk");
         return;
     }
 
@@ -101,7 +120,7 @@ void chunkSetBlockRaw(Chunk* chunk, Point local, Block block) {
 }
 
 void chunkSetBlock(Chunk* chunk, Point local, Block block) {
-    assert(chunk);
+    ASSERT(chunk);
 
     chunkSetBlockRaw(chunk, local, block);
 
@@ -113,7 +132,7 @@ void chunkSetBlock(Chunk* chunk, Point local, Block block) {
 }
 
 Block chunkGetBlock(const Chunk* chunk, Point local) {
-    assert(chunk);
+    ASSERT(chunk);
 
     if (!blockInChunk(chunk, local)) {
         return BLOCK_AIR;
@@ -122,8 +141,8 @@ Block chunkGetBlock(const Chunk* chunk, Point local) {
 }
 
 void drawChunk(const Chunk* chunk, Material material) {
-    assert(chunk);
-    assert(IsMaterialValid(material));
+    ASSERT(chunk);
+    ASSERT(IsMaterialValid(material));
 
     Matrix transform = MatrixTranslateV(pointToVector3(pointMultiply(chunk->coords, (Point)CHUNK_SIZE)));
 
@@ -137,5 +156,19 @@ void drawChunk(const Chunk* chunk, Material material) {
     if (chunk->world->showChunkBorders) {
         DrawCubeWiresV(Vector3Multiply(Vector3AddValue(pointToVector3(chunk->coords), 0.5f), (Vector3)CHUNK_SIZE), (Vector3)CHUNK_SIZE, WHITE);
     }
+}
+
+bool verifyChunk(const Chunk* chunk) {
+    DEBUG("Verifying chunk %d, %d", chunk->coords.x, chunk->coords.z);
+
+    ITERATE_CHUNK(x, y, z) {
+        Block block = chunk->blocks[x][y][z];
+        if (block >= BLOCK_COUNT) {
+            ERROR("Chunk verification failed. Chunk: %d, %d. Block: %d, %d, %d",
+                    chunk->coords.x, chunk->coords.z, x, y, z);
+            return false;
+        }
+    }
+    return true;
 }
 

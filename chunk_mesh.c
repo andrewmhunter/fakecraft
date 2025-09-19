@@ -2,13 +2,14 @@
 #include "world.h"
 #include "mesh.h"
 #include "chunk_mesh.h"
+#include "logger.h"
 
 #define MESH_MAX_VERTICIES UINT16_MAX
 
 const Chunk dummyChunk = {0};
 
 void chunkGenerateMesh(Chunk* chunk) {
-    assert(chunk);
+    ASSERT(chunk);
 
     const Chunk* adjacentChunks[CHUNK_WIDTH][CHUNK_WIDTH][DIRECTION_CARDINAL_COUNT];
 
@@ -115,6 +116,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                     mesh->vertices = (float*)malloc(vertexCapacitySize * 3);
                     mesh->texcoords = (float*)malloc(vertexCapacitySize * 2);
                     mesh->normals = (float*)malloc(vertexCapacitySize * 3);
+                    mesh->colors = (unsigned char*)MemAlloc(faceCapacity * 4 * 4 * sizeof(unsigned char));
                     mesh->indices = (unsigned short*)malloc(faceCapacity * 6 * sizeof(unsigned short));
                 }
 

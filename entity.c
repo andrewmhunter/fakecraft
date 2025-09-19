@@ -1,5 +1,6 @@
 #include "entity.h"
 #include "collision.h"
+#include "logger.h"
 #include <raymath.h>
 
 
@@ -17,7 +18,7 @@ static Vector3 vector3SmallestAbs(Vector3 vector0, Vector3 vector1) {
 }
 
 Vector3 aabbIntersectsSolid(World* world, Vector3 position, Vector3 boundingBox, Vector3 velocity) {
-    assert(world);
+    ASSERT(world);
 
     float velocityScale = Vector3Length(velocity);
 
@@ -236,8 +237,8 @@ Vector3 aabbResolveCollisions(const World* world, Vector3 position, Vector3 boun
 }
 
 void entityInit(Entity* entity, EntityType type, World* world, Vector3 position, float width, float height) {
-    assert(entity);
-    assert(world);
+    ASSERT(entity);
+    ASSERT(world);
 
     entity->type = type;
     entity->world = world;
@@ -253,7 +254,7 @@ void entityInit(Entity* entity, EntityType type, World* world, Vector3 position,
 }
 
 void entityUnload(Entity* entity) {
-    assert(entity);
+    ASSERT(entity);
 }
 
 
@@ -361,7 +362,7 @@ void updatePosition(Entity* entity, float deltaTime) {
 }
 
 void entityUpdate(Entity* entity, float deltaTime) {
-    assert(entity);
+    ASSERT(entity);
 
     if (entity->type == ENTITY_PLAYER) {
         playerUpdate(entity, deltaTime);
@@ -431,7 +432,7 @@ void drawPlayerModel(Vector3 position) {
 }
 
 void entityDraw(const Entity* entity) {
-    assert(entity);
+    ASSERT(entity);
 
     if (entity->type != ENTITY_PLAYER) {
         drawPlayerModel(entity->position);

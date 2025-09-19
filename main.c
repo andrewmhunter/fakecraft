@@ -7,41 +7,55 @@
 #include "collision.h"
 #include "entity.h"
 #include "serialize.h"
+#include "logger.h"
 
-#include <rlgl.h>
 
 // Game
 
 int main(void) {
+    // Pass raylibs logs through our own logger
+    SetTraceLogCallback(raylibLogCallback);
+
+    // We only want to show raylibs warnings as there it prints way to many
+    // info logs
     SetTraceLogLevel(LOG_WARNING);
 
+    setLogLevel(LOG_ALL);
+
+    // No matter where you run the executable from it will still be able to
+    // access the resources in its directory
     ChangeDirectory(GetApplicationDirectory());
 
     //SetConfigFlags(FLAG_VSYNC_HINT);
     InitWindow(1280, 720, "Fakecraft");
     int targetFps = 60;
-    SetTargetFPS(targetFps);
-
+    //SetTargetFPS(targetFps);
 
     SetExitKey(KEY_ESCAPE);
     DisableCursor();
 
     makeSaveDirectories();
 
-    Shader shader = LoadShader("shader.vs", "shader.fs");
-    assert(IsShaderValid(shader));
+    Shader shader = LoadShader("shader.vs.glsl", "shader.fs.glsl");
+    ASSERT(IsShaderValid(shader));
+    // TODO: Need a better way to store uniform locations and switch out model
+    // uniform for the one used by raylib
     int shaderCamUniform = GetShaderLocation(shader, "camPos");
     shaderModelUniform = GetShaderLocation(shader, "model");
+    shaderSkylight = GetShaderLocation(shader, "skyLight");
 
+    // TODO: Custon font loading for minecrafts font format
     font = LoadFont("resources/defaultSpritefont.png");
-    assert(IsFontValid(font));
+    ASSERT(IsFontValid(font));
 
     Texture2D terrain = LoadTexture("resources/alphaTerrain.png");
-    //terrain = LoadTexture("blank.png");
-    assert(IsTextureValid(terrain));
+    ASSERT(IsTextureValid(terrain));
+
+    // TODO: Figure out mipmaps
+    GenTextureMipmaps(&terrain);
 
     //Texture2D clouds = LoadTexture("resources/environment/clouds.png");
-    //assert(IsTextureValid(clouds));
+    //ASSERT(IsTextureValid(clouds));
 
     Camera3D cam = {
         .up = {0.f, 1.f, 0.f},
@@ -51,6 +65,7 @@ int main(void) {
         .projection = CAMERA_PERSPECTIVE
     };
 
+    // TODO: Prerender all the block sprites somehow
     Camera3D guiCam = {
         .up = {.x = 0.f, .y = 1.f, .z = 0.f},
         .fovy = 90.f,
@@ -64,7 +79,7 @@ int main(void) {
     Material material = LoadMaterialDefault();
     material.maps[MATERIAL_MAP_DIFFUSE].texture = terrain;
     material.shader = shader;
-    assert(IsMaterialValid(material));
+    ASSERT(IsMaterialValid(material));
 
     registerBlocks();
 
@@ -118,7 +133,6 @@ int main(void) {
         if (IsKeyPressed(KEY_F9)) {
             world.renderDistance++;
         }
-
 
         worldUpdate(&world, deltaTime);
 

@@ -1,6 +1,6 @@
 
 SRCS := main.c mesh.c block.c chunk.c world.c \
-	util.c worldgen.c chunk_mesh.c entity.c collision.c serialize.c
+	util.c worldgen.c chunk_mesh.c entity.c collision.c serialize.c logger.c
 
 DIR := build
 TARGET := fakecraft
@@ -8,10 +8,10 @@ TARGET := fakecraft
 OBJS := $(SRCS:%.c=$(DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-CFLAGS := -c -g -O2 -Wall -Wextra -Wno-unused-parameter
+CFLAGS := -c -g -O3 -Wall -Wextra -Wno-unused-parameter
 CPPFLAGS := -MD -MP
 LDFLAGS := -lraylib -lm -fwhole-program
-COMMONFLAGS :=
+COMMONFLAGS := -flto
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $(COMMONFLAGS) -o $@ $(OBJS)

@@ -2,16 +2,17 @@
 #include "chunk.h"
 #include "world.h"
 #include "worldgen.h"
+#include "logger.h"
 
 void placeDungeon(World* world, Point worldPoint) {
-    assert(world);
+    ASSERT(world);
 
     worldPlaceBox(world, worldPoint, point(10, 6, 10), BLOCK_COBBLESTONE);
     worldPlaceBox(world, pointAddValue(worldPoint, 1, 1, 1), point(8, 4, 8), BLOCK_AIR);
 }
 
 void placeTree(World* world, Point worldPoint) {
-    assert(world);
+    ASSERT(world);
 
     if (worldGetBlock(world, worldPoint) != BLOCK_GRASS) {
         return;
@@ -59,20 +60,20 @@ void placeTree(World* world, Point worldPoint) {
 
 
 void generateTerrain(Chunk* chunk) {
-    assert(chunk);
+    ASSERT(chunk);
 
     World* world = chunk->world;
     Point coords = chunk->coords;
 
-    for (int x = 0; x < CHUNK_WIDTH; ++x) {
-        for (int y = 0; y < CHUNK_HEIGHT; ++y) {
-            for (int z = 0; z < CHUNK_WIDTH; ++z) {
-                chunk->blocks[x][y][z] = BLOCK_AIR;
-            }
-        }
+    ITERATE_CHUNK(x, y, z) {
+        chunk->blocks[x][y][z] = BLOCK_AIR;
     }
 
 #ifndef SUPERFLAT
+
+    Image noise4 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.02);
+    Image noise3 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.05);
+
     Image noise2 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.06125);
     Image noise1 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.125);
     Image noise0 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.25);
@@ -82,11 +83,14 @@ void generateTerrain(Chunk* chunk) {
         for (int z = 0; z < CHUNK_WIDTH; ++z) {
             int surface = SURFACE_OFFSET;
 #ifndef SUPERFLAT
-            float c2 = GetImageColor(noise2, x, z).r - 128;
-            float c1 = GetImageColor(noise1, x, z).r - 128;
-            float c0 = GetImageColor(noise0, x, z).r - 128;
+            float c4 = Clamp(GetImageColor(noise4, x, z).r - 128.f, 0.f, 256.f);
 
-            surface += c2 / 4 + c1 / 8 + c0 / 16;
+            float c3 = Clamp(GetImageColor(noise3, x, z).r - 170.f, 0.f, 256.f);
+            float c2 = GetImageColor(noise2, x, z).r - 128.f;
+            float c1 = GetImageColor(noise1, x, z).r - 128.f;
+            float c0 = GetImageColor(noise0, x, z).r - 128.f;
+
+            surface += c3 * 1.5f + c2 / 4 + c1 / 8 + c0 / 16 - c4;
 #endif
             surface = clampInt(surface, 1, CHUNK_HEIGHT - 1);
 
@@ -102,6 +106,16 @@ void generateTerrain(Chunk* chunk) {
                 topLayerBlock = BLOCK_SAND;
                 surfaceBlock = BLOCK_SAND;
             }
+
+            /*if (surface > 100) {
+                topLayerBlock = BLOCK_STONE;
+                surfaceBlock = BLOCK_STONE;
+            }
+
+            if (surface > 120) {
+                topLayerBlock = BLOCK_SNOW;
+                surfaceBlock = BLOCK_SNOW;
+            }*/
 
             for (int y = 1; y < surface; ++y) {
                 Block block = topLayerBlock;
@@ -122,6 +136,8 @@ void generateTerrain(Chunk* chunk) {
     chunk->dirty = true;
 
 #ifndef SUPERFLAT
+    UnloadImage(noise3);
+    UnloadImage(noise4);
     UnloadImage(noise2);
     UnloadImage(noise1);
     UnloadImage(noise0);
@@ -132,14 +148,14 @@ void placeFeatures(Chunk* chunk) {
 #ifndef SUPERFLAT
     int treeCount = randomInt(5);
     for (int i = 0; i < treeCount; ++i) {
-        Point point = {randomInt(CHUNK_WIDTH), 0, randomInt(CHUNK_WIDTH)};
+        Point point = {randomInt(CHUNK_WIDTH - 4) + 2, 0, randomInt(CHUNK_WIDTH - 4) + 2};
         point.y = chunk->surfaceHeight[point.x][point.z];
 
         placeTree(chunk->world, localToWorld(chunk->coords, point));
     }
 
     if (randomChance(1, 20)) {
-        placeDungeon(chunk->world, localToWorld(chunk->coords, point(randomInt(CHUNK_WIDTH), 10, randomInt(CHUNK_WIDTH))));
+        placeDungeon(chunk->world, localToWorld(chunk->coords, point(randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10))));
     }
 #endif
 }

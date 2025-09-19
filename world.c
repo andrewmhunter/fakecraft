@@ -6,9 +6,10 @@
 #include "chunk.h"
 #include "chunk_mesh.h"
 #include "serialize.h"
+#include "logger.h"
 
 void worldTryPlaceBox(World* world, Point start, Point size, Block block) {
-    assert(world);
+    ASSERT(world);
 
     Point end = pointAdd(start, size);
     Point realStart = pointMin(start, end);
@@ -24,7 +25,7 @@ void worldTryPlaceBox(World* world, Point start, Point size, Block block) {
 }
 
 void worldPlaceBox(World* world, Point start, Point size, Block block) {
-    assert(world);
+    ASSERT(world);
 
     Point end = pointAdd(start, size);
     Point realStart = pointMin(start, end);
@@ -40,10 +41,11 @@ void worldPlaceBox(World* world, Point start, Point size, Block block) {
 }
 
 void worldInit(World* world) {
-    assert(world);
+    ASSERT(world);
 
-    world->renderDistance = 3;
+    world->renderDistance = 5;
     world->showChunkBorders = false;
+    world->skyLight = 0.f;
 
 
     dict_chunk_init(world->chunks);
@@ -105,9 +107,24 @@ void worldUnload(World* world) {
 }
 
 int shaderModelUniform = 0;
+int shaderSkylight = 0;
 
 void worldUpdate(World* world, float deltaTime) {
-    assert(world);
+    ASSERT(world);
+
+    static int lightDirection = 1;
+
+    if (world->skyLight > 1.f) {
+        lightDirection = -1;
+    }
+
+    if (world->skyLight < 0.f) {
+        lightDirection = 1;
+    }
+
+    world->skyLight = 1.f;
+    //world->skyLight += lightDirection * deltaTime * 0.1;
+
 
     array_entity_it_t entityIt;
     for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
@@ -161,8 +178,10 @@ void worldUpdate(World* world, float deltaTime) {
 }
 
 void worldDraw(World* world, Material material) {
-    assert(world);
-    assert(IsMaterialValid(material));
+    ASSERT(world);
+    ASSERT(IsMaterialValid(material));
+
+    SetShaderValue(material.shader, shaderSkylight, &world->skyLight, SHADER_UNIFORM_FLOAT);
 
     array_entity_it_t entityIt;
     for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
@@ -175,10 +194,12 @@ void worldDraw(World* world, Material material) {
 
         drawChunk(chunk, material);
     }
+
+
 }
 
 void worldMarkDirty(World* world, Point worldPoint) {
-    assert(world);
+    ASSERT(world);
 
     Chunk* chunk = worldGetChunk(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
@@ -188,6 +209,9 @@ void worldMarkDirty(World* world, Point worldPoint) {
 }
 
 bool chunkCoordsInArray(const World* world, Point chunkCoords) {
+    // Hide unused parameter warnings
+    (void)world;
+
     static const int limit = WORLD_MAX_CHUNK_WIDTH / 2;
     return chunkCoords.x >= -limit
         && chunkCoords.x < limit
@@ -197,7 +221,7 @@ bool chunkCoordsInArray(const World* world, Point chunkCoords) {
 }
 
 const Chunk* worldGetChunkConst(const World* world, Point chunkCoords) {
-    assert(world);
+    ASSERT(world);
 
 #ifdef USE_ARRAY
     if (!chunkCoordsInArray(world, chunkCoords)) {
@@ -216,7 +240,7 @@ const Chunk* worldGetChunkConst(const World* world, Point chunkCoords) {
 }
 
 Chunk* worldGetChunk(World* world, Point chunkCoords) {
-    assert(world);
+    ASSERT(world);
 
 #ifdef USE_ARRAY
     if (!chunkCoordsInArray(world, chunkCoords)) {
@@ -235,29 +259,29 @@ Chunk* worldGetChunk(World* world, Point chunkCoords) {
 }
 
 Block worldGetBlock(const World* world, Point worldPoint) {
-    //assert(world);
+    //ASSERT(world);
 
     const Chunk* chunk = worldGetChunkConst(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
-        return BLOCK_BARRIER;
-        //return BLOCK_AIR;
+        //return BLOCK_BARRIER;
+        return BLOCK_AIR;
     }
     return chunkGetBlockRaw(chunk, worldToLocal(worldPoint));
 }
 
 void worldSetBlock(World* world, Point worldPoint, Block block) {
-    assert(world);
+    ASSERT(world);
 
     Chunk* chunk = worldGetChunk(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
-        TraceLog(LOG_WARNING, "Block attempted to be placed outside of loaded chunks");
+        WARN("Block attempted to be placed outside of loaded chunks");
         return;
     }
     chunkSetBlock(chunk, worldToLocal(worldPoint), block);
 }
 
 void worldTryPlaceBlock(World* world, Point worldPoint, Block block) {
-    assert(world);
+    ASSERT(world);
 
     Chunk* chunk = worldGetChunk(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
@@ -270,10 +294,10 @@ void worldTryPlaceBlock(World* world, Point worldPoint, Block block) {
 
 
 Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width, float height) {
-    assert(world);
+    ASSERT(world);
 
     Entity* entity = malloc(sizeof(Entity));
-    assert(entity);
+    ASSERT(entity);
 
     array_entity_push_move(world->entities, &entity);
     entityInit(entity, type, world, position, width, height);

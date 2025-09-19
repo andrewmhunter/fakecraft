@@ -2,6 +2,9 @@
 #include <raymath.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <m-lib/m-string.h>
 #include "util.h"
 
@@ -31,6 +34,24 @@ void saveScreenshot(void) {
     strftime(fileName, sizeof(fileName) - 1, "screenshot%FT%T.png", local);
     fileName[sizeof(fileName) - 1] = '\0';
     TakeScreenshot(fileName);
+}
+
+char* memprintf(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    char* string = vmemprintf(format, args);
+    va_end(args);
+    return string;
+}
+
+char* vmemprintf(const char* format, va_list args) {
+    va_list sizeArgs;
+    va_copy(sizeArgs, args);
+    int size = vsnprintf(NULL, 0, format, sizeArgs);
+    char* string = malloc(size);
+    snprintf(string, size, format, args);
+    va_end(sizeArgs);
+    return string;
 }
 
 void randomizeSeed() {

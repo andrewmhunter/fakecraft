@@ -11,6 +11,12 @@
 
 #define CHUNK_SIZE {CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH}
 
+
+#define ITERATE_CHUNK(XIDENT, YIDENT, ZIDENT) \
+    for (int XIDENT = 0; XIDENT < CHUNK_WIDTH; ++XIDENT) \
+        for (int YIDENT = 0; YIDENT < CHUNK_HEIGHT; ++YIDENT) \
+            for (int ZIDENT = 0; ZIDENT < CHUNK_WIDTH; ++ZIDENT)
+
 // Positions
 
 static inline Point worldToChunk(Point worldPoint) {
@@ -75,8 +81,8 @@ ARRAY_DEF(array_mesh, Mesh, (CLEAR(UnloadMesh), /*INIT_SET(API_6(meshSet)), SET(
 struct World;
 
 typedef struct Chunk {
-    struct World* world;
     Point coords;
+    struct World* world;
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     array_mesh_t meshes;
@@ -85,6 +91,7 @@ typedef struct Chunk {
     uint16_t ignored[CHUNK_HEIGHT];
 #endif
     bool dirty;
+    struct Chunk* adjacentChunks[DIRECTION_CARDINAL_COUNT];
 } Chunk;
 
 static inline Block chunkGetBlockRaw(const Chunk* chunk, Point local) {
@@ -106,6 +113,7 @@ void chunkGenerateMesh(Chunk* chunk);
 void drawChunk(const Chunk* chunk, Material material);
 
 void chunkMarkDirty(Chunk* chunk, Point local);
+bool verifyChunk(const Chunk* chunk);
 
 /*typedef struct {
     Vector3 collisionAt;

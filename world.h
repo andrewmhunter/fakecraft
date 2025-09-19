@@ -8,8 +8,6 @@
 #include "util.h"
 #include "entity.h"
 
-//#define USE_ARRAY
-
 ARRAY_DEF(array_chunk, Chunk*, (CLEAR()))
 DICT_DEF2(dict_chunk, Point, (HASH(pointHash), EQUAL(pointEquals)), Chunk*, (CLEAR(), INIT()))
 
@@ -25,6 +23,7 @@ typedef struct World {
     bool showChunkBorders;
     int renderDistance;
     Entity* player;
+    float skyLight;
 } World;
 
 void worldInit(World* world);
@@ -44,6 +43,7 @@ void worldPlaceBox(World* world, Point start, Point end, Block block);
 Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width, float height);
 
 extern int shaderModelUniform;
+extern int shaderSkylight;
 
 #endif
 

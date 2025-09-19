@@ -1,11 +1,12 @@
 #include "collision.h"
+#include "logger.h"
 
 // Digital differential analysis, extended to work in 3d
 // https://www.youtube.com/watch?v=NbSee-XM7WA
 // https://lodev.org/cgtutor/raycasting.html
 WalkCollision ddaCastRay(const World* world, Vector3 start, Vector3 direction, float maxLength) {
-    assert(world);
-    //assert(Vector3LengthSqr(direction) > 0);
+    ASSERT(world);
+    //ASSERT(Vector3LengthSqr(direction) > 0);
 
     direction = Vector3Normalize(direction);
 
@@ -85,24 +86,8 @@ WalkCollision ddaCastRay(const World* world, Vector3 start, Vector3 direction, f
     return collision;
 }
 
-Vector3 ddaVeer(const World* world, Vector3 start, Vector3 velocity) {
-    assert(world);
-
-    Vector3 maxVelocity;
-
-    WalkCollision coll = {0};
-    do {
-        float maxLength = Vector3Length(velocity);
-        coll = ddaCastRay(world, start, velocity, maxLength);
-        start = coll.collisionBefore;
-        velocity = coll.distanceBefore;
-    } while (coll.collided);
-
-    return maxVelocity;
-}
-
 WalkCollision worldWalkRay(const World* world, Vector3 start, Vector3 direction, float maxLength) {
-    assert(world);
+    ASSERT(world);
 
     direction = Vector3Normalize(direction);
     float epsilon = 0.05;

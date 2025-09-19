@@ -1,11 +1,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-//#define FAST_LEAVES
+#define FAST_LEAVES 0
 //#define USE_IGNORED
 
 #define CHUNK_WIDTH 16
-#define CHUNK_HEIGHT 128
+#define CHUNK_HEIGHT 256
 #define WORLD_MAX_CHUNK_WIDTH 16
 
 #define SENSITIVITY 0.0025f

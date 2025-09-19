@@ -24,6 +24,8 @@ void main()
     diff = diff * diff;
     fragDepth = diff.x + diff.y + diff.z;
 
+    fragColor = vertexColor;
+
     gl_Position = mvp * vec4(vertexPosition, 1.0);
 }
 

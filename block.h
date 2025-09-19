@@ -1,7 +1,6 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
-#include <m-lib/m-core.h>
 #include <stdbool.h>
 #include <raylib.h>
 #include "util.h"
@@ -23,6 +22,7 @@ typedef enum : char {
     BLOCK_LOG,
     BLOCK_CRAFTING_TABLE,
     BLOCK_WATER,
+    BLOCK_SNOW,
     BLOCK_COUNT,
 } Block;
 

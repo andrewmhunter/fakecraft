@@ -13,6 +13,12 @@ void renderText(int x, int y, const char* format, ...);
 
 void saveScreenshot(void);
 
+// Must be freed
+__attribute__((format(printf, 1, 2)))
+char* memprintf(const char* format, ...);
+// Must be freed
+char* vmemprintf(const char* format, va_list args);
+
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
