@@ -3,11 +3,12 @@
 
 #include <stdbool.h>
 #include <raylib.h>
-#include "util.h"
+#include "point.h"
+#include "direction.h"
 
 typedef enum : char {
-    BLOCK_AIR,
     BLOCK_BARRIER,
+    BLOCK_AIR,
     BLOCK_STONE,
     BLOCK_DIRT,
     BLOCK_PLANKS,

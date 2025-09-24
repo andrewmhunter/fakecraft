@@ -43,13 +43,13 @@ void worldPlaceBox(World* world, Point start, Point size, Block block) {
 void worldInit(World* world) {
     ASSERT(world);
 
-    world->renderDistance = 5;
+    world->renderDistance = DEFAULT_RENDER_DISTANCE;
     world->showChunkBorders = false;
     world->skyLight = 0.f;
 
 
-    dict_chunk_init(world->chunks);
-    array_entity_init(world->entities);
+    setInit(&world->chunks);
+    LIST_INIT(&world->entities);
 
     Vector3 playerPosition = (Vector3){
         0,
@@ -69,14 +69,6 @@ void worldInit(World* world) {
     world->seed = randomInt(10000);
 #endif
 
-#ifdef USE_ARRAY
-    for (int i = 0; i < WORLD_MAX_CHUNK_WIDTH; ++i) {
-        for (int j = 0; j < WORLD_MAX_CHUNK_WIDTH; ++j) {
-            world->chunksArr[i][j] = NULL;
-        }
-    }
-#endif
-
     /*const int renderDistance = 1;
 
     for (int x = -renderDistance; x <= renderDistance; ++x) {
@@ -86,24 +78,24 @@ void worldInit(World* world) {
             chunkInit(world, point);
         }
     }*/
-
-    /*dict_chunk_it_t it;
-    for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
-        placeFeatures(dict_chunk_ref(it)->value);
-    }*/
-
 }
 
 void worldUnload(World* world) {
     saveWorld(world);
 
-    dict_chunk_it_t it;
-    for (dict_chunk_it(it, world->chunks); !dict_chunk_end_p(it); dict_chunk_next(it)) {
-        Chunk* chunk = dict_chunk_ref(it)->value;
+    HashEntry* chunkIt = NULL;
+    while (setIterate(&world->chunks, &chunkIt)) {
+        Chunk* chunk = chunkIt->contents;
         chunkUnload(chunk);
         free(chunk);
     }
-    dict_chunk_clear(world->chunks);
+
+    setUnload(&world->chunks);
+
+    for (size_t i = 0; i < world->entities.length; ++i) {
+        entityUnload(world->entities.data[i]);
+    }
+    free(world->entities.data);
 }
 
 int shaderModelUniform = 0;
@@ -125,10 +117,8 @@ void worldUpdate(World* world, float deltaTime) {
     world->skyLight = 1.f;
     //world->skyLight += lightDirection * deltaTime * 0.1;
 
-
-    array_entity_it_t entityIt;
-    for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
-        entityUpdate(*array_entity_cref(entityIt), deltaTime);
+    for (size_t i = 0; i < world->entities.length; ++i) {
+        entityUpdate(world->entities.data[i], deltaTime);
     }
 
     int renderDistance = world->renderDistance;
@@ -151,9 +141,9 @@ void worldUpdate(World* world, float deltaTime) {
         }
     }
 
-    dict_chunk_it_t chunkIt;
-    for (dict_chunk_it(chunkIt, world->chunks); !dict_chunk_end_p(chunkIt); dict_chunk_next(chunkIt)) {
-        Chunk* chunk = dict_chunk_ref(chunkIt)->value;
+    HashEntry* chunkIt = NULL;
+    while (setIterate(&world->chunks, &chunkIt)) {
+        Chunk* chunk = chunkIt->contents;
 
         Point playerChunk = worldToChunkV(world->player->position);
         Point distance = pointSubtract(playerChunk, chunk->coords);
@@ -166,7 +156,7 @@ void worldUpdate(World* world, float deltaTime) {
             || distance.z > adjustedRenderDistance
         ) {
             chunkUnload(chunk);
-            dict_chunk_erase(world->chunks, chunk->coords);
+            setRemove(&world->chunks, CHUNK_DICT_VTABLE, &chunk->coords);
             free(chunk);
             continue;
         }
@@ -183,14 +173,13 @@ void worldDraw(World* world, Material material) {
 
     SetShaderValue(material.shader, shaderSkylight, &world->skyLight, SHADER_UNIFORM_FLOAT);
 
-    array_entity_it_t entityIt;
-    for (array_entity_it(entityIt, world->entities); !array_entity_end_p(entityIt); array_entity_next(entityIt)) {
-        entityDraw(*array_entity_cref(entityIt));
+    for (size_t i = 0; i < world->entities.length; ++i) {
+        entityDraw(world->entities.data[i]);
     }
 
-    dict_chunk_it_t chunkIt;
-    for (dict_chunk_it(chunkIt, world->chunks); !dict_chunk_end_p(chunkIt); dict_chunk_next(chunkIt)) {
-        Chunk* chunk = dict_chunk_ref(chunkIt)->value;
+    HashEntry* chunkIt = NULL;
+    while (setIterate(&world->chunks, &chunkIt)) {
+        Chunk* chunk = chunkIt->contents;
 
         drawChunk(chunk, material);
     }
@@ -223,39 +212,15 @@ bool chunkCoordsInArray(const World* world, Point chunkCoords) {
 const Chunk* worldGetChunkConst(const World* world, Point chunkCoords) {
     ASSERT(world);
 
-#ifdef USE_ARRAY
-    if (!chunkCoordsInArray(world, chunkCoords)) {
-        return NULL;
-    }
-
-    const Chunk* chunk = world->chunksArr[chunkCoords.x + WORLD_MAX_CHUNK_WIDTH / 2][chunkCoords.z + WORLD_MAX_CHUNK_WIDTH / 2];
+    const Chunk* chunk = setGet(&world->chunks, CHUNK_DICT_VTABLE, &chunkCoords);
     return chunk;
-#else
-    Chunk* const* chunk = dict_chunk_cget(world->chunks, chunkCoords);
-    if (chunk == NULL) {
-        return NULL;
-    }
-    return *chunk;
-#endif
 }
 
 Chunk* worldGetChunk(World* world, Point chunkCoords) {
     ASSERT(world);
 
-#ifdef USE_ARRAY
-    if (!chunkCoordsInArray(world, chunkCoords)) {
-        return NULL;
-    }
-
-    Chunk* chunk = world->chunksArr[chunkCoords.x + WORLD_MAX_CHUNK_WIDTH / 2][chunkCoords.z + WORLD_MAX_CHUNK_WIDTH / 2];
+    Chunk* chunk = setGet(&world->chunks, CHUNK_DICT_VTABLE, &chunkCoords);
     return chunk;
-#else
-    Chunk* const* chunk = dict_chunk_cget(world->chunks, chunkCoords);
-    if (chunk == NULL) {
-        return NULL;
-    }
-    return *chunk;
-#endif
 }
 
 Block worldGetBlock(const World* world, Point worldPoint) {
@@ -299,7 +264,7 @@ Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width
     Entity* entity = malloc(sizeof(Entity));
     ASSERT(entity);
 
-    array_entity_push_move(world->entities, &entity);
+    LIST_PUSH(&world->entities, entity);
     entityInit(entity, type, world, position, width, height);
     return entity;
 }

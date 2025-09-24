@@ -45,8 +45,8 @@
 #define STRINGIFY(X) STRINGIFY_2(X)
 #define STRINGIFY_2(X) #X
 
-#define ASSERT(COND) assertion((COND), __FILE__ ":" STRINGIFY(__LINE__), #COND)
-#define ASSERTF(COND, FORMAT, ...) assertionf((COND), __FILE__ ":" STRINGIFY(__LINE__), #COND, FORMAT __VA_OPT__(,) __VA_ARGS__)
+#define ASSERT(COND) assertion((COND), __FILE_NAME__ ":" STRINGIFY(__LINE__), #COND)
+#define ASSERTF(COND, FORMAT, ...) assertionf((COND), __FILE_NAME__ ":" STRINGIFY(__LINE__), #COND, FORMAT __VA_OPT__(,) __VA_ARGS__)
 
 #if ENABLE_DEBUG_ASSERT
 #define DEBUG_ASSERT(COND) ASSERT(COND)

@@ -3,14 +3,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <m-lib/m-array.h>
 #include <raylib.h>
 #include "block.h"
 #include "config.h"
 #include "util.h"
+#include "mesh.h"
+#include "point.h"
+#include "direction.h"
 
 #define CHUNK_SIZE {CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH}
-
 
 #define ITERATE_CHUNK(XIDENT, YIDENT, ZIDENT) \
     for (int XIDENT = 0; XIDENT < CHUNK_WIDTH; ++XIDENT) \
@@ -76,8 +77,6 @@ typedef struct {
     uint8_t surfaceHeight;
 } BlockInstance;
 
-ARRAY_DEF(array_mesh, Mesh, (CLEAR(UnloadMesh), /*INIT_SET(API_6(meshSet)), SET(API_6(meshSet)),*/ INIT()))
-
 struct World;
 
 typedef struct Chunk {
@@ -85,7 +84,7 @@ typedef struct Chunk {
     struct World* world;
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
-    array_mesh_t meshes;
+    MeshList meshes;
     int totalVertexCount;
 #ifdef USE_IGNORED
     uint16_t ignored[CHUNK_HEIGHT];

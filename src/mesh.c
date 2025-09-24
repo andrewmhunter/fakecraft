@@ -1,5 +1,4 @@
 #include <raylib.h>
-#include "util.h"
 #include "block.h"
 #include "mesh.h"
 
@@ -95,5 +94,12 @@ Mesh cubeMesh(Block block) {
     UploadMesh(&mesh, false);
 
     return mesh;
+}
+
+void meshListClear(MeshList* list) {
+    for (size_t i = 0; i < list->length; ++i) {
+        UnloadMesh(list->data[i]);
+    }
+    list->length = 0;
 }
 

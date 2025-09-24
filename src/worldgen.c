@@ -58,6 +58,10 @@ void placeTree(World* world, Point worldPoint) {
     }
 }
 
+Image noise(const World* world, Point coords, float scale) {
+    return GenImagePerlinNoise(CHUNK_WIDTH, CHUNK_WIDTH, 
+            CHUNK_WIDTH * coords.x + world->seed, CHUNK_WIDTH * coords.z, scale);
+}
 
 void generateTerrain(Chunk* chunk) {
     ASSERT(chunk);
@@ -70,13 +74,11 @@ void generateTerrain(Chunk* chunk) {
     }
 
 #ifndef SUPERFLAT
-
-    Image noise4 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.02);
-    Image noise3 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.05);
-
-    Image noise2 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.06125);
-    Image noise1 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.125);
-    Image noise0 = GenImagePerlinNoise(16, 16, 16 * coords.x + world->seed, 16 * coords.z, 0.25);
+    Image noise4 = noise(world, coords, 0.02f);
+    Image noise3 = noise(world, coords, 0.05f);
+    Image noise2 = noise(world, coords, 0.06125f);
+    Image noise1 = noise(world, coords, 0.125f);
+    Image noise0 = noise(world, coords, 0.25f);
 #endif
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {

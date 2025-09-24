@@ -2,7 +2,8 @@
 SOURCE_DIRECORY := src
 
 RAW_SRCS := main.c mesh.c block.c chunk.c world.c \
-	util.c worldgen.c chunk_mesh.c entity.c collision.c serialize.c logger.c
+	util.c worldgen.c chunk_mesh.c entity.c collision.c \
+	serialize.c logger.c hash.c point.c
 
 SRCS := $(RAW_SRCS:%=$(SOURCE_DIRECORY)/%)
 
@@ -12,10 +13,13 @@ TARGET := fakecraft
 OBJS := $(SRCS:%.c=$(DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-CFLAGS := -c -g -O3 -Wall -Wextra -Wno-unused-parameter
+CFLAGS := -c -std=c99 -O3 -g -Wall -Wextra
 CPPFLAGS := -MD -MP
-LDFLAGS := -lraylib -lm -fwhole-program
-COMMONFLAGS :=
+LDFLAGS = -lraylib -lm -fwhole-program
+COMMONFLAGS =
+
+#LDFLAGS += -lasan
+#COMMONFLAGS += -fsanitize=address -fsanitize=undefined
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $(COMMONFLAGS) -o $@ $(OBJS)

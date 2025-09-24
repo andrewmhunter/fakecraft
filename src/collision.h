@@ -2,7 +2,6 @@
 #define COLLISION_H
 
 #include <raylib.h>
-#include "util.h"
 #include "world.h"
 
 typedef struct {

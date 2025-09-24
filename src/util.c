@@ -13,27 +13,13 @@ Font font;
 void renderText(int x, int y, const char* format, ...) {
     va_list args;
     va_start(args, format);
-
-    string_t string;
-    string_init_vprintf(string, format, args);
+    char* string = vmemprintf(format, args);
     va_end(args);
 
-    DrawTextEx(font, string_get_cstr(string), (Vector2){x + 2, y + 2}, 16, 2, GRAY);
-    DrawTextEx(font, string_get_cstr(string), (Vector2){x, y}, 16, 2, WHITE);
+    DrawTextEx(font, string, (Vector2){x + 2, y + 2}, 16, 2, GRAY);
+    DrawTextEx(font, string, (Vector2){x, y}, 16, 2, WHITE);
 
-    string_clear(string);
-}
-
-void saveScreenshot(void) {
-    // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
-    time_t currentTime;
-    struct tm* local;
-    time(&currentTime);
-    local = localtime(&currentTime);
-    char fileName[64];
-    strftime(fileName, sizeof(fileName) - 1, "screenshot%FT%T.png", local);
-    fileName[sizeof(fileName) - 1] = '\0';
-    TakeScreenshot(fileName);
+    free(string);
 }
 
 char* memprintf(const char* format, ...) {
@@ -47,11 +33,23 @@ char* memprintf(const char* format, ...) {
 char* vmemprintf(const char* format, va_list args) {
     va_list sizeArgs;
     va_copy(sizeArgs, args);
-    int size = vsnprintf(NULL, 0, format, sizeArgs);
+    int size = vsnprintf(NULL, 0, format, sizeArgs) + 1;
     char* string = malloc(size);
-    snprintf(string, size, format, args);
+    vsnprintf(string, size, format, args);
     va_end(sizeArgs);
     return string;
+}
+
+void saveScreenshot(void) {
+    // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
+    time_t currentTime;
+    struct tm* local;
+    time(&currentTime);
+    local = localtime(&currentTime);
+    char fileName[64];
+    strftime(fileName, sizeof(fileName) - 1, "screenshots/screenshot%FT%T.png", local);
+    fileName[sizeof(fileName) - 1] = '\0';
+    TakeScreenshot(fileName);
 }
 
 void randomizeSeed() {
@@ -68,10 +66,6 @@ int randomRange(int min, int max) {
 
 bool randomChance(int numerator, int denominator) {
     return randomInt(denominator) < numerator;
-}
-
-const char* formatPoint(Point point) {
-    return TextFormat("x: %d, y: %d, z: %d", point.x, point.y, point.z);
 }
 
 const char* formatVector3(Vector3 vector) {

@@ -255,6 +255,7 @@ void entityInit(Entity* entity, EntityType type, World* world, Vector3 position,
 
 void entityUnload(Entity* entity) {
     ASSERT(entity);
+    free(entity);
 }
 
 

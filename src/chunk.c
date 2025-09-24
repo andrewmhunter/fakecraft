@@ -33,23 +33,21 @@ Chunk* chunkInit(World* world, Point coords) {
 
     for (Direction i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
         Chunk* adjacent = worldGetChunk(world, pointAdd(coords, directionToPoint(i)));
-        chunk->adjacentChunks[i] = chunk;
+        chunk->adjacentChunks[i] = adjacent;
         if (adjacent != NULL) {
             adjacent->adjacentChunks[invertDirection(i)] = chunk;
+            adjacent->dirty = true;
         }
     }
 
-    array_mesh_init(chunk->meshes);
+    LIST_INIT(&chunk->meshes);
 
 #ifdef USE_IGNORED
     memset(chunk->ignored, 0xff, sizeof(chunk->ignored));
 #endif
 
-    dict_chunk_set_at(world->chunks, coords, chunk);
+    setInsert(&world->chunks, CHUNK_DICT_VTABLE, chunk);
 
-#ifdef USE_ARRAY
-    world->chunksArr[x + WORLD_MAX_CHUNK_WIDTH / 2][z + WORLD_MAX_CHUNK_WIDTH / 2] = chunk;
-#endif
 
     if (loadChunk(chunk)) {
         DEBUG("Chunk %d, %d loaded from file", chunk->coords.x, chunk->coords.z);
@@ -67,24 +65,22 @@ Chunk* chunkInit(World* world, Point coords) {
 void chunkUnload(Chunk* chunk) {
     ASSERT(chunk);
 
+
     for (Direction i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
         Chunk* adjacent = chunk->adjacentChunks[i];
+
         if (adjacent != NULL) {
-            //INFO("%p", adjacent);
-            //adjacent->adjacentChunks[invertDirection(i)] = NULL;
+            adjacent->adjacentChunks[invertDirection(i)] = NULL;
         }
+
+        chunk->adjacentChunks[i] = NULL;
     }
 
     saveChunk(chunk);
     DEBUG("Chunk %d, %d saved", chunk->coords.x, chunk->coords.z);
 
-    array_mesh_clear(chunk->meshes);
-    //dict_chunk_erase(chunk->world->chunks, chunk->coords);
-
-#ifdef USE_ARRAY
-    world->chunksArr[x + WORLD_MAX_CHUNK_WIDTH / 2][z + WORLD_MAX_CHUNK_WIDTH / 2] = NULL;
-#endif
-
+    meshListClear(&chunk->meshes);
+    free(chunk->meshes.data);
 }
 
 
@@ -147,10 +143,9 @@ void drawChunk(const Chunk* chunk, Material material) {
     Matrix transform = MatrixTranslateV(pointToVector3(pointMultiply(chunk->coords, (Point)CHUNK_SIZE)));
 
     SetShaderValueMatrix(material.shader, shaderModelUniform, transform);
-    array_mesh_it_t it;
-    for (array_mesh_it(it, chunk->meshes); !array_mesh_end_p(it); array_mesh_next(it)) {
-        const Mesh* mesh = array_mesh_cref(it);
-        DrawMesh(*mesh, material, transform);
+
+    for (size_t i = 0; i < chunk->meshes.length; ++i) {
+        DrawMesh(chunk->meshes.data[i], material, transform);
     }
 
     if (chunk->world->showChunkBorders) {

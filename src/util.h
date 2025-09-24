@@ -2,7 +2,6 @@
 #define UTIL_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <raylib.h>
 #include <raymath.h>
 
@@ -29,18 +28,6 @@ int randomInt(int max);
 int randomRange(int min, int max);
 bool randomChance(int numerator, int denominator);
 
-typedef enum {
-    DIRECTION_SOUTH,
-    DIRECTION_EAST,
-    DIRECTION_NORTH,
-    DIRECTION_WEST,
-    DIRECTION_UP,
-    DIRECTION_DOWN,
-    DIRECTION_COUNT,
-} Direction;
-
-#define DIRECTION_CARDINAL_COUNT 4
-
 // https://stackoverflow.com/a/14997413
 static inline int positiveModulo(int x, int y) {
     return (x % y + y) % y;
@@ -60,12 +47,6 @@ static inline int floorDivFast(int x, int y) {
     value -= (value < 0 && x % y != 0);
     return value;
 }
-
-typedef struct {
-    int x;
-    int y;
-    int z;
-} Point;
 
 static inline int sign(int number) {
     if (number == 0) {
@@ -93,125 +74,6 @@ static inline int clampInt(int value, int min, int max) {
     return value;
 }
 
-static inline Point point(int x, int y, int z) {
-    return (Point){x, y, z};
-}
-
-static inline Point pointZero() {
-    return (Point){0, 0, 0};
-}
-
-static inline Point pointOne() {
-    return (Point){1, 1, 1};
-}
-
-static inline Point pointNegate(Point point) {
-    return (Point){-point.x, -point.y, -point.z};
-}
-
-static inline Point pointAdd(Point lhs, Point rhs) {
-    return (Point){lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
-}
-
-static inline Point pointAddValue(Point lhs, int x, int y, int z) {
-    return (Point){lhs.x + x, lhs.y + y, lhs.z + z};
-}
-
-static inline Point pointSubtract(Point lhs, Point rhs) {
-    return (Point){lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
-}
-
-static inline Point pointSubtractValue(Point lhs, int rhs) {
-    return (Point){lhs.x - rhs, lhs.y - rhs, lhs.z - rhs};
-}
-
-static inline Point pointMultiply(Point lhs, Point rhs) {
-    return (Point){lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
-}
-
-static inline Point pointDivide(Point lhs, Point rhs) {
-    return (Point){lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
-}
-
-static inline Point pointScale(Point lhs, int rhs) {
-    return (Point){lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
-}
-
-static inline Point pointDivideScalar(Point lhs, int rhs) {
-    return (Point){lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
-}
-
-static inline Point pointMin(Point lhs, Point rhs) {
-    return (Point) {
-        MIN(lhs.x, rhs.x),
-        MIN(lhs.y, rhs.y),
-        MIN(lhs.z, rhs.z)
-    };
-}
-
-static inline Point pointMax(Point lhs, Point rhs) {
-    return (Point) {
-        MAX(lhs.x, rhs.x),
-        MAX(lhs.y, rhs.y),
-        MAX(lhs.z, rhs.z)
-    };
-}
-
-static inline bool pointEquals(Point lhs, Point rhs) {
-    return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
-}
-
-static inline size_t pointHash(Point point) {
-    // TODO: Replace with real hash function
-    return point.x * 11 + point.y * 7 + point.z * 3;
-}
-
-static inline Vector3 pointToVector3(Point point) {
-    return (Vector3){point.x, point.y, point.z};
-}
-
-static inline Point vector3ToPoint(Vector3 vector) {
-    return (Point){floor(vector.x), floor(vector.y), floor(vector.z)};
-    //return (Point){vector.x, vector.y, vector.z};
-}
-
-static inline Point pointAddX(Point point, int x) {
-    return (Point){point.x + x, point.y, point.z};
-}
-
-static inline Point pointAddY(Point point, int y) {
-    return (Point){point.x, point.y + y, point.z};
-}
-
-static inline Point pointAddZ(Point point, int z) {
-    return (Point){point.x, point.y, point.z + z};
-}
-
-static inline Point directionToPoint(Direction direction) {
-    static const Point points[DIRECTION_COUNT] = {
-        //[DIRECTION_NONE]  = { 0,  0,  0},
-        [DIRECTION_EAST]  = { 1,  0,  0},
-        [DIRECTION_WEST]  = {-1,  0,  0},
-        [DIRECTION_UP]    = { 0,  1,  0},
-        [DIRECTION_DOWN]  = { 0, -1,  0},
-        [DIRECTION_NORTH] = { 0,  0,  -1},
-        [DIRECTION_SOUTH] = { 0,  0, 1},
-    };
-    return points[direction];
-}
-
-static inline Direction invertDirection(Direction direction) {
-    static const Direction inverted[DIRECTION_COUNT] = {
-        [DIRECTION_UP]    = DIRECTION_DOWN,
-        [DIRECTION_SOUTH] = DIRECTION_NORTH,
-        [DIRECTION_EAST]  = DIRECTION_WEST,
-        [DIRECTION_NORTH] = DIRECTION_SOUTH,
-        [DIRECTION_WEST]  = DIRECTION_EAST,
-        [DIRECTION_DOWN]  = DIRECTION_UP,
-    };
-    return inverted[direction];
-}
-
 static inline Matrix MatrixTranslateV(Vector3 vector) {
     return MatrixTranslate(vector.x, vector.y, vector.z);
 }
@@ -220,7 +82,6 @@ static inline float squaref(float x) {
     return x * x;
 }
 
-const char* formatPoint(Point point);
 const char* formatVector3(Vector3 vector);
 
 
@@ -275,34 +136,6 @@ static inline Vector3 vector3SetAxis(Vector3 vector, Axis axis, float value) {
             break;
     }
     return Vector3Zero();
-}
-
-static inline int pointGetAxis(Point point, Axis axis) {
-    switch (axis) {
-        case AXIS_X:
-            return point.x;
-        case AXIS_Y:
-            return point.y;
-        case AXIS_Z:
-            return point.z;
-        default:
-            break;
-    }
-    return 0;
-}
-
-static inline Point pointSetAxis(Point point, Axis axis, int value) {
-    switch (axis) {
-        case AXIS_X:
-            return (Point){value, point.y, point.z};
-        case AXIS_Y:
-            return (Point){point.x, value, point.z};
-        case AXIS_Z:
-            return (Point){point.x, point.y, value};
-        default:
-            break;
-    }
-    return pointZero();
 }
 
 #endif

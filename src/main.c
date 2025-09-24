@@ -8,6 +8,7 @@
 #include "entity.h"
 #include "serialize.h"
 #include "logger.h"
+#include "point.h"
 
 
 // Game
@@ -162,8 +163,8 @@ int main(void) {
         }
 
         for (KeyboardKey key = KEY_ONE; key <= KEY_NINE; ++key) {
-            Block block = key - KEY_ONE + 1;
-            if (IsKeyPressed(key) && block < BLOCK_COUNT) {
+            if (IsKeyPressed(key)) {
+                Block block = key - KEY_ONE + 1;
                 selectedBlock = block;
             }
         }
@@ -224,8 +225,8 @@ int main(void) {
         indicator = MatrixMultiply(indicator, MatrixTranslate(-75, 35, 0));
         DrawMesh(blocks[selectedBlock].mesh, material, indicator);
 
-
         EndMode3D();
+
 
         renderText(0, 0, "%d FPS", GetFPS());
         renderText(0, 20, "P: %s", formatVector3(player->position));

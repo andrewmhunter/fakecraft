@@ -38,7 +38,6 @@ BlockModel blockModelTable(
     return model;
 }
 
-
 BlockModel blockModelGrass(
         int sideTexCoordX,
         int sideTexCoordY,

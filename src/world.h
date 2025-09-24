@@ -1,24 +1,18 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#include <m-lib/m-array.h>
-#include <m-lib/m-dict.h>
 #include "chunk.h"
-#include "config.h"
-#include "util.h"
 #include "entity.h"
+#include "mem.h"
+#include "hash.h"
+#include "point.h"
 
-ARRAY_DEF(array_chunk, Chunk*, (CLEAR()))
-DICT_DEF2(dict_chunk, Point, (HASH(pointHash), EQUAL(pointEquals)), Chunk*, (CLEAR(), INIT()))
-
-ARRAY_DEF(array_entity, Entity*, (CLEAR()))
+typedef SPAN_T(Entity*) EntitySpan;
+typedef LIST_TS(Entity*, EntitySpan) EntityList;
 
 typedef struct World {
-#ifdef USE_ARRAY
-    Chunk* chunksArr[WORLD_MAX_CHUNK_WIDTH][WORLD_MAX_CHUNK_WIDTH];
-#endif
-    dict_chunk_t chunks;
-    array_entity_t entities;
+    Set chunks;
+    EntityList entities;
     int seed;
     bool showChunkBorders;
     int renderDistance;
@@ -44,6 +38,17 @@ Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width
 
 extern int shaderModelUniform;
 extern int shaderSkylight;
+
+
+static inline Hash pointHashWrapper(Hash hash, const void* point) {
+    return point2Hash(hash, *((Point*)point));
+}
+
+static inline bool pointEqualsWrapper(const void* left, const void* right) {
+    return pointEquals(*(Point*)left, *(Point*)right);
+}
+
+#define CHUNK_DICT_VTABLE (SetVTable){pointHashWrapper, pointEqualsWrapper}
 
 #endif
 

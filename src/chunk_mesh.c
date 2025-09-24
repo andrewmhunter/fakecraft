@@ -1,5 +1,4 @@
 #include "chunk.h"
-#include "world.h"
 #include "mesh.h"
 #include "chunk_mesh.h"
 #include "logger.h"
@@ -21,13 +20,11 @@ void chunkGenerateMesh(Chunk* chunk) {
         }
     }
 
-    const Chunk* northChunk = worldGetChunkConst(chunk->world,
-            pointAdd(chunk->coords, directionToPoint(DIRECTION_NORTH)));
+    const Chunk* northChunk = chunk->adjacentChunks[DIRECTION_NORTH];
     if (northChunk == NULL) {
         northChunk = &dummyChunk;
     }
-    const Chunk* southChunk = worldGetChunkConst(chunk->world,
-            pointAdd(chunk->coords, directionToPoint(DIRECTION_SOUTH)));
+    const Chunk* southChunk = chunk->adjacentChunks[DIRECTION_SOUTH];
     if (southChunk == NULL) {
         southChunk = &dummyChunk;
     }
@@ -36,13 +33,11 @@ void chunkGenerateMesh(Chunk* chunk) {
         adjacentChunks[x][0][DIRECTION_NORTH] = northChunk;
     }
 
-    const Chunk* eastChunk = worldGetChunkConst(chunk->world,
-            pointAdd(chunk->coords, directionToPoint(DIRECTION_EAST)));
+    const Chunk* eastChunk = chunk->adjacentChunks[DIRECTION_EAST];
     if (eastChunk == NULL) {
         eastChunk = &dummyChunk;
     }
-    const Chunk* westChunk = worldGetChunkConst(chunk->world,
-            pointAdd(chunk->coords, directionToPoint(DIRECTION_WEST)));
+    const Chunk* westChunk = chunk->adjacentChunks[DIRECTION_WEST];
     if (westChunk == NULL) {
         westChunk = &dummyChunk;
     }
@@ -51,7 +46,7 @@ void chunkGenerateMesh(Chunk* chunk) {
         adjacentChunks[CHUNK_WIDTH - 1][z][DIRECTION_EAST] = eastChunk;
     }
 
-    array_mesh_reset(chunk->meshes);
+    meshListClear(&chunk->meshes);
 
     chunk->totalVertexCount = 0;
 
@@ -101,7 +96,8 @@ void chunkGenerateMesh(Chunk* chunk) {
                 }
 
                 if (mesh == NULL) {
-                    mesh = array_mesh_push_new(chunk->meshes);
+                    LIST_EXTEND(&chunk->meshes, 1);
+                    mesh = &chunk->meshes.data[chunk->meshes.length++];
                     *mesh = (Mesh){0};
 
                     faceCapacity = 0;
@@ -139,7 +135,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                     chunk->totalVertexCount += 4;
                 }
 
-                if (y == 0 || blocks[chunkGetBlockRaw(chunk, pointAddY(point, -1))].solidness != SOLID) {
+                if (y != 0 && blocks[chunkGetBlockRaw(chunk, pointAddY(point, -1))].solidness != SOLID) {
                     meshFaceSmart(mesh, faceCount++, x, y, z, DIRECTION_DOWN,
                             sides[DIRECTION_DOWN].x, sides[DIRECTION_DOWN].y);
                     chunk->totalVertexCount += 4;
