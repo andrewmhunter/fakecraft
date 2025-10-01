@@ -18,6 +18,11 @@
         for (int YIDENT = 0; YIDENT < CHUNK_HEIGHT; ++YIDENT) \
             for (int ZIDENT = 0; ZIDENT < CHUNK_WIDTH; ++ZIDENT)
 
+#define ITERATE_CHUNK_YXZ(XIDENT, YIDENT, ZIDENT) \
+    for (int YIDENT = 0; YIDENT < CHUNK_HEIGHT; ++YIDENT) \
+        for (int XIDENT = 0; XIDENT < CHUNK_WIDTH; ++XIDENT) \
+            for (int ZIDENT = 0; ZIDENT < CHUNK_WIDTH; ++ZIDENT)
+
 // Positions
 
 static inline Point worldToChunk(Point worldPoint) {

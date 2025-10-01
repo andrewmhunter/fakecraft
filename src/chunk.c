@@ -80,7 +80,7 @@ void chunkUnload(Chunk* chunk) {
     DEBUG("Chunk %d, %d saved", chunk->coords.x, chunk->coords.z);
 
     meshListClear(&chunk->meshes);
-    free(chunk->meshes.data);
+    LIST_FREE(&chunk->meshes);
 }
 
 
@@ -154,6 +154,8 @@ void drawChunk(const Chunk* chunk, Material material) {
 }
 
 bool verifyChunk(const Chunk* chunk) {
+    ASSERT(chunk);
+
     DEBUG("Verifying chunk %d, %d", chunk->coords.x, chunk->coords.z);
 
     ITERATE_CHUNK(x, y, z) {

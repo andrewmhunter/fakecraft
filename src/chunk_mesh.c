@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "chunk_mesh.h"
 #include "logger.h"
+#include <stdio.h>
 
 #define MESH_MAX_VERTICIES UINT16_MAX
 
@@ -90,6 +91,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                     mesh->vertexCount = faceCount * 4;
                     mesh->triangleCount = faceCount * 2;
 
+                    //printf("%d\n", mesh->vertexCount);
                     UploadMesh(mesh, false);
 
                     mesh = NULL;
@@ -112,50 +114,61 @@ void chunkGenerateMesh(Chunk* chunk) {
                     mesh->vertices = (float*)malloc(vertexCapacitySize * 3);
                     mesh->texcoords = (float*)malloc(vertexCapacitySize * 2);
                     mesh->normals = (float*)malloc(vertexCapacitySize * 3);
-                    mesh->colors = (unsigned char*)MemAlloc(faceCapacity * 4 * 4 * sizeof(unsigned char));
+                    mesh->colors = (unsigned char*)malloc(faceCapacity * 4 * 4 * sizeof(unsigned char));
                     mesh->indices = (unsigned short*)malloc(faceCapacity * 6 * sizeof(unsigned short));
                 }
 
                 const Point* sides = properties->model.sides;
 
+#ifdef USE_IGNORED
+#define SET_HAS_FACES() hasFaces = true
+#else
+#define SET_HAS_FACES()
+#endif
+
+                if (properties->solidness == CROSS) {
+                    meshCross(mesh, faceCount, x, y, z, properties->model.sides[0].x, properties->model.sides[0].y);
+                    faceCount += 4;
+                    SET_HAS_FACES();
+                    continue;
+                }
+
                 for (int dir = 0; dir < DIRECTION_CARDINAL_COUNT; ++dir) {
                     const Chunk* adjacentChunk = adjacentChunks[x][z][dir];
                     Point adjacentLocalPoint = worldToLocal(pointAdd(point, directionToPoint(dir)));
                     Block adjacentBlock = chunkGetBlockRaw(adjacentChunk, adjacentLocalPoint); 
-                    if (blocks[adjacentBlock].solidness == SOLID) {
+                    if (blocks[adjacentBlock].solidness == SOLID || (properties->solidness == TRANSPARENT && block == adjacentBlock)) {
                         continue;
                     }
 
-#ifdef USE_IGNORED
-                    hasFaces = true;
-#endif
+                    SET_HAS_FACES();
 
                     meshFaceSmart(mesh, faceCount++, x, y, z, dir,
                             sides[dir].x, sides[dir].y);
                     chunk->totalVertexCount += 4;
                 }
 
-                if (y != 0 && blocks[chunkGetBlockRaw(chunk, pointAddY(point, -1))].solidness != SOLID) {
+                Block adjacentBlock = chunkGetBlockRaw(chunk, pointAddY(point, -1));
+                if (y != 0 && blocks[adjacentBlock].solidness != SOLID && (properties->solidness == SOLID || block != adjacentBlock)) {
                     meshFaceSmart(mesh, faceCount++, x, y, z, DIRECTION_DOWN,
                             sides[DIRECTION_DOWN].x, sides[DIRECTION_DOWN].y);
                     chunk->totalVertexCount += 4;
 
-#ifdef USE_IGNORED
-                    hasFaces = true;
-#endif
+                    SET_HAS_FACES();
                 }
 
-                if (y == CHUNK_HEIGHT - 1 || blocks[chunkGetBlockRaw(chunk, pointAddY(point, 1))].solidness != SOLID) {
+                adjacentBlock = chunkGetBlockRaw(chunk, pointAddY(point, 1));
+                if ((y == CHUNK_HEIGHT - 1 || blocks[adjacentBlock].solidness != SOLID) && (properties->solidness == SOLID || block != adjacentBlock)) {
                     meshFaceSmart(mesh, faceCount++, x, y, z, DIRECTION_UP,
                             sides[DIRECTION_UP].x, sides[DIRECTION_UP].y);
                     chunk->totalVertexCount += 4;
 
-#ifdef USE_IGNORED
-                    hasFaces = true;
-#endif
+                    SET_HAS_FACES();
                 }
 
             }
+
+#undef SET_HAS_FACES
 
 #ifdef USE_IGNORED
             if (!hasFaces) {
@@ -167,6 +180,8 @@ void chunkGenerateMesh(Chunk* chunk) {
 
     mesh->triangleCount = faceCount * 2;
     mesh->vertexCount = faceCount * 4;
+
+    //printf("%d\n", mesh->vertexCount);
 
 #ifdef TIME_MESHER
     double buildTime = GetTime() - timeStart;

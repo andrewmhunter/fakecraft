@@ -102,6 +102,10 @@ static inline void* setGet(const Set* set, SetVTable vtable, const void* key) {
     return NULL;
 }
 
+static inline bool setHas(const Set* set, SetVTable vtable, const void* key) {
+    return setGet(set, vtable, key) != NULL;
+}
+
 static inline void* setInsert(Set* set, SetVTable vtable, void* keyValue) {
     Hash hash = vtable.hashFn(FNV_OFFSET, keyValue);
 

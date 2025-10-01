@@ -1,24 +1,27 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define FAST_LEAVES 1
+#define FAST_LEAVES 0
 //#define USE_IGNORED
 
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 256
-#define WORLD_MAX_CHUNK_WIDTH 16
+
+#define WORLD_MAX_CHUNK_WIDTH 32
 
 #define DEFAULT_RENDER_DISTANCE 5
 
 #define SENSITIVITY 0.0025f
 
-//#define DEFAULT_SET_SEED 1000
+#define DEFAULT_SET_SEED 1000
 
-#define DIRT_LAYER 1
-#define SURFACE_OFFSET 60
-#define OCEAN_LEVEL 47
+#define DIRT_LAYER 2
+#define SURFACE_OFFSET 73
+#define OCEAN_LEVEL 60
 
 #define PLAYER_EYE 1.62f
+
+//#define NO_SAVE_CHUNKS
 
 //#define TIME_MESHER
 

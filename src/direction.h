@@ -14,6 +14,7 @@ typedef enum {
 } Direction;
 
 #define DIRECTION_CARDINAL_COUNT 4
+#define DIRECTION_FIRST 0
 
 static inline Point directionToPoint(Direction direction) {
     static const Point points[DIRECTION_COUNT] = {

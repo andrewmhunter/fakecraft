@@ -2,7 +2,14 @@
 #include "block.h"
 #include "mesh.h"
 
-void meshVertex(Mesh* mesh, int index, Vector3 position, float texCoordX, float texCoordY, Vector3 normal) {
+void meshVertex(
+        Mesh* mesh,
+        int index,
+        Vector3 position,
+        float texCoordX, float texCoordY,
+        Vector3 normal,
+        Color color
+) {
     int coordIndex = index * 3;
     mesh->vertices[coordIndex] = position.x;
     mesh->vertices[coordIndex + 1] = position.y;
@@ -13,25 +20,32 @@ void meshVertex(Mesh* mesh, int index, Vector3 position, float texCoordX, float 
     mesh->normals[coordIndex + 2] = normal.z;
 
     int colorIndex = index * 4;
-    mesh->colors[colorIndex] = 128;
-    mesh->colors[colorIndex + 1] = 128;
+    mesh->colors[colorIndex] = color.r;
+    mesh->colors[colorIndex + 1] = color.g;
 
     int texIndex = index * 2;
     mesh->texcoords[texIndex] = texCoordX;
     mesh->texcoords[texIndex + 1] = texCoordY;
 }
 
-void meshFace(Mesh* mesh, int index, Vector3 a, Vector3 b, Vector3 c, Vector3 d, int textureX, int textureY, Vector3 normal) {
+void meshFace(
+        Mesh* mesh,
+        int index,
+        Vector3 a, Vector3 b, Vector3 c, Vector3 d,
+        int textureX, int textureY,
+        Vector3 normal,
+        Color color
+) {
     float blockFaceSize = 16.f / 256.f;
     float texCoordX = textureX * blockFaceSize;
     float texCoordY = textureY * blockFaceSize;
 
     int vertIndex = index * 4;
 
-    meshVertex(mesh, vertIndex + 0, a, texCoordX, texCoordY + blockFaceSize, normal);
-    meshVertex(mesh, vertIndex + 1, b, texCoordX + blockFaceSize, texCoordY + blockFaceSize, normal);
-    meshVertex(mesh, vertIndex + 2, c, texCoordX + blockFaceSize, texCoordY, normal);
-    meshVertex(mesh, vertIndex + 3, d, texCoordX, texCoordY, normal);
+    meshVertex(mesh, vertIndex + 0, a, texCoordX, texCoordY + blockFaceSize, normal, color);
+    meshVertex(mesh, vertIndex + 1, b, texCoordX + blockFaceSize, texCoordY + blockFaceSize, normal, color);
+    meshVertex(mesh, vertIndex + 2, c, texCoordX + blockFaceSize, texCoordY, normal, color);
+    meshVertex(mesh, vertIndex + 3, d, texCoordX, texCoordY, normal, color);
 
     int indIndex = index * 6;
     mesh->indices[indIndex + 0] = vertIndex + 0;
@@ -42,7 +56,12 @@ void meshFace(Mesh* mesh, int index, Vector3 a, Vector3 b, Vector3 c, Vector3 d,
     mesh->indices[indIndex + 5] = vertIndex + 0;
 }
 
-void meshFaceSmart(Mesh* mesh, int index, int x, int y, int z, Direction side, int textureX, int textureY) {
+void meshFaceSmart(
+        Mesh* mesh,
+        int index, int x, int y, int z,
+        Direction side,
+        int textureX, int textureY
+) {
     // x = 0 left / 1 right, y = 0 bottom / 1 top, z = 0 back / 1 front
     const Vector3 lbb = {x + 0, y + 0, z + 0};
     const Vector3 lbf = {x + 0, y + 0, z + 1};
@@ -64,7 +83,9 @@ void meshFaceSmart(Mesh* mesh, int index, int x, int y, int z, Direction side, i
 
     const Vector3* offsets = vertexOffsets[side];
     Vector3 normal = pointToVector3(directionToPoint(side));
-    meshFace(mesh, index, offsets[0], offsets[1], offsets[2], offsets[3], textureX, textureY, normal);
+
+    Color color = {.r = 128, .g = 128, .b = 0, .a = 255};
+    meshFace(mesh, index, offsets[0], offsets[1], offsets[2], offsets[3], textureX, textureY, normal, color);
 }
 
 void meshAddCube(Mesh* mesh, int index, int x, int y, int z, Block block) {
@@ -94,6 +115,27 @@ Mesh cubeMesh(Block block) {
     UploadMesh(&mesh, false);
 
     return mesh;
+}
+
+void meshCross(Mesh* mesh, int index, int x, int y, int z, int textureX, int textureY) {
+    Vector3 lbb = {x + 0, y + 0, z + 0};
+    Vector3 lbf = {x + 0, y + 0, z + 1};
+    Vector3 ltb = {x + 0, y + 1, z + 0};
+    Vector3 ltf = {x + 0, y + 1, z + 1};
+    Vector3 rbb = {x + 1, y + 0, z + 0};
+    Vector3 rbf = {x + 1, y + 0, z + 1};
+    Vector3 rtb = {x + 1, y + 1, z + 0};
+    Vector3 rtf = {x + 1, y + 1, z + 1};
+
+    //Vector3 normal = pointToVector3(directionToPoint(side));
+    Vector3 normal0 = {0.f, 1.f, 0.f};
+    Vector3 normal1 = {1.f, 0.f, 0.f};
+    Color color = {.r = 128, .g = 128, .b = 0, .a = 255};
+
+    meshFace(mesh, index, lbb, rbf, rtf, ltb, textureX, textureY, normal0, color);
+    meshFace(mesh, index + 1, rbf, lbb, ltb, rtf, textureX, textureY, normal1, color);
+    meshFace(mesh, index + 2, lbf, rbb, rtb, ltf, textureX, textureY, normal1, color);
+    meshFace(mesh, index + 3, rbb, lbf, ltf, rtb, textureX, textureY, normal0, color);
 }
 
 void meshListClear(MeshList* list) {

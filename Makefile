@@ -14,7 +14,7 @@ OBJS := $(SRCS:%.c=$(DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 CFLAGS := -c -std=c99 -O3 -g -Wall -Wextra
-CPPFLAGS := -MD -MP
+CPPFLAGS := -MD -MP -Iexternal
 LDFLAGS = -lraylib -lm -fwhole-program
 COMMONFLAGS =
 

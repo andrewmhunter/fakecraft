@@ -4,5 +4,6 @@ resources/
 profiling/
 save/
 screenshots/
+compile_commands.json
 fakecraft
 

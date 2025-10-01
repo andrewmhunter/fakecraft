@@ -95,11 +95,15 @@ void worldUnload(World* world) {
     for (size_t i = 0; i < world->entities.length; ++i) {
         entityUnload(world->entities.data[i]);
     }
-    free(world->entities.data);
+    LIST_FREE(&world->entities);
 }
 
 int shaderModelUniform = 0;
 int shaderSkylight = 0;
+
+static int chunkDistance(Point from, Point to) {
+    return (int)floorf(sqrtf(squaref(from.x - to.x) + squaref(from.z - to.z)));
+}
 
 void worldUpdate(World* world, float deltaTime) {
     ASSERT(world);
@@ -114,8 +118,8 @@ void worldUpdate(World* world, float deltaTime) {
         lightDirection = 1;
     }
 
+    world->skyLight += lightDirection * deltaTime * 0.1;
     world->skyLight = 1.f;
-    //world->skyLight += lightDirection * deltaTime * 0.1;
 
     for (size_t i = 0; i < world->entities.length; ++i) {
         entityUpdate(world->entities.data[i], deltaTime);
@@ -124,6 +128,8 @@ void worldUpdate(World* world, float deltaTime) {
     int renderDistance = world->renderDistance;
 
     if (world->player) {
+        int maxChunkLoads = 10;
+
         for (int x = -renderDistance; x <= renderDistance; ++x) {
             for (int z = -renderDistance; z <= renderDistance; ++z) {
                 Point chunkCoord = {x, 0, z};
@@ -136,6 +142,16 @@ void worldUpdate(World* world, float deltaTime) {
                     continue;
                 }
 
+                int distance = chunkDistance(worldToChunkV(world->player->position), chunkCoord);
+                if (distance > renderDistance) {
+                    continue;
+                }
+
+                if (maxChunkLoads <= 0 && distance != 0) {
+                    continue;
+                }
+                maxChunkLoads--;
+
                 chunkInit(world, chunkCoord);
             }
         }
@@ -146,7 +162,10 @@ void worldUpdate(World* world, float deltaTime) {
         Chunk* chunk = chunkIt->contents;
 
         Point playerChunk = worldToChunkV(world->player->position);
-        Point distance = pointSubtract(playerChunk, chunk->coords);
+
+        int distance = chunkDistance(playerChunk, chunk->coords);
+
+        /*Point distance = pointSubtract(playerChunk, chunk->coords);
 
         int adjustedRenderDistance = renderDistance + 1;
 
@@ -154,7 +173,8 @@ void worldUpdate(World* world, float deltaTime) {
             || distance.x > adjustedRenderDistance
             || distance.z < -adjustedRenderDistance
             || distance.z > adjustedRenderDistance
-        ) {
+        ) {*/
+        if (distance > renderDistance + 1) {
             chunkUnload(chunk);
             setRemove(&world->chunks, CHUNK_DICT_VTABLE, &chunk->coords);
             free(chunk);
@@ -173,10 +193,6 @@ void worldDraw(World* world, Material material) {
 
     SetShaderValue(material.shader, shaderSkylight, &world->skyLight, SHADER_UNIFORM_FLOAT);
 
-    for (size_t i = 0; i < world->entities.length; ++i) {
-        entityDraw(world->entities.data[i]);
-    }
-
     HashEntry* chunkIt = NULL;
     while (setIterate(&world->chunks, &chunkIt)) {
         Chunk* chunk = chunkIt->contents;
@@ -184,7 +200,9 @@ void worldDraw(World* world, Material material) {
         drawChunk(chunk, material);
     }
 
-
+    for (size_t i = 0; i < world->entities.length; ++i) {
+        entityDraw(world->entities.data[i]);
+    }
 }
 
 void worldMarkDirty(World* world, Point worldPoint) {

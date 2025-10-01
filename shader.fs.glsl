@@ -26,8 +26,6 @@ void main()
 	 * Bottom = 0.5
 	*/
 
-	//float shade = fragNormal.y * 0.2 - abs(fragNormal.x) * 0.2 + 0.8;
-
 	float shade = fragNormal.y * 0.25 + abs(fragNormal.x) * 0.05 - abs(fragNormal.z) * 0.15 + 0.75;
 
 	float fogDistance = 1000.0;

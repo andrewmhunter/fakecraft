@@ -39,6 +39,11 @@
         (LIST)->capacity = 0; \
     } while (0)
 
+#define LIST_FREE(LIST) do { \
+        free((LIST)->data); \
+        LIST_INIT(LIST); \
+    } while (0)
+
 #define LIST_RESIZE(LIST, SIZE) do { \
         (LIST)->data = arrayResize((LIST)->data, sizeof((LIST)->data[0]), \
                 &(LIST)->capacity, (SIZE)); \
@@ -71,5 +76,12 @@ static inline void* arrayResize(void* data, size_t elementSize,
 
     return realloc(data, *capacity * elementSize);
 }
+
+
+typedef SPAN_T(char) StringSpan;
+typedef LIST_TS(char, StringSpan) String;
+
+//String stringAllocPrintf(const char* format, ...);
+//void stringClearPrintf(String* string, const char* format, ...);
 
 #endif

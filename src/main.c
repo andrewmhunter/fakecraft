@@ -97,7 +97,7 @@ int main(void) {
     float maxY = 0.f;
 
     while (!WindowShouldClose()) {
-        if (IsKeyPressed(KEY_Q)) {
+        if (IsKeyPressed(KEY_Q) && targetFps > 0) {
             targetFps -= 10;
             SetTargetFPS(targetFps);
         }
@@ -127,7 +127,7 @@ int main(void) {
             ToggleBorderlessWindowed();
         }
 
-        if (IsKeyPressed(KEY_F8)) {
+        if (IsKeyPressed(KEY_F8) && world.renderDistance > 0) {
             world.renderDistance--;
         }
 
@@ -233,6 +233,7 @@ int main(void) {
         renderText(0, 40, "V: %s", formatVector3(player->velocity));
         renderText(0, 60, "L: %s", formatVector3(lookVec));
         renderText(0, 100, "%.02f m/s", Vector3Length(player->velocity) * GetFPS());
+        renderText(0, 120, "RD: %d", world.renderDistance);
 
         maxY = MAX(cam.position.y, maxY);
         renderText(0, 80, "%f", maxY - cam.position.y);

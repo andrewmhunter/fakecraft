@@ -1,19 +1,19 @@
 #include "collision.h"
 #include "logger.h"
+#include <raymath.h>
 
 // Digital differential analysis, extended to work in 3d
 // https://www.youtube.com/watch?v=NbSee-XM7WA
 // https://lodev.org/cgtutor/raycasting.html
 WalkCollision ddaCastRay(const World* world, Vector3 start, Vector3 direction, float maxLength) {
     ASSERT(world);
-    //ASSERT(Vector3LengthSqr(direction) > 0);
 
     direction = Vector3Normalize(direction);
 
     Vector3 deltaDistance = {
-        sqrt(1 + squaref(direction.y / direction.x) + squaref(direction.z / direction.x)),
-        sqrt(1 + squaref(direction.x / direction.y) + squaref(direction.z / direction.y)),
-        sqrt(1 + squaref(direction.x / direction.z) + squaref(direction.y / direction.z))
+        sqrtf(1 + squaref(direction.y / direction.x) + squaref(direction.z / direction.x)),
+        sqrtf(1 + squaref(direction.x / direction.y) + squaref(direction.z / direction.y)),
+        sqrtf(1 + squaref(direction.x / direction.z) + squaref(direction.y / direction.z))
     };
 
     const Point worldPoint = vector3ToPoint(start);
@@ -86,31 +86,216 @@ WalkCollision ddaCastRay(const World* world, Vector3 start, Vector3 direction, f
     return collision;
 }
 
-WalkCollision worldWalkRay(const World* world, Vector3 start, Vector3 direction, float maxLength) {
-    ASSERT(world);
+BoundingBox genBoundingBox(Vector3 position, Vector3 bounds) {
+    Vector3 sides = {bounds.x / 2, 0.f, bounds.z / 2.f};
+    Vector3 min = Vector3Subtract(position, sides);
+    sides.y = bounds.y;
+    Vector3 max = Vector3Add(position, sides);
+    return (BoundingBox) {.min = min, .max = max};
+}
 
-    direction = Vector3Normalize(direction);
-    float epsilon = 0.05;
-    Vector3 step = Vector3Scale(direction, epsilon);
 
-    WalkCollision coll;
-    coll.collided = false;
-    Vector3 before = start;
-    coll.collisionAt = start;
+// https://medium.com/@andrebluntindie/3d-aabb-collision-detection-and-resolution-for-voxel-games-5fcbfdb8cdb4
 
-    Vector3 walk = {0, 0, 0};
-    while (Vector3Length(walk) <= maxLength) {
-        before = coll.collisionAt;
-        walk = Vector3Add(walk, step);
-        coll.collisionAt = Vector3Add(start, walk);
-        if (worldGetBlock(world, vector3ToPoint(coll.collisionAt)) != BLOCK_AIR) {
-            coll.collided = true;
-            break;
+static bool overlapsX(BoundingBox boundingBox, Vector3 block) {
+    return boundingBox.max.x > block.x && boundingBox.min.x < block.x + 1;
+}
+
+static bool overlapsY(BoundingBox boundingBox, Vector3 block) {
+    return boundingBox.max.y > block.y && boundingBox.min.y < block.y + 1;
+}
+
+static bool overlapsZ(BoundingBox boundingBox, Vector3 block) {
+    return boundingBox.max.z > block.z && boundingBox.min.z < block.z + 1;
+}
+
+#if 0
+static inline bool overlapsAxis(BoundingBox boundingBox, Vector3 block, Axis axis) {
+    return vector3GetAxis(boundingBox.max, axis) > vector3GetAxis(block, axis)
+        && vector3GetAxis(boundingBox.min, axis) < vector3GetAxis(block, axis) + 1;
+}
+
+static inline float aabbResolveAxis(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition, Axis axis) {
+    float velocityA = vector3GetAxis(velocity, axis);
+
+    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+        return velocityA;
+    }
+
+    Vector3 worldVector = pointToVector3(blockPosition);
+    float worldVectorA = vector3GetAxis(worldVector, axis);
+
+    BoundingBox movedBounds = {
+        .min = Vector3Add(boundingBox.min, velocity),
+        .max = Vector3Add(boundingBox.max, velocity)
+    };
+
+    bool intersectsA = overlapsAxis(boundingBox, worldVector, axis);
+    bool intersectsB = overlapsAxis(boundingBox, worldVector, axisOther0(axis));
+    bool intersectsC = overlapsAxis(boundingBox, worldVector, axisOther1(axis));
+
+    if (intersectsA && intersectsB && intersectsC) {
+        return velocityA;
+    }
+
+    bool willIntersectA = overlapsAxis(movedBounds, worldVector, axis);
+
+    if (intersectsB && intersectsC && willIntersectA) {
+        if (velocityA < 0.f && vector3GetAxis(movedBounds.min, axis) <= worldVectorA + 1.f) {
+            velocityA = MIN(worldVectorA + 1.f - vector3GetAxis(boundingBox.min, axis) + EPSILON, 0.f);
+        } else if (velocityA > 0.f && vector3GetAxis(movedBounds.max, axis) >= worldVectorA) {
+            velocityA = MAX(worldVectorA - vector3GetAxis(boundingBox.max, axis) - EPSILON, 0.f);
         }
     }
 
-    coll.blockAt = vector3ToPoint(coll.collisionAt);
-    coll.blockBefore = vector3ToPoint(before);
-    return coll;
+    return velocityA;
+}
+#endif
+
+static float aabbResolveX(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition) {
+    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+        return velocity.x;
+    }
+
+    Vector3 worldVector = pointToVector3(blockPosition);
+
+    BoundingBox bb = {
+        .min = Vector3Add(boundingBox.min, velocity),
+        .max = Vector3Add(boundingBox.max, velocity)
+    };
+
+    bool intersectsX = overlapsX(boundingBox, worldVector);
+    bool intersectsY = overlapsY(boundingBox, worldVector);
+    bool intersectsZ = overlapsZ(boundingBox, worldVector);
+
+    if (intersectsX && intersectsY && intersectsZ) {
+        return velocity.x;
+    }
+
+    bool willIntersectX = overlapsX(bb, worldVector);
+
+    if (intersectsY && intersectsZ && willIntersectX) {
+        if (velocity.x < 0.f && bb.min.x <= worldVector.x + 1.f) {
+            velocity.x = MIN(worldVector.x + 1.f - boundingBox.min.x + EPSILON, 0.f);
+        } else if (velocity.x > 0.f && bb.max.x >= worldVector.x) {
+            velocity.x = MAX(worldVector.x - boundingBox.max.x - EPSILON, 0.f);
+        }
+    }
+
+    return velocity.x;
+}
+
+static float aabbResolveY(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition) {
+    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+        return velocity.y;
+    }
+
+    Vector3 worldVector = pointToVector3(blockPosition);
+
+    BoundingBox bb = {
+        .min = Vector3Add(boundingBox.min, velocity),
+        .max = Vector3Add(boundingBox.max, velocity)
+    };
+
+    bool intersectsX = overlapsX(boundingBox, worldVector);
+    bool intersectsY = overlapsY(boundingBox, worldVector);
+    bool intersectsZ = overlapsZ(boundingBox, worldVector);
+
+    if (intersectsX && intersectsY && intersectsZ) {
+        return velocity.y;
+    }
+
+    bool willIntersectY = overlapsY(bb, worldVector);
+
+    if (intersectsX && intersectsZ && willIntersectY) {
+        if (velocity.y < 0.f && bb.min.y <= worldVector.y + 1.f) {
+            velocity.y = MIN(worldVector.y + 1.f - boundingBox.min.y + EPSILON, 0.f);
+        } else if (velocity.y > 0.f && bb.max.y >= worldVector.y) {
+            velocity.y = MAX(worldVector.y - boundingBox.max.y - EPSILON, 0.f);
+        }
+    }
+
+    return velocity.y;
+}
+
+static float aabbResolveZ(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition) {
+    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+        return velocity.z;
+    }
+
+    Vector3 worldVector = pointToVector3(blockPosition);
+
+    BoundingBox bb = {
+        .min = Vector3Add(boundingBox.min, velocity),
+        .max = Vector3Add(boundingBox.max, velocity)
+    };
+
+    bool intersectsX = overlapsX(boundingBox, worldVector);
+    bool intersectsY = overlapsY(boundingBox, worldVector);
+    bool intersectsZ = overlapsZ(boundingBox, worldVector);
+
+    if (intersectsX && intersectsY && intersectsZ) {
+        return velocity.z;
+    }
+
+    bool willIntersectZ = overlapsZ(bb, worldVector);
+
+    if (intersectsX && intersectsY && willIntersectZ) {
+        if (velocity.z < 0.f && bb.min.z <= worldVector.z + 1.f) {
+            velocity.z = MIN(worldVector.z + 1.f - boundingBox.min.z + EPSILON, 0.f);
+        } else if (velocity.z > 0.f && bb.max.z > worldVector.z) {
+            velocity.z = MAX(worldVector.z - boundingBox.max.z - EPSILON, 0.f);
+        }
+    }
+
+    return velocity.z;
+}
+
+static inline float absMinf(float a, float b) {
+    if (fabs(a) <= fabs(b)) {
+        return a;
+    }
+    return b;
+}
+
+Vector3 aabbResolveCollisions(const World* world, Vector3 position, Vector3 bounds, Vector3 velocity) {
+    BoundingBox boundingBox = genBoundingBox(position, bounds);
+    for (int i = -2; i <= 2; ++i) {
+        for (int j = -2; j <= 4; ++j) {
+            for (int k = -2; k <= 2; ++k) {
+                Point blockPosition = pointAdd(vector3ToPoint(position), point(i, j, k));
+                float resolved = aabbResolveX(world, boundingBox, velocity, blockPosition);
+                velocity.x = absMinf(velocity.x, resolved);
+            }
+        }
+    }
+
+    boundingBox.min.x += velocity.x;
+    boundingBox.max.x += velocity.x;
+
+    for (int i = -2; i <= 2; ++i) {
+        for (int j = -2; j <= 4; ++j) {
+            for (int k = -2; k <= 2; ++k) {
+                Point blockPosition = pointAdd(vector3ToPoint(position), point(i, j, k));
+                float resolved = aabbResolveY(world, boundingBox, velocity, blockPosition);
+                velocity.y = absMinf(velocity.y, resolved);
+            }
+        }
+    }
+
+    boundingBox.min.y += velocity.y;
+    boundingBox.max.y += velocity.y;
+
+    for (int i = -2; i <= 2; ++i) {
+        for (int j = -2; j <= 4; ++j) {
+            for (int k = -2; k <= 2; ++k) {
+                Point blockPosition = pointAdd(vector3ToPoint(position), point(i, j, k));
+                float resolved = aabbResolveZ(world, boundingBox, velocity, blockPosition);
+                velocity.z = absMinf(velocity.z, resolved);
+            }
+        }
+    }
+
+    return velocity;
 }
 

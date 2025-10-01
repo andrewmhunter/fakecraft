@@ -110,7 +110,8 @@ static inline Axis axisOther1(Axis axis) {
     return others[axis];
 }
 
-static inline float vector3GetAxis(Vector3 vector, Axis axis) {
+#if 0
+static float vector3GetAxis(Vector3 vector, Axis axis) {
     switch (axis) {
         case AXIS_X:
             return vector.x;
@@ -137,5 +138,6 @@ static inline Vector3 vector3SetAxis(Vector3 vector, Axis axis, float value) {
     }
     return Vector3Zero();
 }
+#endif
 
 #endif

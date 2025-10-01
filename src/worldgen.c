@@ -4,6 +4,10 @@
 #include "worldgen.h"
 #include "logger.h"
 
+#define STB_PERLIN_IMPLEMENTATION
+#include "stb_perlin.h"
+#undef STB_PERLIN_IMPLEMENTATION
+
 void placeDungeon(World* world, Point worldPoint) {
     ASSERT(world);
 
@@ -11,10 +15,29 @@ void placeDungeon(World* world, Point worldPoint) {
     worldPlaceBox(world, pointAddValue(worldPoint, 1, 1, 1), point(8, 4, 8), BLOCK_AIR);
 }
 
+static void placeCactus(World* world, Point worldPoint) {
+    int cactusHeight = randomRange(1, 4);
+    worldPoint = pointAddY(worldPoint, 1);
+    if (worldGetBlock(world, worldPoint) != BLOCK_AIR) {
+        return;
+    }
+
+    for (int i = 0; i < cactusHeight; ++i) {
+        worldSetBlock(world, pointAddY(worldPoint, i), BLOCK_CACTUS);
+    }
+}
+
 void placeTree(World* world, Point worldPoint) {
     ASSERT(world);
 
-    if (worldGetBlock(world, worldPoint) != BLOCK_GRASS) {
+    Block surfaceBlock = worldGetBlock(world, worldPoint);
+
+    if (surfaceBlock == BLOCK_SAND) {
+        placeCactus(world, worldPoint);
+        return;
+    }
+
+    if (surfaceBlock != BLOCK_GRASS) {
         return;
     }
 
@@ -58,11 +81,6 @@ void placeTree(World* world, Point worldPoint) {
     }
 }
 
-Image noise(const World* world, Point coords, float scale) {
-    return GenImagePerlinNoise(CHUNK_WIDTH, CHUNK_WIDTH, 
-            CHUNK_WIDTH * coords.x + world->seed, CHUNK_WIDTH * coords.z, scale);
-}
-
 void generateTerrain(Chunk* chunk) {
     ASSERT(chunk);
 
@@ -73,30 +91,28 @@ void generateTerrain(Chunk* chunk) {
         chunk->blocks[x][y][z] = BLOCK_AIR;
     }
 
-#ifndef SUPERFLAT
-    Image noise4 = noise(world, coords, 0.02f);
-    Image noise3 = noise(world, coords, 0.05f);
-    Image noise2 = noise(world, coords, 0.06125f);
-    Image noise1 = noise(world, coords, 0.125f);
-    Image noise0 = noise(world, coords, 0.25f);
-#endif
-
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_WIDTH; ++z) {
             int surface = SURFACE_OFFSET;
+
 #ifndef SUPERFLAT
-            float c4 = Clamp(GetImageColor(noise4, x, z).r - 128.f, 0.f, 256.f);
+            float biomeScale = 0.001f;
 
-            float c3 = Clamp(GetImageColor(noise3, x, z).r - 170.f, 0.f, 256.f);
-            float c2 = GetImageColor(noise2, x, z).r - 128.f;
-            float c1 = GetImageColor(noise1, x, z).r - 128.f;
-            float c0 = GetImageColor(noise0, x, z).r - 128.f;
+            float wx = x + CHUNK_WIDTH * coords.x;
+            float wz = z + CHUNK_WIDTH * coords.z;
 
-            surface += c3 * 1.5f + c2 / 4 + c1 / 8 + c0 / 16 - c4;
+            float biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, 2.f, 0.5f, 10) + 0.5f;
+            biome *= 255.f;
+
+            float scale = 0.001f;
+            float stretch = 128.f;
+            int octaves = 12;
+            float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, 1.f, 2.f, 0.5f, octaves);
+            surface = noise * stretch + SURFACE_OFFSET;
 #endif
+
             surface = clampInt(surface, 1, CHUNK_HEIGHT - 1);
 
-            surface = surface >= CHUNK_HEIGHT ? CHUNK_HEIGHT - 1 : surface;
             chunk->surfaceHeight[x][z] = surface;
 
             chunk->blocks[x][0][z] = BLOCK_BEDROCK;
@@ -104,46 +120,63 @@ void generateTerrain(Chunk* chunk) {
             Block topLayerBlock = BLOCK_DIRT;
             Block surfaceBlock = BLOCK_GRASS;
 
-            if (surface < 50) {
+            if (biome < 64.0) {
+                surfaceBlock = BLOCK_SNOWY_GRASS;
+            }
+
+            if (surface < OCEAN_LEVEL + 3 || biome > 192.0) {
                 topLayerBlock = BLOCK_SAND;
                 surfaceBlock = BLOCK_SAND;
             }
 
-            /*if (surface > 100) {
-                topLayerBlock = BLOCK_STONE;
-                surfaceBlock = BLOCK_STONE;
-            }
+            for (int y = 1; y <= surface; ++y) {
+                float caveThreshold = -0.5f;
+                float caveScale = 0.025;
+                float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale, wx * caveScale, 2.f, 0.5f, 4);
 
-            if (surface > 120) {
-                topLayerBlock = BLOCK_SNOW;
-                surfaceBlock = BLOCK_SNOW;
-            }*/
+                if (caveNoise < caveThreshold) {
+                    continue;
+                }
 
-            for (int y = 1; y < surface; ++y) {
                 Block block = topLayerBlock;
                 if (y < surface - DIRT_LAYER) {
                     block = BLOCK_STONE;
                 }
+
+                if (y == surface) {
+                    block = surfaceBlock;
+                }
+
                 chunk->blocks[x][y][z] = block;
             }
 
-            for (int y = surface + 1; y <= OCEAN_LEVEL; ++y) {
-                chunk->blocks[x][y][z] = BLOCK_WATER;
+            for (int y = 11; y >= 0; --y) {
+                if (chunk->blocks[x][y][z] != BLOCK_AIR) {
+                    continue;
+                }
+                chunk->blocks[x][y][z] = BLOCK_LAVA;
             }
 
-            chunk->blocks[x][surface][z] = surfaceBlock;
+            if (surface < OCEAN_LEVEL) {
+                for (int y = OCEAN_LEVEL; y > 0; --y) {
+                    if (chunk->blocks[x][y][z] != BLOCK_AIR) {
+                        break;
+                    }
+
+                    Block waterBlock = BLOCK_WATER;
+                    if (y == OCEAN_LEVEL && biome < 64.f) {
+                        waterBlock = BLOCK_ICE;
+                    }
+                    chunk->blocks[x][y][z] = waterBlock;
+                }
+            }
+
+
+            //chunk->blocks[x][surface][z] = surfaceBlock;
         }
     }
 
     chunk->dirty = true;
-
-#ifndef SUPERFLAT
-    UnloadImage(noise3);
-    UnloadImage(noise4);
-    UnloadImage(noise2);
-    UnloadImage(noise1);
-    UnloadImage(noise0);
-#endif
 }
 
 void placeFeatures(Chunk* chunk) {

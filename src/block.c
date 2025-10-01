@@ -67,7 +67,7 @@ BlockModel blockModelNone() {
 
 BlockProperties blocks[BLOCK_COUNT];
 
-void regBlock(Block block, const char* name, Solidness solid, BlockModel model) {
+static void regBlock(Block block, const char* name, Solidness solid, BlockModel model) {
     ASSERT(name);
 
     BlockProperties props = {
@@ -77,7 +77,6 @@ void regBlock(Block block, const char* name, Solidness solid, BlockModel model) 
     };
 
     blocks[block] = props;
-
     blocks[block].mesh = cubeMesh(block);
 }
 
@@ -104,7 +103,15 @@ void registerBlocks() {
 
     regBlock(BLOCK_LOG, "log", SOLID, blockModelLog(4, 1, 5, 1));
     regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
-    regBlock(BLOCK_WATER, "water", SOLID, blockModelDefault(13, 12));
+    regBlock(BLOCK_WATER, "water", TRANSPARENT, blockModelDefault(13, 12));
     regBlock(BLOCK_SNOW, "snow", SOLID, blockModelDefault(2, 4));
+    regBlock(BLOCK_ICE, "ice", TRANSPARENT, blockModelDefault(3, 4));
+    regBlock(BLOCK_CACTUS, "cactus", TRANSPARENT, blockModelGrass(6, 4, 5, 4, 7, 4));
+    regBlock(BLOCK_LAVA, "lava", SOLID, blockModelDefault(13, 14));
+    regBlock(BLOCK_SNOWY_GRASS, "snowy_grass", SOLID, blockModelGrass(4, 4, 2, 4, 2, 0));
+
+    regBlock(BLOCK_COBWEB, "cobweb", CROSS, blockModelDefault(11, 0));
+    regBlock(BLOCK_ROSE, "rose", CROSS, blockModelDefault(12, 0));
+    regBlock(BLOCK_DANDELION, "dandelion", CROSS, blockModelDefault(13, 0));
 }
 

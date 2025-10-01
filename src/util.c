@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <m-lib/m-string.h>
+#include <string.h>
 #include "util.h"
 
 Font font;
@@ -42,14 +42,19 @@ char* vmemprintf(const char* format, va_list args) {
 
 void saveScreenshot(void) {
     // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
+
     time_t currentTime;
     struct tm* local;
     time(&currentTime);
     local = localtime(&currentTime);
     char fileName[64];
-    strftime(fileName, sizeof(fileName) - 1, "screenshots/screenshot%FT%T.png", local);
+    strftime(fileName, sizeof(fileName) - 1, "screenshot%FT%T.png", local);
     fileName[sizeof(fileName) - 1] = '\0';
     TakeScreenshot(fileName);
+
+    char finalFileName[128];
+    snprintf(finalFileName, sizeof(finalFileName) - 1, "screenshots/%s", fileName);
+    rename(fileName, finalFileName);
 }
 
 void randomizeSeed() {
