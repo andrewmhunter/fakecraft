@@ -1,5 +1,5 @@
 # Fakecraft
-A voxel sandbox game based on Minecraft
+A voxel sandbox game based on Minecraft, written in C99
 
 ## Dependencies
 
