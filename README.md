@@ -18,3 +18,10 @@ The git repository does not contain any copyrighted material. To make the game p
    a legitimate copy of the game or download it [here](https://minecraft.wiki/w/File:201007301722_terrain.png)
 4. Run `make`
 
+## Images
+
+![house](/images/house.png)
+![world](/images/world.png)
+![cave](/images/cave.png)
+![features](/images/features.png)
+
