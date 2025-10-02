@@ -5,7 +5,7 @@ A voxel sandbox game based on Minecraft, written in C99
 
 Fakecraft depends on
 1. [raylib](https://www.raylib.com/) for graphics and window management. You'll have to install raylib to build fakecraft.
-   I have plans to eventually remove the dependancy on raylib and switch to using straight OpenGL
+   I have plans to eventually remove the dependency on raylib and switch to using OpenGL and GLFW
 3. [stb_perlin](https://github.com/nothings/stb/blob/master/stb_perlin.h) for perlin noise. Used in terrain generation. This is already included
    in the project as a single header file in `external/`
 
@@ -32,15 +32,17 @@ Pick Block: Middle Click
 
 Cycle Through Blocks: Scroll Wheel
 
-Fly: F
+Toggle Fly: F
 
-NoClip: N
+Toggle NoClip: N
 
 Spawn Entity: H
 
 Decrease Render Distance: F8
 
 Increase Render Distance: F9
+
+Toggle Fullscreen: F11
 
 Close Game: ESC
 
