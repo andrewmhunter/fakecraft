@@ -1,12 +1,22 @@
+#include <stdio.h>
 #include <raylib.h>
 #include "chunk.h"
 #include "world.h"
 #include "worldgen.h"
 #include "logger.h"
 
-#define STB_PERLIN_IMPLEMENTATION
+//#define STB_PERLIN_IMPLEMENTATION
 #include "stb_perlin.h"
-#undef STB_PERLIN_IMPLEMENTATION
+//#undef STB_PERLIN_IMPLEMENTATION
+
+Hash featureSeed(Hash seed, FeatureId feature) {
+    return hashInt(seed, feature);
+}
+
+int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
+    unsigned int number = featureSeed(chunkSeed, feature);
+    return (number % (max - min)) + min;
+}
 
 void placeDungeon(World* world, Point worldPoint) {
     ASSERT(world);
@@ -89,13 +99,13 @@ void generateTerrain(Chunk* chunk) {
 
     ITERATE_CHUNK(x, y, z) {
         chunk->blocks[x][y][z] = BLOCK_AIR;
+        chunk->light[x][y][z] = (LightValues){0x0, 0xff};
     }
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_WIDTH; ++z) {
             int surface = SURFACE_OFFSET;
 
-#ifndef SUPERFLAT
             float biomeScale = 0.001f;
 
             float wx = x + CHUNK_WIDTH * coords.x;
@@ -104,6 +114,7 @@ void generateTerrain(Chunk* chunk) {
             float biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, 2.f, 0.5f, 10) + 0.5f;
             biome *= 255.f;
 
+#ifndef SUPERFLAT
             float scale = 0.001f;
             float stretch = 128.f;
             int octaves = 12;
@@ -148,6 +159,7 @@ void generateTerrain(Chunk* chunk) {
                 }
 
                 chunk->blocks[x][y][z] = block;
+                chunk->light[x][y][z] = (LightValues){0, 0x80};
             }
 
             for (int y = 11; y >= 0; --y) {
@@ -180,10 +192,25 @@ void generateTerrain(Chunk* chunk) {
 }
 
 void placeFeatures(Chunk* chunk) {
-#ifndef SUPERFLAT
-    int treeCount = randomInt(5);
+#ifdef SUPERFLAT
+    return;
+#endif
+
+    Hash chunkSeed = hashInt(FNV_OFFSET, chunk->world->seed);
+    chunkSeed = hashInt(chunkSeed, chunk->coords.x);
+    chunkSeed = hashInt(chunkSeed, chunk->coords.z);
+
+    Hash treeSeed = featureSeed(chunkSeed, FEATURE_TREE);
+    int treeCount = seededNumber(treeSeed, FEATURE_NUMBER, 0, 7);
+
+    Hash treeIndexSeed = featureSeed(treeSeed, FEATURE_INDEX);
     for (int i = 0; i < treeCount; ++i) {
-        Point point = {randomInt(CHUNK_WIDTH - 4) + 2, 0, randomInt(CHUNK_WIDTH - 4) + 2};
+        Hash treeIndex = hashChar(treeIndexSeed, i);
+
+        int x = seededNumber(treeIndex, FEATURE_X, 2, CHUNK_WIDTH - 4);
+        int z = seededNumber(treeIndex, FEATURE_Z, 2, CHUNK_WIDTH - 4);
+
+        Point point = {x, 0, z};
         point.y = chunk->surfaceHeight[point.x][point.z];
 
         placeTree(chunk->world, localToWorld(chunk->coords, point));
@@ -192,6 +219,5 @@ void placeFeatures(Chunk* chunk) {
     if (randomChance(1, 20)) {
         placeDungeon(chunk->world, localToWorld(chunk->coords, point(randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10))));
     }
-#endif
 }
 

@@ -3,7 +3,7 @@ SOURCE_DIRECORY := src
 
 RAW_SRCS := main.c mesh.c block.c chunk.c world.c \
 	util.c worldgen.c chunk_mesh.c entity.c collision.c \
-	serialize.c logger.c hash.c point.c
+	serialize.c logger.c hash.c point.c fileio.c timer.c
 
 SRCS := $(RAW_SRCS:%=$(SOURCE_DIRECORY)/%)
 
@@ -13,7 +13,7 @@ TARGET := fakecraft
 OBJS := $(SRCS:%.c=$(DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-CFLAGS := -c -std=c99 -O3 -g -Wall -Wextra
+CFLAGS := -c -std=c99 -O3 -g -Wall -Wextra -march=native
 CPPFLAGS := -MD -MP -Iexternal
 LDFLAGS = -lraylib -lm -fwhole-program
 COMMONFLAGS =
@@ -22,7 +22,7 @@ COMMONFLAGS =
 #COMMONFLAGS += -fsanitize=address -fsanitize=undefined
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) $(COMMONFLAGS) -o $@ $(OBJS)
+	$(CC) $(COMMONFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 $(DIR)/%.o: %.c
 	@ mkdir -p $(dir $@)

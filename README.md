@@ -48,8 +48,8 @@ Close Game: ESC
 
 ## Images
 
-![house](/images/house.png)
-![world](/images/world.png)
-![cave](/images/cave.png)
-![features](/images/features.png)
+![house](images/house.png)
+![world](images/world.png)
+![cave](images/cave.png)
+![features](images/features.png)
 

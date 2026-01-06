@@ -6,6 +6,7 @@
 #include "chunk.h"
 #include "entity.h"
 #include "logger.h"
+#include "fileio.h"
 
 void saveFloat(float number, FILE* file) {
     ASSERT(fwrite(&number, sizeof(number), 1, file) == 1);
@@ -69,8 +70,7 @@ void saveChunk(const Chunk* chunk) {
 
     char fileName[FILENAME_MAX];
     getChunkFileName(chunk, fileName, sizeof(fileName));
-    FILE* file = fopen(fileName, "wb");
-    ASSERT(file);
+    FILE* file = openFileRequired(fileName, "wb");
 
     size_t blocksSize = sizeof(chunk->blocks);
     size_t savedCount = 0;
@@ -105,8 +105,9 @@ bool loadChunk(Chunk* chunk) {
 
     char fileName[FILENAME_MAX];
     getChunkFileName(chunk, fileName, sizeof(fileName));
-    FILE* file = fopen(fileName, "rb");
-    if (file == NULL) {
+
+    FILE* file = NULL;
+    if (!openFile(&file, fileName, "rb", LOG_TRACE)) {
         return false;
     }
 
@@ -258,8 +259,7 @@ void saveWorld(const World* world) {
 
     DEBUG("Saving world to file");
 
-    FILE* file = fopen("save/world.bin", "wb");
-    ASSERT(file);
+    FILE* file = openFileRequired("save/world.bin", "wb");
 
     saveI32(world->seed, file);
     saveEntity(world->player, file);
@@ -282,8 +282,8 @@ void saveWorld(const World* world) {
 bool loadWorld(World* world) {
     ASSERT(world);
 
-    FILE* file = fopen("save/world.bin", "rb");
-    if (file == NULL) {
+    FILE* file = NULL;
+    if (!openFile(&file, "save/world.bin", "rb", LOG_WARNING)) {
         return false;
     }
 

@@ -2,6 +2,8 @@
 #include "logger.h"
 #include <raymath.h>
 
+#define COLLISION_EPSILON 0.00001
+
 // Digital differential analysis, extended to work in 3d
 // https://www.youtube.com/watch?v=NbSee-XM7WA
 // https://lodev.org/cgtutor/raycasting.html
@@ -142,9 +144,9 @@ static inline float aabbResolveAxis(const World* world, BoundingBox boundingBox,
 
     if (intersectsB && intersectsC && willIntersectA) {
         if (velocityA < 0.f && vector3GetAxis(movedBounds.min, axis) <= worldVectorA + 1.f) {
-            velocityA = MIN(worldVectorA + 1.f - vector3GetAxis(boundingBox.min, axis) + EPSILON, 0.f);
+            velocityA = MIN(worldVectorA + 1.f - vector3GetAxis(boundingBox.min, axis) + COLLISION_EPSILON, 0.f);
         } else if (velocityA > 0.f && vector3GetAxis(movedBounds.max, axis) >= worldVectorA) {
-            velocityA = MAX(worldVectorA - vector3GetAxis(boundingBox.max, axis) - EPSILON, 0.f);
+            velocityA = MAX(worldVectorA - vector3GetAxis(boundingBox.max, axis) - COLLISION_EPSILON, 0.f);
         }
     }
 
@@ -152,8 +154,12 @@ static inline float aabbResolveAxis(const World* world, BoundingBox boundingBox,
 }
 #endif
 
+bool isPassable(Block block) {
+    return blocks[block].passability == PASSABLE;
+}
+
 static float aabbResolveX(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition) {
-    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+    if (isPassable(worldGetBlock(world, blockPosition))) {
         return velocity.x;
     }
 
@@ -176,9 +182,9 @@ static float aabbResolveX(const World* world, BoundingBox boundingBox, Vector3 v
 
     if (intersectsY && intersectsZ && willIntersectX) {
         if (velocity.x < 0.f && bb.min.x <= worldVector.x + 1.f) {
-            velocity.x = MIN(worldVector.x + 1.f - boundingBox.min.x + EPSILON, 0.f);
+            velocity.x = MIN(worldVector.x + 1.f - boundingBox.min.x + COLLISION_EPSILON, 0.f);
         } else if (velocity.x > 0.f && bb.max.x >= worldVector.x) {
-            velocity.x = MAX(worldVector.x - boundingBox.max.x - EPSILON, 0.f);
+            velocity.x = MAX(worldVector.x - boundingBox.max.x - COLLISION_EPSILON, 0.f);
         }
     }
 
@@ -186,7 +192,7 @@ static float aabbResolveX(const World* world, BoundingBox boundingBox, Vector3 v
 }
 
 static float aabbResolveY(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition) {
-    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+    if (isPassable(worldGetBlock(world, blockPosition))) {
         return velocity.y;
     }
 
@@ -209,9 +215,9 @@ static float aabbResolveY(const World* world, BoundingBox boundingBox, Vector3 v
 
     if (intersectsX && intersectsZ && willIntersectY) {
         if (velocity.y < 0.f && bb.min.y <= worldVector.y + 1.f) {
-            velocity.y = MIN(worldVector.y + 1.f - boundingBox.min.y + EPSILON, 0.f);
+            velocity.y = MIN(worldVector.y + 1.f - boundingBox.min.y + COLLISION_EPSILON, 0.f);
         } else if (velocity.y > 0.f && bb.max.y >= worldVector.y) {
-            velocity.y = MAX(worldVector.y - boundingBox.max.y - EPSILON, 0.f);
+            velocity.y = MAX(worldVector.y - boundingBox.max.y - COLLISION_EPSILON, 0.f);
         }
     }
 
@@ -219,7 +225,7 @@ static float aabbResolveY(const World* world, BoundingBox boundingBox, Vector3 v
 }
 
 static float aabbResolveZ(const World* world, BoundingBox boundingBox, Vector3 velocity, Point blockPosition) {
-    if (worldGetBlock(world, blockPosition) == BLOCK_AIR) {
+    if (isPassable(worldGetBlock(world, blockPosition))) {
         return velocity.z;
     }
 
@@ -242,9 +248,9 @@ static float aabbResolveZ(const World* world, BoundingBox boundingBox, Vector3 v
 
     if (intersectsX && intersectsY && willIntersectZ) {
         if (velocity.z < 0.f && bb.min.z <= worldVector.z + 1.f) {
-            velocity.z = MIN(worldVector.z + 1.f - boundingBox.min.z + EPSILON, 0.f);
+            velocity.z = MIN(worldVector.z + 1.f - boundingBox.min.z + COLLISION_EPSILON, 0.f);
         } else if (velocity.z > 0.f && bb.max.z > worldVector.z) {
-            velocity.z = MAX(worldVector.z - boundingBox.max.z - EPSILON, 0.f);
+            velocity.z = MAX(worldVector.z - boundingBox.max.z - COLLISION_EPSILON, 0.f);
         }
     }
 

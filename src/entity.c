@@ -17,6 +17,8 @@ void entityInit(Entity* entity, EntityType type, World* world, Vector3 position,
     entity->flying = false;
     entity->onGround = false;
     entity->noClip = false;
+
+    entity->breakTimer = timerInit(0.25);
 }
 
 void entityUnload(Entity* entity) {
@@ -80,7 +82,7 @@ void playerUpdate(Entity* entity, float deltaTime) {
     Vector2 mouseDelta = GetMouseDelta();
     entity->yaw -= mouseDelta.x * SENSITIVITY;
     entity->pitch-= mouseDelta.y * SENSITIVITY;
-    entity->pitch = Clamp(entity->pitch, -PI / 2 + 0.0001, PI / 2 - 0.0001);
+    entity->pitch = Clamp(entity->pitch, -PI / 2 + 0.01, PI / 2 - 0.01);
 
     movement = Vector3RotateByAxisAngle(movement, (Vector3){0.f, 1.f, 0.f}, entity->yaw);
     movement = Vector3Normalize(movement);

@@ -2,6 +2,7 @@
 #define ENTITY_H
 
 #include <raylib.h>
+#include "timer.h"
 
 struct World;
 
@@ -22,6 +23,7 @@ typedef struct Entity {
     bool flying;
     bool onGround;
     bool noClip;
+    Timer breakTimer;
 } Entity;
 
 void entityInit(Entity* entity, EntityType type, struct World* world, Vector3 position, float width, float height);

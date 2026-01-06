@@ -11,7 +11,7 @@
 #define FNV_OFFSET 0x811c9dc5
 
 #define SET_RATIO_NUMERATOR 1
-#define SET_RATIO_DENOMINATOR 2
+#define SET_RATIO_DENOMINATOR 4
 
 typedef uint32_t Hash;
 
@@ -21,6 +21,10 @@ static inline Hash hashBytes(Hash hash, const void* data, size_t count) {
         hash *= FNV_PRIME;
     }
     return hash;
+}
+
+static inline Hash hashChar(Hash hash, char ch) {
+    return hashBytes(hash, &ch, sizeof(char));
 }
 
 static inline Hash hashInt(Hash hash, int value) {

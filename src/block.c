@@ -67,13 +67,14 @@ BlockModel blockModelNone() {
 
 BlockProperties blocks[BLOCK_COUNT];
 
-static void regBlock(Block block, const char* name, Solidness solid, BlockModel model) {
+static void regBlock(Block block, const char* name, Solidness solid, Passability passability, BlockModel model) {
     ASSERT(name);
 
     BlockProperties props = {
         .name = name,
         .solidness = solid,
         .model = model,
+        .passability = passability
     };
 
     blocks[block] = props;
@@ -81,37 +82,37 @@ static void regBlock(Block block, const char* name, Solidness solid, BlockModel 
 }
 
 void registerBlocks() {
-    regBlock(BLOCK_AIR, "air", TRANSPARENT, blockModelNone());
-    regBlock(BLOCK_BARRIER, "barrier", SOLID, blockModelNone());
+    regBlock(BLOCK_AIR, "air", TRANSPARENT, PASSABLE, blockModelNone());
+    regBlock(BLOCK_BARRIER, "barrier", SOLID, IMPASSABLE, blockModelNone());
 
-    regBlock(BLOCK_STONE, "stone", SOLID, blockModelDefault(1, 0));
-    regBlock(BLOCK_DIRT, "dirt", SOLID, blockModelDefault(2, 0));
-    regBlock(BLOCK_PLANKS, "planks", SOLID, blockModelDefault(4, 0));
-    regBlock(BLOCK_COBBLESTONE, "cobblestone", SOLID, blockModelDefault(0, 1));
-    regBlock(BLOCK_BEDROCK, "bedrock", SOLID, blockModelDefault(1, 1));
-    regBlock(BLOCK_DIAMOND_ORE, "diamond_ore", SOLID, blockModelDefault(2, 3));
-    regBlock(BLOCK_OBSIDIAN, "obsidian", SOLID, blockModelDefault(5, 2));
-    regBlock(BLOCK_GRASS, "grass", SOLID, blockModelGrass(3, 0, 0, 0, 2, 0));
-    regBlock(BLOCK_SAND, "sand", SOLID, blockModelDefault(2, 1));
-    regBlock(BLOCK_GLASS, "glass", TRANSPARENT, blockModelDefault(1, 3));
+    regBlock(BLOCK_STONE, "stone", SOLID, IMPASSABLE, blockModelDefault(1, 0));
+    regBlock(BLOCK_DIRT, "dirt", SOLID, IMPASSABLE, blockModelDefault(2, 0));
+    regBlock(BLOCK_PLANKS, "planks", SOLID, IMPASSABLE, blockModelDefault(4, 0));
+    regBlock(BLOCK_COBBLESTONE, "cobblestone", SOLID, IMPASSABLE, blockModelDefault(0, 1));
+    regBlock(BLOCK_BEDROCK, "bedrock", SOLID, IMPASSABLE, blockModelDefault(1, 1));
+    regBlock(BLOCK_DIAMOND_ORE, "diamond_ore", SOLID, IMPASSABLE, blockModelDefault(2, 3));
+    regBlock(BLOCK_OBSIDIAN, "obsidian", SOLID, IMPASSABLE, blockModelDefault(5, 2));
+    regBlock(BLOCK_GRASS, "grass", SOLID, IMPASSABLE, blockModelGrass(3, 0, 0, 0, 2, 0));
+    regBlock(BLOCK_SAND, "sand", SOLID, IMPASSABLE, blockModelDefault(2, 1));
+    regBlock(BLOCK_GLASS, "glass", TRANSPARENT, IMPASSABLE, blockModelDefault(1, 3));
 
 #if FAST_LEAVES
-    regBlock(BLOCK_LEAVES, "leaves", SOLID, blockModelDefault(5, 3));
+    regBlock(BLOCK_LEAVES, "leaves", SOLID, IMPASSABLE, blockModelDefault(5, 3));
 #else
-    regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, blockModelDefault(4, 3));
+    regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, IMPASSABLE, blockModelDefault(4, 3));
 #endif
 
-    regBlock(BLOCK_LOG, "log", SOLID, blockModelLog(4, 1, 5, 1));
-    regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
-    regBlock(BLOCK_WATER, "water", TRANSPARENT, blockModelDefault(13, 12));
-    regBlock(BLOCK_SNOW, "snow", SOLID, blockModelDefault(2, 4));
-    regBlock(BLOCK_ICE, "ice", TRANSPARENT, blockModelDefault(3, 4));
-    regBlock(BLOCK_CACTUS, "cactus", TRANSPARENT, blockModelGrass(6, 4, 5, 4, 7, 4));
-    regBlock(BLOCK_LAVA, "lava", SOLID, blockModelDefault(13, 14));
-    regBlock(BLOCK_SNOWY_GRASS, "snowy_grass", SOLID, blockModelGrass(4, 4, 2, 4, 2, 0));
+    regBlock(BLOCK_LOG, "log", SOLID, IMPASSABLE, blockModelLog(4, 1, 5, 1));
+    regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, IMPASSABLE, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
+    regBlock(BLOCK_WATER, "water", TRANSPARENT, PASSABLE, blockModelDefault(13, 12));
+    regBlock(BLOCK_SNOW, "snow", SOLID, IMPASSABLE, blockModelDefault(2, 4));
+    regBlock(BLOCK_ICE, "ice", TRANSPARENT, IMPASSABLE, blockModelDefault(3, 4));
+    regBlock(BLOCK_CACTUS, "cactus", TRANSPARENT, IMPASSABLE, blockModelGrass(6, 4, 5, 4, 7, 4));
+    regBlock(BLOCK_LAVA, "lava", TRANSPARENT, PASSABLE, blockModelDefault(13, 14));
+    regBlock(BLOCK_SNOWY_GRASS, "snowy_grass", SOLID, IMPASSABLE, blockModelGrass(4, 4, 2, 4, 2, 0));
 
-    regBlock(BLOCK_COBWEB, "cobweb", CROSS, blockModelDefault(11, 0));
-    regBlock(BLOCK_ROSE, "rose", CROSS, blockModelDefault(12, 0));
-    regBlock(BLOCK_DANDELION, "dandelion", CROSS, blockModelDefault(13, 0));
+    regBlock(BLOCK_COBWEB, "cobweb", CROSS, PASSABLE, blockModelDefault(11, 0));
+    regBlock(BLOCK_ROSE, "rose", CROSS, PASSABLE, blockModelDefault(12, 0));
+    regBlock(BLOCK_DANDELION, "dandelion", CROSS, PASSABLE, blockModelDefault(13, 0));
 }
 

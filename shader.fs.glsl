@@ -7,6 +7,9 @@ in float fragDepth;
 
 uniform sampler2D texture0;
 uniform float skyLight;
+uniform vec4 fogColor;
+uniform float fogDistance;
+uniform float fogDropoff;
 
 out vec4 finalColor;
 
@@ -28,17 +31,17 @@ void main()
 
 	float shade = fragNormal.y * 0.25 + abs(fragNormal.x) * 0.05 - abs(fragNormal.z) * 0.15 + 0.75;
 
-	float fogDistance = 1000.0;
-	float fogDropoff = 2000.0;
-	float fog = 1.0 - (fragDepth - 2500.0) / 2000.0;
+	float fog = 1.0 - (fragDepth - fogDropoff) / fogDistance;
+	fog = clamp(fog, 0.0, 1.0);
 
 	float lighting = fragColor.r + fragColor.g * skyLight;
 	shade *= lighting;
 	finalColor = texColor * vec4(shade, shade, shade, 1.0);
-	//finalColor.a *= fog;
 
-	//finalColor = vec4(fragDepth / 1000, 0.0, 1.0, 1.0);
 
-	//finalColor = mix(vec4(1.0), finalColor, fog);
+	finalColor = mix(fogColor, finalColor, fog);
+
+	/// Crazy colors
+	// finalColor = vec4(fragDepth / 1000, 0.0, 1.0, 1.0);
 }
 

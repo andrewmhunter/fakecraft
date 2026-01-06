@@ -149,7 +149,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                 }
 
                 Block adjacentBlock = chunkGetBlockRaw(chunk, pointAddY(point, -1));
-                if (y != 0 && blocks[adjacentBlock].solidness != SOLID && (properties->solidness == SOLID || block != adjacentBlock)) {
+                if (y != 0 && (blocks[adjacentBlock].solidness != SOLID && (properties->solidness == SOLID || block != adjacentBlock))) {
                     meshFaceSmart(mesh, faceCount++, x, y, z, DIRECTION_DOWN,
                             sides[DIRECTION_DOWN].x, sides[DIRECTION_DOWN].y);
                     chunk->totalVertexCount += 4;

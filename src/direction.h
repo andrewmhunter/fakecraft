@@ -40,6 +40,16 @@ static inline Direction invertDirection(Direction direction) {
     return inverted[direction];
 }
 
+static inline Direction directionCardinalRightAngle(Direction direction) {
+    static const Direction right[DIRECTION_COUNT] = {
+        [DIRECTION_SOUTH] = DIRECTION_WEST,
+        [DIRECTION_EAST]  = DIRECTION_SOUTH,
+        [DIRECTION_NORTH] = DIRECTION_EAST,
+        [DIRECTION_WEST]  = DIRECTION_NORTH,
+    };
+    return right[direction];
+}
+
 static inline const char* directionName(Direction direction) {
     static const char* const directionNames[DIRECTION_COUNT] = {
         [DIRECTION_UP]    = "up",

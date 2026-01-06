@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "util.h"
+#include "logger.h"
 
 Font font;
 
@@ -55,6 +56,8 @@ void saveScreenshot(void) {
     char finalFileName[128];
     snprintf(finalFileName, sizeof(finalFileName) - 1, "screenshots/%s", fileName);
     rename(fileName, finalFileName);
+
+    INFO("Saved screenshot %s", finalFileName);
 }
 
 void randomizeSeed() {

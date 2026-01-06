@@ -11,17 +11,44 @@
 #include "point.h"
 
 
-// Game
+void drawThickWireCube(Vector3 position, Color color, float lineWidth) {
+    float axisOffset = 0.f;
+    float epsilon = 0.00125;
+
+    float longLineLength = 1.f + 1.f * epsilon;
+
+    float boxWidth = (1.f - lineWidth + epsilon) / 2.f;
+    float offsets[] = {boxWidth, -boxWidth};
+
+    float shortLineLength = longLineLength - 2.f * lineWidth;
+
+
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            float offsetA = offsets[i];
+            float offsetB = offsets[j];
+
+            Vector3 xPos = Vector3Add(position, (Vector3){axisOffset, offsetA, offsetB});
+            DrawCube(xPos, shortLineLength, lineWidth, lineWidth, color);
+
+            Vector3 yPos = Vector3Add(position, (Vector3){offsetA, axisOffset, offsetB});
+            DrawCube(yPos, lineWidth, longLineLength, lineWidth, color);
+
+            Vector3 zPos = Vector3Add(position, (Vector3){offsetA, offsetB, axisOffset});
+            DrawCube(zPos, lineWidth, lineWidth, shortLineLength, color);
+        }
+    }
+}
 
 int main(void) {
     // Pass raylibs logs through our own logger
     SetTraceLogCallback(raylibLogCallback);
 
-    // We only want to show raylibs warnings as there it prints way to many
+    // We only want to show raylibs warnings as it emits way to many
     // info logs
     SetTraceLogLevel(LOG_WARNING);
 
-    setLogLevel(LOG_ALL);
+    setLogLevel(LOG_INFO);
 
     // No matter where you run the executable from it will still be able to
     // access the resources in its directory
@@ -39,11 +66,15 @@ int main(void) {
 
     Shader shader = LoadShader("shader.vs.glsl", "shader.fs.glsl");
     ASSERT(IsShaderValid(shader));
+    // TODO: This doesn't check if a shader compilation error occured
     // TODO: Need a better way to store uniform locations and switch out model
     // uniform for the one used by raylib
     int shaderCamUniform = GetShaderLocation(shader, "camPos");
     shaderModelUniform = GetShaderLocation(shader, "model");
     shaderSkylight = GetShaderLocation(shader, "skyLight");
+    shaderFogColor = GetShaderLocation(shader, "fogColor");
+    shaderFogDistance = GetShaderLocation(shader, "fogDistance");
+    shaderFogDropoff = GetShaderLocation(shader, "fogDropoff");
 
     // TODO: Custon font loading for minecrafts font format
     font = LoadFont("resources/defaultSpritefont.png");
@@ -96,6 +127,8 @@ int main(void) {
 
     float maxY = 0.f;
 
+    bool showGui = true;
+
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_Q) && targetFps > 0) {
             targetFps -= 10;
@@ -117,6 +150,10 @@ int main(void) {
 
         if (IsKeyPressed(KEY_F2)) {
             saveScreenshot();
+        }
+
+        if (IsKeyPressed(KEY_F1)) {
+            showGui = !showGui;
         }
 
         if (IsKeyPressed(KEY_F6)) {
@@ -148,14 +185,31 @@ int main(void) {
         WalkCollision rayCast = ddaCastRay(&world, cam.position, lookVec, 8.f);
         Vector3 cubePos = Vector3AddValue(pointToVector3(rayCast.blockAt), 0.5f);
 
+        float initialBreakTime = 0.3f;
+        float repeatedBreakTime = 0.15f;
+
         if (rayCast.collided) {
             if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
                 worldTryPlaceBlock(&world, rayCast.blockBefore, selectedBlock);
+                timerResetTime(&player->breakTimer, initialBreakTime);
             }
+
+            if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && timerUpdate(&player->breakTimer)) {
+                worldTryPlaceBlock(&world, rayCast.blockBefore, selectedBlock);
+                timerResetTime(&player->breakTimer, repeatedBreakTime);
+            }
+
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 worldSetBlock(&world, rayCast.blockAt, BLOCK_AIR);
+                timerResetTime(&player->breakTimer, initialBreakTime);
             }
+
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && timerUpdate(&player->breakTimer)) {
+                worldSetBlock(&world, rayCast.blockAt, BLOCK_AIR);
+                timerResetTime(&player->breakTimer, repeatedBreakTime);
+            }
+
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
                 selectedBlock = worldGetBlock(&world, rayCast.blockAt);
@@ -186,64 +240,81 @@ int main(void) {
         SetShaderValue(shader, shaderCamUniform, &cam.position, SHADER_UNIFORM_VEC3);
 
         BeginDrawing();
-        ClearBackground(SKYBLUE);
+        ClearBackground(world.skyColor);
 
         BeginMode3D(cam);
 
-        //drawChunk(&chunk, material);
         worldDraw(&world, material);
 
-        if (rayCast.collided) {
-            float epsilon = 0.002;
-            float low = 1.f - epsilon;
-            float offset = 1.f + epsilon;
-            DrawCubeWires(cubePos, 1, 1, 1, WHITE);
-            DrawCubeWires(cubePos, offset, offset, offset, WHITE);
-            DrawCubeWires(cubePos, low, low, offset, WHITE);
-            DrawCubeWires(cubePos, low, offset, low, WHITE);
-            DrawCubeWires(cubePos, offset, low, low, WHITE);
+        unsigned char inversionColorValue = 200;
+        Color inversionColor = (Color){.r = inversionColorValue, .g = inversionColorValue, .b = inversionColorValue};
+
+        if (showGui) {
+            if (rayCast.collided) {
+                BeginBlendMode(BLEND_SUBTRACT_COLORS);
+
+                /*float epsilon = 0.002;
+                float low = 1.f - epsilon;
+                float offset = 1.f + epsilon;
+                DrawCubeWires(cubePos, 1, 1, 1, inversionColor);
+                DrawCubeWires(cubePos, offset, offset, offset, inversionColor);
+                DrawCubeWires(cubePos, low, low, offset, inversionColor);
+                DrawCubeWires(cubePos, low, offset, low, inversionColor);
+                DrawCubeWires(cubePos, offset, low, low, inversionColor);*/
+
+                drawThickWireCube(cubePos, inversionColor, 0.02f);
+                EndBlendMode();
+            }
+
+            if (world.showChunkBorders) {
+                DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
+            }
         }
-
-        //DrawSphere(rayCast2.collisionAt, 0.3, RED);
-        //DrawSphere(pointToVector3(rayCast2.blockAt), 0.3, BLUE);
-
-        if (world.showChunkBorders) {
-            DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
-        }
-
-        //DrawCubeWires(Vector3Subtract(cam.position, (Vector3){0, PLAYER_EYE - 0.9f, 0}), 0.6f, 1.8f, 0.6f, WHITE);
 
         EndMode3D();
 
-        int screenMiddleX = GetScreenWidth() / 2;
-        int screenMiddleY = GetScreenHeight() / 2;
+        if (showGui) {
+            int screenMiddleX = GetScreenWidth() / 2;
+            int screenMiddleY = GetScreenHeight() / 2;
 
-        BeginMode3D(guiCam);
-        Matrix indicator = MatrixScale(5.f, 5.f, 5.f);
-        indicator = MatrixMultiply(indicator, MatrixRotateY(PI / 4));
-        indicator = MatrixMultiply(indicator, MatrixRotateX(-PI / 8));
-        indicator = MatrixMultiply(indicator, MatrixTranslate(-75, 35, 0));
-        DrawMesh(blocks[selectedBlock].mesh, material, indicator);
+            BeginMode3D(guiCam);
 
-        EndMode3D();
+            float fogDistance = 10000000.f;
+            float fogDropoff = fogDistance;
+            SetShaderValue(material.shader, shaderFogDistance, &fogDistance, SHADER_UNIFORM_FLOAT);
+            SetShaderValue(material.shader, shaderFogDropoff, &fogDropoff, SHADER_UNIFORM_FLOAT);
+
+            Matrix indicator = MatrixIdentity();
+            indicator = MatrixMultiply(indicator, MatrixScale(5.f, 5.f, 5.f));
+            indicator = MatrixMultiply(indicator, MatrixRotateY(PI / 4));
+            indicator = MatrixMultiply(indicator, MatrixRotateX(-PI / 8));
+            indicator = MatrixMultiply(indicator, MatrixTranslate(-75, 35, 0));
+            DrawMesh(blocks[selectedBlock].mesh, material, indicator);
+
+            EndMode3D();
 
 
-        renderText(0, 0, "%d FPS", GetFPS());
-        renderText(0, 20, "P: %s", formatVector3(player->position));
-        renderText(0, 40, "V: %s", formatVector3(player->velocity));
-        renderText(0, 60, "L: %s", formatVector3(lookVec));
-        renderText(0, 100, "%.02f m/s", Vector3Length(player->velocity) * GetFPS());
-        renderText(0, 120, "RD: %d", world.renderDistance);
+            renderText(0, 0, "%d FPS", GetFPS());
+            renderText(0, 20, "P: %s", formatVector3(player->position));
+            renderText(0, 40, "V: %s", formatVector3(player->velocity));
+            renderText(0, 60, "L: %s", formatVector3(lookVec));
+            renderText(0, 80, "RD: %d", world.renderDistance);
+            renderText(0, 100, "E: %lu", world.entities.length);
 
-        maxY = MAX(cam.position.y, maxY);
-        renderText(0, 80, "%f", maxY - cam.position.y);
+            maxY = MAX(cam.position.y, maxY);
+            //renderText(0, 80, "%f", maxY - cam.position.y);
 
-        //DrawText(TextFormat("%d: %s", selectedBlock, blocks[selectedBlock].name), 0, 20, 20, WHITE);
+            //DrawText(TextFormat("%d: %s", selectedBlock, blocks[selectedBlock].name), 0, 20, 20, WHITE);
 
-        //DrawLine(screenMiddleX - 4, screenMiddleY, screenMiddleX + 4, screenMiddleY, WHITE);
-        //DrawLine(screenMiddleX, screenMiddleY - 4, screenMiddleX, screenMiddleY + 4, WHITE);
-        DrawRectangle(screenMiddleX - 8, screenMiddleY - 1, 16, 2, WHITE);
-        DrawRectangle(screenMiddleX - 1, screenMiddleY - 8, 2, 16, WHITE);
+            //DrawLine(screenMiddleX - 4, screenMiddleY, screenMiddleX + 4, screenMiddleY, WHITE);
+            //DrawLine(screenMiddleX, screenMiddleY - 4, screenMiddleX, screenMiddleY + 4, WHITE);
+
+            BeginBlendMode(BLEND_SUBTRACT_COLORS);
+            DrawRectangle(screenMiddleX - 8, screenMiddleY - 1, 16, 2, inversionColor);
+            DrawRectangle(screenMiddleX - 1, screenMiddleY - 8, 2, 16, inversionColor);
+            DrawRectangle(screenMiddleX - 1, screenMiddleY - 1, 2, 2, inversionColor);
+            EndBlendMode();
+        }
 
 
         EndDrawing();

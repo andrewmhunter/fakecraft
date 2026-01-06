@@ -50,6 +50,11 @@ typedef enum {
     CROSS,
 } Solidness;
 
+typedef enum {
+    PASSABLE,
+    IMPASSABLE,
+} Passability;
+
 typedef struct {
     Point sides[DIRECTION_COUNT];
 } BlockModel;
@@ -59,6 +64,7 @@ typedef struct {
     Solidness solidness;
     Mesh mesh;
     BlockModel model;
+    Passability passability;
 } BlockProperties;
 
 extern BlockProperties blocks[BLOCK_COUNT];

@@ -46,7 +46,7 @@ void worldInit(World* world) {
     world->renderDistance = DEFAULT_RENDER_DISTANCE;
     world->showChunkBorders = false;
     world->skyLight = 0.f;
-
+    world->skyColor = SKYBLUE;
 
     setInit(&world->chunks);
     LIST_INIT(&world->entities);
@@ -100,9 +100,76 @@ void worldUnload(World* world) {
 
 int shaderModelUniform = 0;
 int shaderSkylight = 0;
+int shaderFogColor = 0;
+int shaderFogDistance = 0;
+int shaderFogDropoff = 0;
 
 static int chunkDistance(Point from, Point to) {
     return (int)floorf(sqrtf(squaref(from.x - to.x) + squaref(from.z - to.z)));
+}
+
+
+CircleIterator circleIteratorInit(int distance) {
+    return (CircleIterator) {
+        .distance = distance,
+        .row = 0,
+        .direction = 4,
+        .column = 0,
+        .side = 1,
+    };
+}
+
+static bool updateStateCircleIterator(CircleIterator* state) {
+    if (state->side == 1) {
+        state->side = -1;
+    } else if (state->side == -1) {
+        if (state->column != state->row) {
+            state->side = 1;
+            return true;
+        }
+    }
+
+    state->direction += 1;
+    if (state->direction < DIRECTION_CARDINAL_COUNT) {
+        return true;
+    }
+    state->direction = 0;
+
+    state->column += 1;
+
+    state->side = -1;
+    if (state->column < state->row + 1) {
+        return true;
+    }
+    state->column = 0;
+
+    state->row += 1;
+    state->side = 0;
+    if (state->row < state->distance + 1) {
+        return true;
+    }
+
+    return false;
+}
+
+bool iterateCircleIterator(CircleIterator* state, Point* pointOut) {
+    if (!updateStateCircleIterator(state)) {
+        return false;
+    }
+
+    Point directionPoint = directionToPoint(state->direction);
+    Point rightAnglePoint = directionToPoint(directionCardinalRightAngle(state->direction));
+
+    Point point = pointScale(directionPoint, state->row);
+
+    Point offsetColumn = pointScale(rightAnglePoint, state->side * state->column);
+    point = pointAdd(point, offsetColumn);
+
+    *pointOut = point;
+
+    //fprintf(stderr, "% d % d\n", point.x, point.z);
+
+    return true;
 }
 
 void worldUpdate(World* world, float deltaTime) {
@@ -128,33 +195,32 @@ void worldUpdate(World* world, float deltaTime) {
     int renderDistance = world->renderDistance;
 
     if (world->player) {
-        int maxChunkLoads = 10;
+        int maxChunkLoads = 2;
 
-        for (int x = -renderDistance; x <= renderDistance; ++x) {
-            for (int z = -renderDistance; z <= renderDistance; ++z) {
-                Point chunkCoord = {x, 0, z};
-                chunkCoord = pointAdd(chunkCoord, worldToChunkV(world->player->position));
-                // This prevents cubic chunks
-                chunkCoord.y = 0;
+        Point chunkOffset = pointZero();
+        CircleIterator offsetIterator = circleIteratorInit(renderDistance);
 
-                Chunk* chunk = worldGetChunk(world, chunkCoord);
-                if (chunk != NULL) {
-                    continue;
-                }
+        do {
+            Point chunkCoord = pointAdd(chunkOffset, worldToChunkV(world->player->position));
+            chunkCoord.y = 0;
+            Chunk* chunk = worldGetChunk(world, chunkCoord);
 
-                int distance = chunkDistance(worldToChunkV(world->player->position), chunkCoord);
-                if (distance > renderDistance) {
-                    continue;
-                }
-
-                if (maxChunkLoads <= 0 && distance != 0) {
-                    continue;
-                }
-                maxChunkLoads--;
-
-                chunkInit(world, chunkCoord);
+            if (chunk != NULL) {
+                continue;
             }
-        }
+
+            int distance = chunkDistance(worldToChunkV(world->player->position), chunkCoord);
+            if (distance > renderDistance) {
+                continue;
+            }
+
+            if (maxChunkLoads <= 0 && distance != 0) {
+                continue;
+            }
+            maxChunkLoads--;
+
+            chunkInit(world, chunkCoord);
+        } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
     }
 
     HashEntry* chunkIt = NULL;
@@ -165,15 +231,6 @@ void worldUpdate(World* world, float deltaTime) {
 
         int distance = chunkDistance(playerChunk, chunk->coords);
 
-        /*Point distance = pointSubtract(playerChunk, chunk->coords);
-
-        int adjustedRenderDistance = renderDistance + 1;
-
-        if (distance.x < -adjustedRenderDistance
-            || distance.x > adjustedRenderDistance
-            || distance.z < -adjustedRenderDistance
-            || distance.z > adjustedRenderDistance
-        ) {*/
         if (distance > renderDistance + 1) {
             chunkUnload(chunk);
             setRemove(&world->chunks, CHUNK_DICT_VTABLE, &chunk->coords);
@@ -193,12 +250,41 @@ void worldDraw(World* world, Material material) {
 
     SetShaderValue(material.shader, shaderSkylight, &world->skyLight, SHADER_UNIFORM_FLOAT);
 
-    HashEntry* chunkIt = NULL;
+
+    Color fogColor = world->skyColor;
+    Vector4 fogColorVector = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
+    fogColorVector = Vector4Scale(fogColorVector, 1.f / 255.f);
+    SetShaderValue(material.shader, shaderFogColor, &fogColorVector, SHADER_UNIFORM_VEC4);
+
+    //float fogDropoff = 4000.f;
+    //float fogDistance = 5000.f;
+    
+    float fogDropoff = (world->renderDistance - 1) * 16;
+    fogDropoff *= fogDropoff;
+    float fogDistance = fogDropoff * 4.f / 5.f;
+
+
+    SetShaderValue(material.shader, shaderFogDistance, &fogDistance, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(material.shader, shaderFogDropoff, &fogDropoff, SHADER_UNIFORM_FLOAT);
+
+    /*HashEntry* chunkIt = NULL;
     while (setIterate(&world->chunks, &chunkIt)) {
         Chunk* chunk = chunkIt->contents;
 
         drawChunk(chunk, material);
-    }
+    }*/
+
+    Point chunkOffset = pointZero();
+    CircleIterator offsetIterator = circleIteratorInit(world->renderDistance + 1);
+    do {
+        Point chunkCoord = pointAdd(chunkOffset, worldToChunkV(world->player->position));
+        chunkCoord.y = 0;
+        Chunk* chunk = worldGetChunk(world, chunkCoord);
+        if (chunk == NULL) {
+            continue;
+        }
+        drawChunk(chunk, material);
+    } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
     for (size_t i = 0; i < world->entities.length; ++i) {
         entityDraw(world->entities.data[i]);

@@ -22,7 +22,10 @@ void main()
 
     vec4 diff = model * vec4(vertexPosition, 1.0) - vec4(camPos, 1.0);
     diff = diff * diff;
-    fragDepth = diff.x + diff.y + diff.z;
+
+    fragDepth = diff.x + diff.z;
+
+    // fragDepth = diff.x + diff.z + diff.y;
 
     fragColor = vertexColor;
 

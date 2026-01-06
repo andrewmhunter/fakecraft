@@ -1,6 +1,8 @@
 #ifndef FAKECRAFT_LOGGER_H
 #define FAKECRAFT_LOGGER_H
 
+#define RAISE_ON_FATAL 1
+
 #include <raylib.h>
 #include <stdarg.h>
 
@@ -9,6 +11,8 @@
 // To work with the preprocessor we have to use integer literals instead
 // of the TraceLogLevel which they are equal to
 #define MIN_LOG_LEVEL 3
+
+#define LOG(LEVEL, FORMAT, ...) printLog(LEVEL, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
 
 #if 1 >= MIN_LOG_LEVEL
 #define TRACE(FORMAT, ...) printLog(LOG_TRACE, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)

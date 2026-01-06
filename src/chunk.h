@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <raylib.h>
+#include <stdint.h>
 #include "block.h"
 #include "config.h"
 #include "util.h"
@@ -78,6 +79,11 @@ static inline Vector3 localToWorldV(Point chunkCoord, Vector3 local) {
 // Chunk
 
 typedef struct {
+    uint8_t blockLight;
+    uint8_t skyLight;
+} LightValues;
+
+typedef struct {
     Block block;
     uint8_t surfaceHeight;
 } BlockInstance;
@@ -87,8 +93,6 @@ struct World;
 typedef struct Chunk {
     Point coords;
     struct World* world;
-    Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
-    int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     MeshList meshes;
     int totalVertexCount;
 #ifdef USE_IGNORED
@@ -96,6 +100,9 @@ typedef struct Chunk {
 #endif
     bool dirty;
     struct Chunk* adjacentChunks[DIRECTION_CARDINAL_COUNT];
+    int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
+    Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
+    LightValues light[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
 } Chunk;
 
 static inline Block chunkGetBlockRaw(const Chunk* chunk, Point local) {

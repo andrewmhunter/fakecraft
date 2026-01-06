@@ -40,7 +40,11 @@ void vprintLog(TraceLogLevel level, const char* where, const char* format, va_li
     fputc('\n', stderr);
 
     if (level == LOG_FATAL) {
+#if RAISE_ON_FATAL
         raise(SIGABRT);
+#else
+        exit(1);
+#endif
     }
 }
 

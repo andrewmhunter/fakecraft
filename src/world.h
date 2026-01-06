@@ -18,6 +18,7 @@ typedef struct World {
     int renderDistance;
     Entity* player;
     float skyLight;
+    Color skyColor;
 } World;
 
 void worldInit(World* world);
@@ -38,6 +39,9 @@ Entity* spawnEntity(World* world, EntityType type, Vector3 position, float width
 
 extern int shaderModelUniform;
 extern int shaderSkylight;
+extern int shaderFogColor;
+extern int shaderFogDistance;
+extern int shaderFogDropoff;
 
 
 static inline Hash pointHashWrapper(Hash hash, const void* point) {
@@ -49,6 +53,17 @@ static inline bool pointEqualsWrapper(const void* left, const void* right) {
 }
 
 #define CHUNK_DICT_VTABLE (SetVTable){pointHashWrapper, pointEqualsWrapper}
+
+typedef struct {
+    int distance;
+    int row;
+    Direction direction;
+    int column;
+    int side;
+} CircleIterator;
+
+CircleIterator circleIteratorInit(int distance);
+bool iterateCircleIterator(CircleIterator* state, Point* pointOut);
 
 #endif
 
