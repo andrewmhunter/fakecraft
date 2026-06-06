@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef CONFIG_HPP
+#define CONFIG_HPP
 
 #define FAST_LEAVES 0
 //#define USE_IGNORED
@@ -11,7 +11,7 @@
 
 #define DEFAULT_RENDER_DISTANCE 7
 
-#define SENSITIVITY 0.0025f
+#define SENSITIVITY 0.0075
 
 //#define DEFAULT_SET_SEED 1000
 
@@ -21,14 +21,14 @@
 
 #define PLAYER_EYE 1.62f
 
-#define NO_SAVE_CHUNKS
+//#define NO_SAVE_CHUNKS
 
 //#define TIME_MESHER
 
 //#define PROFILING_STARTUP
 
 #define SUPERFLAT 0
-#define GENERATE_CAVES 1
+#define GENERATE_CAVES 0
 
 #ifdef PROFILING_STARTUP
 #ifndef DEFAULT_SET_SEED

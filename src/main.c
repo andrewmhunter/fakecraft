@@ -1,6 +1,8 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <stdbool.h>
+#include <glad/glad.h>
+#include <rlgl.h>
 #include "block.h"
 #include "world.h"
 #include "util.h"
@@ -13,7 +15,7 @@
 
 void drawThickWireCube(Vector3 position, Color color, float lineWidth) {
     float axisOffset = 0.f;
-    float epsilon = 0.00125;
+    float epsilon = 0.010;
 
     float longLineLength = 1.f + 1.f * epsilon;
 
@@ -66,6 +68,7 @@ int main(void) {
 
     Shader shader = LoadShader("shader.vs.glsl", "shader.fs.glsl");
     ASSERT(IsShaderValid(shader));
+
     // TODO: This doesn't check if a shader compilation error occured
     // TODO: Need a better way to store uniform locations and switch out model
     // uniform for the one used by raylib
@@ -90,19 +93,19 @@ int main(void) {
     //ASSERT(IsTextureValid(clouds));
 
     Camera3D cam = {
+        .position = {0.f, 0.f, 0.f},
+        .target = {0.f, 0.f, 0.f},
         .up = {0.f, 1.f, 0.f},
         .fovy = 90.f,
-        .target = {0.f, 0.f, 0.f},
-        .position = {0.f, 0.f, 0.f},
         .projection = CAMERA_PERSPECTIVE
     };
 
     // TODO: Prerender all the block sprites somehow
     Camera3D guiCam = {
+        .position = {.x = 0.f, .y = 0.f, .z = -10.f},
+        .target = {0, 0, 0},
         .up = {.x = 0.f, .y = 1.f, .z = 0.f},
         .fovy = 90.f,
-        .target = {0, 0, 0},
-        .position = {.x = 0.f, .y = 0.f, .z = -10.f},
         .projection = CAMERA_ORTHOGRAPHIC 
     };
 
@@ -251,19 +254,17 @@ int main(void) {
 
         if (showGui) {
             if (rayCast.collided) {
-                BeginBlendMode(BLEND_SUBTRACT_COLORS);
-
-                /*float epsilon = 0.002;
-                float low = 1.f - epsilon;
-                float offset = 1.f + epsilon;
-                DrawCubeWires(cubePos, 1, 1, 1, inversionColor);
-                DrawCubeWires(cubePos, offset, offset, offset, inversionColor);
-                DrawCubeWires(cubePos, low, low, offset, inversionColor);
-                DrawCubeWires(cubePos, low, offset, low, inversionColor);
-                DrawCubeWires(cubePos, offset, low, low, inversionColor);*/
+                //BeginBlendMode(BLEND_SUBTRACT_COLORS);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_ONE, GL_ONE);
+                glBlendEquation(GL_FUNC_SUBTRACT);
 
                 drawThickWireCube(cubePos, inversionColor, 0.02f);
-                EndBlendMode();
+                rlDrawRenderBatchActive();
+
+                //EndBlendMode();
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glBlendEquation(GL_FUNC_ADD);
             }
 
             if (world.showChunkBorders) {

@@ -1,4 +1,4 @@
--std=c99
+-std=gnu++23
 -Wall
 -Wextra
 -Iexternal

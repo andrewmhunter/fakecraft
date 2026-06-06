@@ -1,22 +1,22 @@
 #version 330
 
-in vec3 vertexPosition;
-in vec2 vertextTexCoord;
-in vec3 vertexNormal;
-in vec4 vertexColor;
-
-uniform mat4 mvp;
-uniform vec3 camPos;
+uniform mat4 projectionView;
 uniform mat4 model;
+uniform vec3 camPos;
 
-out vec2 fragTexCoord;
+layout (location = 0) in vec3 vertexPosition;
+layout (location = 1) in vec2 vertexTexcoord;
+layout (location = 2) in vec3 vertexNormal;
+layout (location = 3) in vec4 vertexColor;
+
+out vec2 fragTexcoord;
 out vec4 fragColor;
 out vec3 fragNormal;
 out float fragDepth;
 
 void main()
 {
-    fragTexCoord = vertextTexCoord;
+    fragTexcoord = vertexTexcoord;
     fragColor = vertexColor;
     fragNormal = vertexNormal;
 
@@ -24,11 +24,10 @@ void main()
     diff = diff * diff;
 
     fragDepth = diff.x + diff.z;
-
     // fragDepth = diff.x + diff.z + diff.y;
 
     fragColor = vertexColor;
 
-    gl_Position = mvp * vec4(vertexPosition, 1.0);
+    gl_Position = projectionView * model * vec4(vertexPosition, 1.0);
 }
 

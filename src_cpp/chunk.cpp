@@ -1,20 +1,21 @@
-#include <raylib.h>
 #include <raymath.h>
-#include "logger.h"
-#include "util.h"
-#include "chunk.h"
-#include "world.h"
-#include "chunk.h"
-#include "worldgen.h"
-#include "serialize.h"
-#include "logger.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include "logger.hpp"
+#include "chunk.hpp"
+#include "world.hpp"
+#include "chunk.hpp"
+#include "worldgen.hpp"
+#include "serialize.hpp"
+#include "logger.hpp"
+#include "graphics.hpp"
 
 // Chunk
 
 void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
     ASSERT(chunk);
 
-    Point point = {x, y, z};
+    glm::ivec3 point = {x, y, z};
     if (chunkGetBlock(chunk, point) != BLOCK_AIR) {
         return;
     }
@@ -22,32 +23,30 @@ void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
     chunkSetBlock(chunk, point, block);
 }
 
-Chunk* chunkInit(World* world, Point coords) {
+Chunk* chunkInit(World* world, glm::ivec3 coords) {
     ASSERT(world);
 
-    Chunk* chunk = malloc(sizeof(Chunk));
+    Chunk* chunk = new Chunk;
     ASSERT(chunk);
 
     chunk->world = world;
     chunk->coords = coords;
+    chunk->loaded = true;
 
-    for (Direction i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
-        Chunk* adjacent = worldGetChunk(world, pointAdd(coords, directionToPoint(i)));
+    for (int i = 0; i < DIRECTION_CARDINAL_COUNT; i += 1) {
+        Chunk* adjacent = worldGetChunk(world, coords + directionToPoint(static_cast<Direction>(i)));
         chunk->adjacentChunks[i] = adjacent;
         if (adjacent != NULL) {
-            adjacent->adjacentChunks[invertDirection(i)] = chunk;
+            adjacent->adjacentChunks[invertDirection(static_cast<Direction>(i))] = chunk;
             adjacent->dirty = true;
         }
     }
-
-    LIST_INIT(&chunk->meshes);
 
 #ifdef USE_IGNORED
     memset(chunk->ignored, 0xff, sizeof(chunk->ignored));
 #endif
 
-    setInsert(&world->chunks, CHUNK_DICT_VTABLE, chunk);
-
+    world->chunks[coords] = chunk;
 
     if (loadChunk(chunk)) {
         DEBUG("Chunk %d, %d loaded from file", chunk->coords.x, chunk->coords.z);
@@ -64,13 +63,13 @@ Chunk* chunkInit(World* world, Point coords) {
 
 void chunkUnload(Chunk* chunk) {
     ASSERT(chunk);
+    chunk->loaded = false;
 
-
-    for (Direction i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
+    for (int i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
         Chunk* adjacent = chunk->adjacentChunks[i];
 
         if (adjacent != NULL) {
-            adjacent->adjacentChunks[invertDirection(i)] = NULL;
+            adjacent->adjacentChunks[invertDirection(static_cast<Direction>(i))] = NULL;
         }
 
         chunk->adjacentChunks[i] = NULL;
@@ -79,12 +78,14 @@ void chunkUnload(Chunk* chunk) {
     saveChunk(chunk);
     DEBUG("Chunk %d, %d saved", chunk->coords.x, chunk->coords.z);
 
-    meshListClear(&chunk->meshes);
-    LIST_FREE(&chunk->meshes);
+    //if (chunk->mesh.vertexArrayObject == 150) {
+    //    ERROR("Because of chunkUnload c %d, %d :", chunk->coords.x, chunk->coords.z);
+    //}
+    chunk->mesh.unload();
 }
 
 
-bool blockInChunk(const Chunk* chunk, Point local) {
+bool blockInChunk(const Chunk* chunk, glm::ivec3 local) {
     ASSERT(chunk);
 
     return local.x >= 0 && local.x < CHUNK_WIDTH
@@ -92,7 +93,7 @@ bool blockInChunk(const Chunk* chunk, Point local) {
         && local.z >= 0 && local.z < CHUNK_WIDTH;
 }
 
-void chunkMarkDirty(Chunk* chunk, Point local) {
+void chunkMarkDirty(Chunk* chunk, glm::ivec3 local) {
     ASSERT(chunk);
     ASSERT(blockInChunk(chunk, local));
 
@@ -103,7 +104,7 @@ void chunkMarkDirty(Chunk* chunk, Point local) {
 #endif
 }
 
-void chunkSetBlockRaw(Chunk* chunk, Point local, Block block) {
+void chunkSetBlockRaw(Chunk* chunk, glm::ivec3 local, Block block) {
     ASSERT(chunk);
 
     if (!blockInChunk(chunk, local)) {
@@ -115,19 +116,19 @@ void chunkSetBlockRaw(Chunk* chunk, Point local, Block block) {
     chunkMarkDirty(chunk, local);
 }
 
-void chunkSetBlock(Chunk* chunk, Point local, Block block) {
+void chunkSetBlock(Chunk* chunk, glm::ivec3 local, Block block) {
     ASSERT(chunk);
 
     chunkSetBlockRaw(chunk, local, block);
 
-    Point worldPoint = localToWorld(chunk->coords, local);
+    glm::ivec3 worldPoint = localToWorld(chunk->coords, local);
 
     for (int i = 0; i < DIRECTION_COUNT; ++i) {
-        worldMarkDirty(chunk->world, pointAdd(worldPoint, directionToPoint(i)));
+        worldMarkDirty(chunk->world, worldPoint + directionToPoint(static_cast<Direction>(i)));
     }
 }
 
-Block chunkGetBlock(const Chunk* chunk, Point local) {
+Block chunkGetBlock(const Chunk* chunk, glm::ivec3 local) {
     ASSERT(chunk);
 
     if (!blockInChunk(chunk, local)) {
@@ -136,21 +137,38 @@ Block chunkGetBlock(const Chunk* chunk, Point local) {
     return chunk->blocks[local.x][local.y][local.z];
 }
 
-void drawChunk(const Chunk* chunk, Material material) {
+static void drawChunkMesh(const Chunk* chunk, Shader shader, const GPUMesh& mesh) {
     ASSERT(chunk);
-    ASSERT(IsMaterialValid(material));
 
-    Matrix transform = MatrixTranslateV(pointToVector3(pointMultiply(chunk->coords, (Point)CHUNK_SIZE)));
+    glm::mat4 transform = glm::mat4{1.f};
+    transform = glm::translate(transform, glm::vec3{chunk->coords * (glm::ivec3)CHUNK_SIZE});
+    //transform = glm::scale(transform, CHUNK_SIZE);
+    //transform = glm::translate(transform, pointToVector3(chunk->coords));
 
-    SetShaderValueMatrix(material.shader, shaderModelUniform, transform);
-
-    for (size_t i = 0; i < chunk->meshes.length; ++i) {
-        DrawMesh(chunk->meshes.data[i], material, transform);
+    if (!chunk->loaded) {
+        ERROR("Drawing unloaded chunk with vao: %d", chunk->mesh.vertexArrayObject);
     }
+
+    shader.setUniformMat4("model", transform);
+    mesh.draw();
 
     if (chunk->world->showChunkBorders) {
-        DrawCubeWiresV(Vector3Multiply(Vector3AddValue(pointToVector3(chunk->coords), 0.5f), (Vector3)CHUNK_SIZE), (Vector3)CHUNK_SIZE, WHITE);
+        wireframeEnable();
+        //DrawCubeWiresV(Vector3Multiply(Vector3AddValue(pointToVector3(chunk->coords), 0.5f), (Vector3)CHUNK_SIZE), (Vector3)CHUNK_SIZE, WHITE);
+        wireframeDisable();
     }
+}
+
+void drawChunk(const Chunk* chunk, Shader shader) {
+    ASSERT(chunk);
+
+    drawChunkMesh(chunk, shader, chunk->mesh);
+}
+
+void drawChunkTranslucent(const Chunk* chunk, Shader shader) {
+    ASSERT(chunk);
+
+    drawChunkMesh(chunk, shader, chunk->translucentMesh);
 }
 
 bool verifyChunk(const Chunk* chunk) {

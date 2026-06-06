@@ -66,7 +66,8 @@ void playerUpdate(Entity* entity, float deltaTime) {
     //float speed = entity->flying ? 10.79f : 4.317;
     //speed = entity->flying ? 21.58f : 5.612;
 
-    float speed = 0.098f * deltaTime;
+    //float speed = 0.098f * deltaTime;
+    float speed = 0.15f * deltaTime;
 
     if (IsKeyDown(KEY_LEFT_SHIFT)) {
         speed *= 2.f;

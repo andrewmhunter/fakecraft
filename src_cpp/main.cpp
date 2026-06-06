@@ -1,0 +1,477 @@
+#include <map>
+#include <stdbool.h>
+#include <format>
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "block.hpp"
+#include "world.hpp"
+#include "util.hpp"
+#include "collision.hpp"
+#include "entity.hpp"
+#include "serialize.hpp"
+#include "logger.hpp"
+#include "graphics.hpp"
+#include "input.hpp"
+#include "text.hpp"
+
+
+void drawThickWireCube(Shader shader, glm::vec3 position, float lineWidth) {
+    float axisOffset = 0.f;
+    float epsilon = 0.010;
+
+    float longLineLength = 1.f + 1.f * epsilon;
+
+    float boxWidth = (1.f - lineWidth + epsilon) / 2.f;
+    float offsets[] = {boxWidth, -boxWidth};
+
+    float shortLineLength = longLineLength - 2.f * lineWidth;
+
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            float offsetA = offsets[i];
+            float offsetB = offsets[j];
+
+            glm::vec3 xPos = position + glm::vec3{axisOffset, offsetA, offsetB};
+            drawCube(shader, xPos, {shortLineLength, lineWidth, lineWidth});
+
+            glm::vec3 yPos = position + glm::vec3{offsetA, axisOffset, offsetB};
+            drawCube(shader, yPos, {lineWidth, longLineLength, lineWidth});
+
+            glm::vec3 zPos = position + glm::vec3{offsetA, offsetB, axisOffset};
+            drawCube(shader, zPos, {lineWidth, lineWidth, shortLineLength});
+        }
+    }
+}
+
+
+void errorCallbackGlfw(int error, const char* description) {
+    ERROR("GLFW Error %d: %s", error, description);
+}
+
+void checkOpenglErrors() {
+    std::map<GLenum, std::string> openglErrors{
+        {GL_INVALID_ENUM,                   "GL_INVALID_ENUM"},
+        {GL_INVALID_VALUE,                  "GL_INVALID_VALUE"},
+        {GL_INVALID_OPERATION,              "GL_INVALID_OPERATION"},
+        {GL_STACK_OVERFLOW,                 "GL_STACK_OVERFLOW"},
+        {GL_STACK_UNDERFLOW,                "GL_STACK_UNDERFLOW"},
+        {GL_OUT_OF_MEMORY,                  "GL_OUT_OF_MEMORY"},
+        {GL_INVALID_FRAMEBUFFER_OPERATION,  "GL_INVALID_FRAMEBUFFER_OPERATION"},
+    };
+
+    GLenum errorCode = 0;
+    while ((errorCode = glGetError()) != GL_NO_ERROR) {
+        ERROR("OpenGL Error: %s", openglErrors[errorCode].c_str());
+    }
+}
+
+// From learnopengl
+void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
+        GLenum severity, GLsizei length, const char *message, const void *userParam
+) {
+    (void)length;
+    (void)userParam;
+
+    static const std::map<GLenum, std::string_view> sources {
+        {GL_DEBUG_SOURCE_API,             "API"},
+        {GL_DEBUG_SOURCE_WINDOW_SYSTEM,   "Window System"},
+        {GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader Compiler"},
+        {GL_DEBUG_SOURCE_THIRD_PARTY,     "Third Party"},
+        {GL_DEBUG_SOURCE_APPLICATION,     "Application"},
+        {GL_DEBUG_SOURCE_OTHER,           "Other"},
+    };
+
+    static const std::map<GLenum, std::string_view> types {
+        {GL_DEBUG_TYPE_ERROR,               "Error"},
+        {GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated Behaviour"},
+        {GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR,  "Undefined Behaviour"},
+        {GL_DEBUG_TYPE_PORTABILITY,         "Portability"},
+        {GL_DEBUG_TYPE_PERFORMANCE,         "Performance"},
+        {GL_DEBUG_TYPE_MARKER,              "Marker"},
+        {GL_DEBUG_TYPE_PUSH_GROUP,          "Push Group"},
+        {GL_DEBUG_TYPE_POP_GROUP,           "Pop Group"},
+        {GL_DEBUG_TYPE_OTHER,               "Other"},
+    };
+
+    static const std::map<GLenum, TraceLogLevel> severities {
+        {GL_DEBUG_SEVERITY_HIGH,         LOG_FATAL},
+        {GL_DEBUG_SEVERITY_MEDIUM,       LOG_ERROR},
+        {GL_DEBUG_SEVERITY_LOW,          LOG_WARNING},
+        {GL_DEBUG_SEVERITY_NOTIFICATION, LOG_INFO},
+    };
+
+    // ignore non-significant error/warning codes
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) {
+        return;
+    }
+
+    std::string text = std::format(
+        "OpenGL({}), source: {}, type: {}: {}",
+        id, sources.at(source), types.at(type), message
+    );
+
+    LOG(severities.at(severity), "%s", text.c_str());
+}
+
+int windowWidth = 800;
+int windowHeight = 600;
+
+glm::mat4 cameraProjection{};
+glm::mat4 guiCameraProjection{};
+
+void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    (void)window;
+
+    windowWidth = width;
+    windowHeight = height;
+
+    cameraProjection = glm::perspective(
+        glm::radians(90.f),
+        static_cast<float>(windowWidth) / static_cast<float>(windowHeight),
+        0.1f,
+        10000.f
+    );
+
+    guiCameraProjection = glm::ortho(
+        -windowWidth / 2.f, windowWidth / 2.f,
+        -windowHeight / 2.f, windowHeight / 2.f
+    );
+
+    glViewport(0, 0, windowWidth, windowHeight);
+}
+
+void toggleFullscreen(GLFWwindow* window) {
+    static bool isFullscreen = false;
+
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+    if (isFullscreen) {
+        glfwSetWindowMonitor(window,
+                nullptr,
+                10, 10,
+                800, 600,
+                mode->refreshRate
+            );
+        framebufferSizeCallback(window, 800, 600);
+    } else {
+        glfwSetWindowMonitor(window,
+                monitor,
+                0, 0,
+                mode->width, mode->height,
+                mode->refreshRate
+            );
+        framebufferSizeCallback(window, mode->width, mode->height);
+    }
+
+    isFullscreen = !isFullscreen;
+}
+
+
+int main() {
+    setLogLevel(LOG_INFO);
+
+    // No matter where you run the executable from it will still be able to
+    // access the resources in its directory
+    //ChangeDirectory(GetApplicationDirectory());
+
+    if (!glfwInit()) {
+        FATAL("GLFW failed to initialize");
+    }
+
+    glfwSetErrorCallback(errorCallbackGlfw);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+
+    GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Fakecraft", nullptr, nullptr);
+    if (window == nullptr) {
+        FATAL("Failed to create GLFW window");
+    }
+
+    glfwMakeContextCurrent(window);
+
+    glfwSetKeyCallback(window, keyCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetCursorPosCallback(window, cursorPosCallback);
+    glfwSetScrollCallback(window, scrollCallback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        FATAL("Failed to initialize GLAD");
+    }
+
+    int glFlags = 0;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &glFlags);
+    if (glFlags & GL_CONTEXT_FLAG_DEBUG_BIT) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(openglDebugCallback, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
+    } else {
+        WARN("No debug context");
+    }
+
+    initMeshes();
+
+    framebufferSizeCallback(window, windowWidth, windowHeight);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
+
+    int targetFps = 60;
+
+    // Hide the cursor and lock it to the middle of the screen
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    makeSaveDirectories();
+
+    Shader terrainShader = Shader::buildFiles("assets/terrain.vs.glsl", "assets/terrain.fs.glsl");
+    Shader simpleShader = Shader::buildFiles("assets/simple.vs.glsl", "assets/simple.fs.glsl");
+
+    Texture terrainTexture{"assets/resources/alphaTerrain.png"};
+    Font font{"assets/resources/font/default.png"};
+
+    glm::vec3 up{0.f, 1.f, 0.f};
+
+    // TODO: Prerender all the block sprites somehow
+
+    int selectedBlock = BLOCK_PLANKS;
+
+    registerBlocks();
+
+#ifdef DEFAULT_SET_SEED
+    srand(DEFAULT_SET_SEED);
+#else
+    randomizeSeed();
+#endif
+
+    World world;
+    worldInit(&world);
+
+    glClearColor(world.skyColor.r, world.skyColor.g, world.skyColor.b, world.skyColor.a);
+
+    Entity* player = world.player;
+
+    bool showGui = true;
+
+    glfwSwapInterval(0);
+
+    double clock = glfwGetTime();
+    while (!glfwWindowShouldClose(window)) {
+        double time = glfwGetTime();
+        float deltaTime = time - clock;
+        clock = time;
+        deltaTime *= 20.f;
+
+        if (keyPressed(GLFW_KEY_Q) && targetFps > 0) {
+            targetFps -= 10;
+            //SetTargetFPS(targetFps);
+        }
+
+        if (keyPressed(GLFW_KEY_E)) {
+            targetFps += 10;
+            //SetTargetFPS(targetFps);
+        }
+
+        if (keyPressed(GLFW_KEY_F2)) {
+            //saveScreenshot();
+        }
+
+        if (keyPressed(GLFW_KEY_F1)) {
+            showGui = !showGui;
+        }
+
+        if (keyPressed(GLFW_KEY_F6)) {
+            world.showChunkBorders = !world.showChunkBorders;
+        }
+
+        if (keyPressed(GLFW_KEY_F11)) {
+            toggleFullscreen(window);
+        }
+
+        if (keyPressed(GLFW_KEY_F8) && world.renderDistance > 0) {
+            world.renderDistance--;
+        }
+
+        if (keyPressed(GLFW_KEY_F9)) {
+            world.renderDistance++;
+        }
+
+        if (keyPressed(GLFW_KEY_ESCAPE)) {
+            glfwSetWindowShouldClose(window, true);
+        }
+
+        glm::vec3 camPosition = player->position + glm::vec3{0, PLAYER_EYE, 0};
+
+        glm::vec3 lookVec{1.f, 0.f, 0.f};
+        lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->pitch, {0.f, 0.f, 1.f}) * glm::vec4{lookVec, 1.f}};
+        lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->yaw, {0.f, 1.f, 0.f}) * glm::vec4{lookVec, 1.f}};
+
+        glm::vec3 target = camPosition + lookVec;
+
+        WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, 8.f);
+        glm::vec3 cubePos = glm::vec3{rayCast.blockAt} + 0.5f;
+
+        glm::mat4 view = glm::lookAt(camPosition, target, up);
+
+        float initialBreakTime = 0.3f * 20.f;
+        float repeatedBreakTime = 0.15f * 20.f;
+
+        if (rayCast.collided) {
+            if (mouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+                worldTryPlaceBlock(&world, rayCast.blockBefore, static_cast<Block>(selectedBlock));
+                timerResetTime(&player->breakTimer, initialBreakTime);
+            }
+
+            if (mouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT) && timerUpdate(&player->breakTimer, deltaTime)) {
+                worldTryPlaceBlock(&world, rayCast.blockBefore, static_cast<Block>(selectedBlock));
+                timerResetTime(&player->breakTimer, repeatedBreakTime);
+            }
+
+
+            if (mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                worldSetBlock(&world, rayCast.blockAt, BLOCK_AIR);
+                timerResetTime(&player->breakTimer, initialBreakTime);
+            }
+
+            if (mouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) && timerUpdate(&player->breakTimer, deltaTime)) {
+                worldSetBlock(&world, rayCast.blockAt, BLOCK_AIR);
+                timerResetTime(&player->breakTimer, repeatedBreakTime);
+            }
+
+
+            if (mouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
+                selectedBlock = worldGetBlock(&world, rayCast.blockAt);
+            }
+        }
+
+        for (int key = GLFW_KEY_1; key <= GLFW_KEY_9; ++key) {
+            if (keyPressed(key)) {
+                Block block = static_cast<Block>(key - GLFW_KEY_1 + 1);
+                selectedBlock = block;
+            }
+        }
+
+        if (keyPressed(GLFW_KEY_H)) {
+            Entity* mob = spawnEntity(&world, ENTITY_MOB, player->position, 0.6f, 1.8f);
+            mob->velocity = player->velocity * 2.f;
+        }
+
+        if (getMouseScroll() < 0) {
+            selectedBlock -= 1;
+        }
+
+        if (getMouseScroll() > 0) {
+            selectedBlock += 1;
+        }
+
+        selectedBlock = wrapInt(selectedBlock, 2, BLOCK_COUNT);
+
+        worldUpdate(&world, deltaTime);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        terrainShader.setUniformMat4("projectionView", cameraProjection * view);
+        terrainShader.setUniformVec3("camPos", camPosition);
+        simpleShader.setUniformMat4("projectionView", cameraProjection * view);
+
+        terrainTexture.bind();
+
+        worldDraw(&world, terrainShader, simpleShader);
+
+        glm::vec4 inversionColor = color::fromRGB(0xc8c8c8);
+
+        if (showGui) {
+            if (rayCast.collided) {
+                blendModeInvert();
+
+                simpleShader.use();
+                simpleShader.setUniformVec4("color", inversionColor);
+                drawThickWireCube(simpleShader, cubePos, 0.02f);
+                //drawCube(simpleShader, cubePos, glm::vec3{1.05f});
+
+                blendModeNormal();
+            }
+
+            if (world.showChunkBorders) {
+                //TODO:
+                //DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
+            }
+        }
+
+        if (showGui) {
+            glDepthMask(false);
+
+            int screenMiddleX = windowWidth / 2;
+            int screenMiddleY = windowHeight / 2;
+
+            glm::mat4 guiView{1.f};
+            terrainShader.use();
+            terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView);
+            simpleShader.setUniformMat4("projectionView", guiCameraProjection * guiView);
+
+            float iconScale = 48.f;
+            float cornerOffset = 75.f;
+            glm::mat4 indicator{1.f};
+            indicator = glm::translate(indicator, {screenMiddleX - cornerOffset, screenMiddleY - cornerOffset, 0});
+            indicator = glm::scale(indicator, {iconScale, iconScale, 0.1f});
+            indicator = glm::rotate(indicator, glm::pi<float>() / 8.f, {1.f, 0.f, 0.f});
+            indicator = glm::rotate(indicator, glm::pi<float>() / 4.f, {0.f, 1.f, 0.f});
+            terrainShader.setUniformMat4("model", indicator);
+            blocks[selectedBlock].mesh.draw();
+
+            glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-windowWidth / 2.f, windowHeight / 2.f, 0.f});
+            terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView * cornerTransform);
+            terrainShader.setUniformMat4("model", glm::mat4{1.f});
+            font.texture.bind();
+
+            TextBatch text{font};
+            text.drawString({5, -20}, std::format("{} FPS", static_cast<int>(1.f / (deltaTime / 20.f))));
+            text.drawString({5, -40}, std::format("P: {:.2f}", player->position));
+            text.drawString({5, -60}, std::format("V: {:.2f}", player->velocity));
+            text.drawString({5, -80}, std::format("L: {:.2f}", lookVec));
+            text.drawString({5, -100}, std::format("RD: {}", world.renderDistance));
+            text.drawString({5, -120}, std::format("E: {}", world.entities.size()));
+            text.draw();
+
+            blendModeInvert();
+
+            simpleShader.use();
+            simpleShader.setUniformVec4("color", color::white);
+            drawRectangle(simpleShader, {0.f, 0.f}, {16.f, 2.f});
+            drawRectangle(simpleShader, {0.f, 0.f}, {2.f, 16.f});
+            drawRectangle(simpleShader, {0.f, 0.f}, {2.f, 2.f});
+
+            blendModeNormal();
+
+            glDepthMask(true);
+        }
+
+
+        checkOpenglErrors();
+
+        glfwSwapBuffers(window);
+
+        inputStatePrepare();
+        glfwPollEvents();
+
+#ifdef PROFILING_STARTUP
+        break;
+#endif
+    }
+
+    worldUnload(&world);
+
+    glfwTerminate();
+}
+
+

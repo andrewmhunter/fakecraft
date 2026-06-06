@@ -1,12 +1,8 @@
-#include <raylib.h>
-#include "chunk.h"
-#include "world.h"
-#include "worldgen.h"
-#include "logger.h"
-
-//#define STB_PERLIN_IMPLEMENTATION
-#include "stb_perlin.h"
-//#undef STB_PERLIN_IMPLEMENTATION
+#include <stb_perlin.h>
+#include "chunk.hpp"
+#include "world.hpp"
+#include "worldgen.hpp"
+#include "logger.hpp"
 
 Hash featureSeed(Hash seed, FeatureId feature) {
     return hashChar(seed, feature);
@@ -17,26 +13,26 @@ int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
     return (number % (max - min)) + min;
 }
 
-void placeDungeon(World* world, Point worldPoint) {
+void placeDungeon(World* world, glm::ivec3 worldPoint) {
     ASSERT(world);
 
-    worldPlaceBox(world, worldPoint, point(10, 6, 10), BLOCK_COBBLESTONE);
-    worldPlaceBox(world, pointAddValue(worldPoint, 1, 1, 1), point(8, 4, 8), BLOCK_AIR);
+    worldPlaceBox(world, worldPoint, {10, 6, 10}, BLOCK_COBBLESTONE);
+    worldPlaceBox(world, worldPoint + 1, {8, 4, 8}, BLOCK_AIR);
 }
 
-static void placeCactus(World* world, Point worldPoint) {
+static void placeCactus(World* world, glm::ivec3 worldPoint) {
     int cactusHeight = randomRange(1, 4);
-    worldPoint = pointAddY(worldPoint, 1);
+    worldPoint += glm::ivec3{0, 1, 0};
     if (worldGetBlock(world, worldPoint) != BLOCK_AIR) {
         return;
     }
 
     for (int i = 0; i < cactusHeight; ++i) {
-        worldSetBlock(world, pointAddY(worldPoint, i), BLOCK_CACTUS);
+        worldSetBlock(world, worldPoint + glm::ivec3{0, i, 0}, BLOCK_CACTUS);
     }
 }
 
-void placeTree(World* world, Point worldPoint) {
+void placeTree(World* world, glm::ivec3 worldPoint) {
     ASSERT(world);
 
     Block surfaceBlock = worldGetBlock(world, worldPoint);
@@ -50,7 +46,7 @@ void placeTree(World* world, Point worldPoint) {
         return;
     }
 
-    static const Point corners[4] = {
+    static const glm::ivec3 corners[4] = {
         {1, 0, 1},
         {-1, 0, 1},
         {-1, 0, -1},
@@ -58,35 +54,35 @@ void placeTree(World* world, Point worldPoint) {
     };
 
     worldSetBlock(world, worldPoint, BLOCK_DIRT);
-    worldPoint = pointAddY(worldPoint, 1);
+    worldPoint += glm::ivec3{0, 1, 0};
 
     int height = randomRange(5, 7);
-    worldPlaceBox(world, worldPoint, point(1, height, 1), BLOCK_LOG);
+    worldPlaceBox(world, worldPoint, {1, height, 1}, BLOCK_LOG);
 
     //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), BLOCK_LEAVES);
 
-    worldTryPlaceBox(world, pointAddValue(worldPoint, -2, height - 3, -1), point(5, 2, 3), BLOCK_LEAVES);
-    worldTryPlaceBox(world, pointAddValue(worldPoint, -1, height - 3, -2), point(3, 2, 5), BLOCK_LEAVES);
+    worldTryPlaceBox(world, worldPoint + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, BLOCK_LEAVES);
+    worldTryPlaceBox(world, worldPoint + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, BLOCK_LEAVES);
 
     for (int i = 0; i < 4; ++i) {
-        Point scaledCorner = pointScale(corners[i], 2);
+        glm::ivec3 scaledCorner = corners[i] * 2;
         for (int j = height - 3; j < height - 1; ++j) {
             if (!randomChance(1, 2)) {
                 continue;
             }
-            worldTryPlaceBlock(world, pointAdd(worldPoint, pointAddY(scaledCorner, j)), BLOCK_LEAVES);
+            worldTryPlaceBlock(world, worldPoint + scaledCorner + glm::ivec3{0, j, 0}, BLOCK_LEAVES);
         }
     }
 
-    worldTryPlaceBox(world, pointAddValue(worldPoint, -1, height - 1, 0), point(3, 2, 1), BLOCK_LEAVES);
-    worldTryPlaceBox(world, pointAddValue(worldPoint, 0, height - 1, -1), point(1, 2, 3), BLOCK_LEAVES);
+    worldTryPlaceBox(world, worldPoint + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, BLOCK_LEAVES);
+    worldTryPlaceBox(world, worldPoint + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, BLOCK_LEAVES);
 
     for (int i = 0; i < 4; ++i) {
         if (!randomChance(1, 2)) {
             continue;
         }
 
-        worldTryPlaceBlock(world, pointAdd(worldPoint, pointAddY(corners[i], height - 1)), BLOCK_LEAVES);
+        worldTryPlaceBlock(world, worldPoint + corners[i] + glm::ivec3{0, height - 1, 0}, BLOCK_LEAVES);
     }
 }
 
@@ -94,7 +90,7 @@ void generateTerrain(Chunk* chunk) {
     ASSERT(chunk);
 
     //World* world = chunk->world;
-    Point coords = chunk->coords;
+    glm::ivec3 coords = chunk->coords;
 
     ITERATE_CHUNK(x, y, z) {
         chunk->blocks[x][y][z] = BLOCK_AIR;
@@ -211,14 +207,29 @@ void placeFeatures(Chunk* chunk) {
         int x = seededNumber(treeIndex, FEATURE_X, 2, CHUNK_WIDTH - 4);
         int z = seededNumber(treeIndex, FEATURE_Z, 2, CHUNK_WIDTH - 4);
 
-        Point point = {x, 0, z};
+        glm::ivec3 point = {x, 0, z};
         point.y = chunk->surfaceHeight[point.x][point.z];
 
         placeTree(chunk->world, localToWorld(chunk->coords, point));
     }
 
     if (randomChance(1, 20)) {
-        placeDungeon(chunk->world, localToWorld(chunk->coords, point(randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10))));
+        placeDungeon(chunk->world, localToWorld(chunk->coords, {randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10)}));
+    }
+
+    Hash flowerSeed = featureSeed(chunkSeed, FEATURE_FLOWER_PATCH);
+    int flowerCount = seededNumber(flowerSeed, FEATURE_NUMBER, -10, 10);
+
+    Block flowerType = seededNumber(flowerSeed, FEATURE_FLAG, 0, 2) ? BLOCK_ROSE : BLOCK_DANDELION;
+    Hash flowerIndexSeed = featureSeed(flowerSeed, FEATURE_INDEX);
+    for (int i = 0; i < flowerCount; ++i) {
+        Hash flowerIndex = hashChar(flowerIndexSeed, i);
+
+        int x = seededNumber(flowerIndex, FEATURE_X, 0, CHUNK_WIDTH);
+        int z = seededNumber(flowerIndex, FEATURE_Z, 0, CHUNK_WIDTH);
+        int y = chunk->surfaceHeight[x][z];
+
+        chunkTryPlaceBlock(chunk, x, y + 1, z, flowerType);
     }
 }
 
