@@ -1,4 +1,3 @@
-#include <raymath.h>
 #include <stdint.h>
 #include "world.hpp"
 #include "util.hpp"

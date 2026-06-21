@@ -1,4 +1,3 @@
-#include <raylib.h>
 #include "point.hpp"
 
 std::strong_ordering operator<=>(const glm::ivec3& left, const glm::ivec3& right) {

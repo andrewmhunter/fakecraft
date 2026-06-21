@@ -52,6 +52,10 @@ Image::~Image() {
     stbi_image_free(data);
 }
 
+glm::vec4 Image::getPixel(glm::ivec2 position) const {
+    return getPixel(position.x, position.y);
+}
+
 glm::vec4 Image::getPixel(int x, int y) const {
     ASSERT(x < width);
     ASSERT(x >= 0);

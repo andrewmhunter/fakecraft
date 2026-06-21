@@ -21,14 +21,14 @@
 
 #define PLAYER_EYE 1.62f
 
-//#define NO_SAVE_CHUNKS
+#define NO_SAVE_CHUNKS
 
 //#define TIME_MESHER
 
 //#define PROFILING_STARTUP
 
 #define SUPERFLAT 0
-#define GENERATE_CAVES 0
+#define GENERATE_CAVES 1
 
 #ifdef PROFILING_STARTUP
 #ifndef DEFAULT_SET_SEED

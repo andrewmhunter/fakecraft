@@ -1,5 +1,3 @@
-CXX = clang++
-
 SOURCE_DIRECORY := src
 
 SRCS := main.cpp mesh.cpp block.cpp chunk.cpp world.cpp \

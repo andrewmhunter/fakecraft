@@ -1,6 +1,7 @@
 #include <stb_perlin.h>
 #include "chunk.hpp"
 #include "world.hpp"
+#include "hash.hpp"
 #include "worldgen.hpp"
 #include "logger.hpp"
 

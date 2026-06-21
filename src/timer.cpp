@@ -1,5 +1,4 @@
 #include <stdbool.h>
-#include <raylib.h>
 #include "timer.hpp"
 
 Timer timerInit(double startTime) {

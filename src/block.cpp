@@ -2,7 +2,6 @@
 #include "block.hpp"
 #include "config.hpp"
 #include "logger.hpp"
-#include <raymath.h>
 
 BlockModel blockModelDefault(int texCoordX, int texCoordY) {
     BlockModel model;

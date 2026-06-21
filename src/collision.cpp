@@ -1,6 +1,5 @@
 #include "collision.hpp"
 #include "logger.hpp"
-#include <raymath.h>
 
 #define COLLISION_EPSILON 0.00001
 

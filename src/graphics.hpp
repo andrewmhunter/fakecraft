@@ -11,14 +11,6 @@
 #include <cstdint>
 
 namespace color {
-    static inline constexpr glm::vec4 fromRGB(std::uint32_t hexcode) {
-        return glm::vec4{
-            ((hexcode >> 16) & 0xff) / 255.f,
-            ((hexcode >> 8) & 0xff) / 255.f,
-            (hexcode & 0xff) / 255.f, 1.f
-        };
-    }
-
     static inline constexpr glm::vec4 fromRGBA(std::uint32_t hexcode) {
         return glm::vec4{
             ((hexcode >> 24) & 0xff) / 255.f,
@@ -26,6 +18,10 @@ namespace color {
             ((hexcode >> 8) & 0xff) / 255.f,
             (hexcode & 0xff) / 255.f
         };
+    }
+
+    static inline constexpr glm::vec4 fromRGB(std::uint32_t hexcode) {
+        return fromRGBA((hexcode << 8) | 0xff);
     }
 
     static constexpr glm::vec4 white{1.f, 1.f, 1.f, 1.f};
@@ -104,6 +100,7 @@ public:
 
     ~Image();
 
+    glm::vec4 getPixel(glm::ivec2 position) const;
     glm::vec4 getPixel(int x, int y) const;
 };
 
