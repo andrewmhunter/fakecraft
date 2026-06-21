@@ -1,13 +1,17 @@
 # Fakecraft
-A voxel sandbox game based on Minecraft, written in C99
+A voxel sandbox game based on Minecraft, written in C++ using OpenGL. Previously it was written in C99 using
+Raylib and it is currently in the process of being ported to C++ so the code structure is still more similar
+to C than C++ in many places.
 
 ## Dependencies
 
 Fakecraft depends on
-1. [raylib](https://www.raylib.com/) for graphics and window management. You'll have to install raylib to build fakecraft.
-   I have plans to eventually remove the dependency on raylib and switch to using OpenGL and GLFW
-3. [stb_perlin](https://github.com/nothings/stb/blob/master/stb_perlin.h) for perlin noise. Used in terrain generation. This is already included
-   in the project as a single header file in `external/`
+1. GLFW3
+2. GLM
+3. [stb_perlin](https://github.com/nothings/stb/blob/master/stb_perlin.h) for perlin noise
+   (used in terrain generation)
+   and stb_image for loading images.
+   These are already included in the project as single header files in `external/`
 
 ## Building
 The git repository does not contain any copyrighted material. To make the game playable you'll first need to get some textures.
