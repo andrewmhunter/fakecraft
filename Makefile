@@ -16,7 +16,7 @@ OBJS := $(SRCS_CXX:%.cpp=$(DIR)/%.o) $(EXTERNAL_SRCS:%.c=$(DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 CFLAGS := -c -O3 -g -Wall -Wextra -fdiagnostics-color=always # -march=native
-CXXFLAGS := $(CFLAGS) -std=gnu++23
+CXXFLAGS := $(CFLAGS) -std=c++23
 CPPFLAGS := -MD -MP -Iexternal -I$(SOURCE_DIRECORY)
 LDFLAGS = -fwhole-program -lm -lglfw -lGL # -lX11 -lpthread -lXrandr -lXi -ldl # -lraylib
 COMMONFLAGS =

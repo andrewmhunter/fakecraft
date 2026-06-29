@@ -12,7 +12,7 @@
 // Chunk
 
 void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
-    ASSERT(chunk);
+    Logger::Logger::assertion(chunk);
 
     glm::ivec3 point = {x, y, z};
     if (chunkGetBlock(chunk, point) != BLOCK_AIR) {
@@ -23,10 +23,10 @@ void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block) {
 }
 
 Chunk* chunkInit(World* world, glm::ivec3 coords) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     Chunk* chunk = new Chunk;
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     chunk->world = world;
     chunk->coords = coords;
@@ -48,20 +48,20 @@ Chunk* chunkInit(World* world, glm::ivec3 coords) {
     world->chunks[coords] = chunk;
 
     if (loadChunk(chunk)) {
-        DEBUG("Chunk %d, %d loaded from file", chunk->coords.x, chunk->coords.z);
+        Logger::debug(std::format("Chunk {}, {} loaded from file", chunk->coords.x, chunk->coords.z));
         return chunk;
     }
 
     generateTerrain(chunk);
     placeFeatures(chunk);
 
-    DEBUG("Chunk %d, %d generated", chunk->coords.x, chunk->coords.z);
+    Logger::debug(std::format("Chunk {}, {} generated", chunk->coords.x, chunk->coords.z));
     return chunk;
 }
 
 
 void chunkUnload(Chunk* chunk) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
     chunk->loaded = false;
 
     for (int i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
@@ -75,17 +75,16 @@ void chunkUnload(Chunk* chunk) {
     }
 
     saveChunk(chunk);
-    DEBUG("Chunk %d, %d saved", chunk->coords.x, chunk->coords.z);
+    Logger::debug(std::format("Chunk {}, {} saved", chunk->coords.x, chunk->coords.z));
 
     //if (chunk->mesh.vertexArrayObject == 150) {
-    //    ERROR("Because of chunkUnload c %d, %d :", chunk->coords.x, chunk->coords.z);
+    //    Logger::error("Because of chunkUnload c %d, %d :", chunk->coords.x, chunk->coords.z);
     //}
-    chunk->mesh.unload();
 }
 
 
 bool blockInChunk(const Chunk* chunk, glm::ivec3 local) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     return local.x >= 0 && local.x < CHUNK_WIDTH
         && local.y >= 0 && local.y < CHUNK_HEIGHT
@@ -93,8 +92,8 @@ bool blockInChunk(const Chunk* chunk, glm::ivec3 local) {
 }
 
 void chunkMarkDirty(Chunk* chunk, glm::ivec3 local) {
-    ASSERT(chunk);
-    ASSERT(blockInChunk(chunk, local));
+    Logger::assertion(chunk);
+    Logger::assertion(blockInChunk(chunk, local));
 
     chunk->dirty = true;
 
@@ -104,10 +103,10 @@ void chunkMarkDirty(Chunk* chunk, glm::ivec3 local) {
 }
 
 void chunkSetBlockRaw(Chunk* chunk, glm::ivec3 local, Block block) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     if (!blockInChunk(chunk, local)) {
-        WARN("Block placed outside of chunk");
+        Logger::warning("Block placed outside of chunk");
         return;
     }
 
@@ -116,7 +115,7 @@ void chunkSetBlockRaw(Chunk* chunk, glm::ivec3 local, Block block) {
 }
 
 void chunkSetBlock(Chunk* chunk, glm::ivec3 local, Block block) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     chunkSetBlockRaw(chunk, local, block);
 
@@ -128,7 +127,7 @@ void chunkSetBlock(Chunk* chunk, glm::ivec3 local, Block block) {
 }
 
 Block chunkGetBlock(const Chunk* chunk, glm::ivec3 local) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     if (!blockInChunk(chunk, local)) {
         return BLOCK_AIR;
@@ -136,8 +135,8 @@ Block chunkGetBlock(const Chunk* chunk, glm::ivec3 local) {
     return chunk->blocks[local.x][local.y][local.z];
 }
 
-static void drawChunkMesh(const Chunk* chunk, Shader shader, const GPUMesh& mesh) {
-    ASSERT(chunk);
+static void drawChunkMesh(const Chunk* chunk, ShaderProgram& shader, const GPUMesh& mesh) {
+    Logger::assertion(chunk);
 
     glm::mat4 transform = glm::mat4{1.f};
     transform = glm::translate(transform, glm::vec3{chunk->coords * (glm::ivec3)CHUNK_SIZE});
@@ -145,7 +144,7 @@ static void drawChunkMesh(const Chunk* chunk, Shader shader, const GPUMesh& mesh
     //transform = glm::translate(transform, pointToVector3(chunk->coords));
 
     if (!chunk->loaded) {
-        ERROR("Drawing unloaded chunk with vao: %d", chunk->mesh.vertexArrayObject);
+        Logger::error(std::format("Drawing unloaded chunk with vao: {}", chunk->mesh->vertexArrayObject.object));
     }
 
     shader.setUniformMat4("model", transform);
@@ -158,28 +157,28 @@ static void drawChunkMesh(const Chunk* chunk, Shader shader, const GPUMesh& mesh
     }
 }
 
-void drawChunk(const Chunk* chunk, Shader shader) {
-    ASSERT(chunk);
+void drawChunk(const Chunk* chunk, ShaderProgram& shader) {
+    Logger::assertion(chunk);
 
-    drawChunkMesh(chunk, shader, chunk->mesh);
+    drawChunkMesh(chunk, shader, chunk->mesh.value());
 }
 
-void drawChunkTranslucent(const Chunk* chunk, Shader shader) {
-    ASSERT(chunk);
+void drawChunkTranslucent(const Chunk* chunk, ShaderProgram& shader) {
+    Logger::assertion(chunk);
 
-    drawChunkMesh(chunk, shader, chunk->translucentMesh);
+    drawChunkMesh(chunk, shader, chunk->translucentMesh.value());
 }
 
 bool verifyChunk(const Chunk* chunk) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
-    DEBUG("Verifying chunk %d, %d", chunk->coords.x, chunk->coords.z);
+    Logger::debug(std::format("Verifying chunk {}, {}", chunk->coords.x, chunk->coords.z));
 
     ITERATE_CHUNK(x, y, z) {
         Block block = chunk->blocks[x][y][z];
         if (block >= BLOCK_COUNT) {
-            ERROR("Chunk verification failed. Chunk: %d, %d. Block: %d, %d, %d",
-                    chunk->coords.x, chunk->coords.z, x, y, z);
+            Logger::error(std::format("Chunk verification failed. Chunk: {}, {}. Block: {}, {}, {}",
+                    chunk->coords.x, chunk->coords.z, x, y, z));
             return false;
         }
     }
@@ -187,6 +186,8 @@ bool verifyChunk(const Chunk* chunk) {
 }
 
 void chunkComputeLightValues(Chunk* chunk) {
+    (void)chunk;
+
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_WIDTH; ++z) {
             for (int y = CHUNK_HEIGHT - 1; y >= 0; --y) {

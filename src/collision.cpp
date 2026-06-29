@@ -7,7 +7,7 @@
 // https://www.youtube.com/watch?v=NbSee-XM7WA
 // https://lodev.org/cgtutor/raycasting.html
 WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 direction, float maxLength) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     direction = glm::normalize(direction);
 
@@ -22,6 +22,9 @@ WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 directio
         .blockAt = worldPoint,
         .blockBefore = worldPoint,
         .collisionAt = start,
+        .collisionBefore = glm::vec3{},
+        .distance = glm::vec3{},
+        .distanceBefore = glm::vec3{},
         .length = 0.f,
         .lengthBefore = 0.f,
         .collided = false,
@@ -154,7 +157,7 @@ static inline float aabbResolveAxis(const World* world, BoundingBox boundingBox,
 #endif
 
 bool isPassable(Block block) {
-    return blocks[block].passability == PASSABLE;
+    return blocks[block]->passability == PASSABLE;
 }
 
 static float aabbResolveX(const World* world, FCBoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition) {

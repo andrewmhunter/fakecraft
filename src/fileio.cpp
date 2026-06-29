@@ -6,7 +6,7 @@
 bool openFile(FILE** file, const char* fileName, const char* mode, TraceLogLevel level) {
     *file = fopen(fileName, mode);
     if (*file == NULL) {
-        LOG(level, "Could not open file '%s' mode '%s'. OS Error %d: %s", fileName, mode, errno, strerror(errno));
+        Logger::log(level, std::format("Could not open file '{}' mode '{}'. OS Error {}: {}", fileName, mode, errno, strerror(errno)));
         return false;
     }
     return true;

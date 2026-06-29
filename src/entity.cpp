@@ -1,44 +1,117 @@
 #include <cmath>
 #include "entity.hpp"
 #include "collision.hpp"
+#include "graphics.hpp"
 #include "logger.hpp"
 #include "input.hpp"
+#include "timer.hpp"
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <GLFW/glfw3.h>
 
-void entityInit(Entity* entity, EntityType type, World* world, glm::vec3 position, float width, float height) {
-    ASSERT(entity);
-    ASSERT(world);
-
-    entity->type = type;
-    entity->world = world;
-    entity->position = position;
-    entity->velocity = glm::vec3{0.f};
-    entity->velocityOld = glm::vec3{0.f};
-    entity->boundingBox = {width, height, width};
-    entity->pitch = 0.f;
-    entity->yaw = 0.f;
-    entity->flying = false;
-    entity->onGround = false;
-    entity->noClip = false;
-
-    entity->breakTimer = timerInit(0.25);
+Entity::Entity(World* world, glm::vec3 position, glm::vec3 boundingBox)
+    : world{world},
+    type{ENTITY_PLAYER},
+    position{position},
+    boundingBox{boundingBox},
+    pitch{0.f},
+    yaw{0.f}
+{
 }
 
-void entityUnload(Entity* entity) {
-    ASSERT(entity);
-    delete entity;
+Entity::~Entity() {
+
+}
+
+//#define UPDATE_POSITION_FIRST
+
+void Entity::updatePosition(float deltaTime) {
+    glm::vec3 avgVelocity = (velocity + velocityOld) * deltaTime * 0.5f;
+    glm::vec3 baseVelocity = avgVelocity;
+
+    if (!noClip) {
+        avgVelocity = aabbResolveCollisions(world, position, boundingBox, avgVelocity);
+    }
+
+    position = position + avgVelocity;
+
+    if (avgVelocity.x != baseVelocity.x) {
+        velocity.x = 0.f;
+    }
+
+    onGround = false;
+    if (avgVelocity.y != baseVelocity.y) {
+        velocity.y = 0.f;
+        onGround = baseVelocity.y < 0.f;
+    }
+
+    if (avgVelocity.z != baseVelocity.z) {
+        velocity.z = 0.f;
+    }
+
+
+    velocityOld = velocity;
+}
+
+void Entity::update(float deltaTime) {
+    // Minecraft entity physics: https://minecraft.wiki/w/Entity#Motion
+    // https://gamedev.stackexchange.com/questions/169558/how-can-i-fix-my-velocity-damping-to-work-with-any-delta-frame-time
+
+#ifdef UPDATE_POSITION_FIRST
+    updatePosition(this, deltaTime);
+#endif
+
+    float horizontalDrag = 0.546f;
+    //float horizontalDrag = 0.91f;
+    float verticalDrag = 0.98f;
+
+
+    if (!flying) {
+        velocity.y -= (double)0.08 * deltaTime;
+    }
+
+    horizontalDrag = 1.f - powf(horizontalDrag, deltaTime);
+    if (!flying) {
+        verticalDrag = 1.f - powf(verticalDrag, deltaTime);
+    } else {
+        verticalDrag = horizontalDrag;
+    }
+
+    velocity.x = std::lerp(velocity.x, 0.f, horizontalDrag);
+    velocity.y = std::lerp(velocity.y, 0.f, verticalDrag);//* deltaTime * 20;
+    velocity.z = std::lerp(velocity.z, 0.f, horizontalDrag);
+
+#ifndef UPDATE_POSITION_FIRST
+    updatePosition(deltaTime);
+#endif
+}
+
+void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);
+
+void Entity::draw(ShaderProgram& shader) {
+    drawPlayerModel(shader, position);
+    /*if (type != ENTITY_PLAYER) {
+
+        //DrawBoundingBox(genBoundingBox(entity->position, entity->boundingBox), WHITE);
+    }*/
 }
 
 
-void playerUpdate(Entity* entity, float deltaTime) {
+Player::Player(World* world, glm::vec3 position)
+    : Entity{world, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+{
+}
+
+void Player::update(float deltaTime) {
+    Entity::update(deltaTime);
+
     if (keyPressed(GLFW_KEY_F)) {
-        entity->flying = !entity->flying;
+        flying = !flying;
     }
 
     if (keyPressed(GLFW_KEY_N)) {
-        entity->noClip = !entity->noClip;
+        noClip = !noClip;
     }
 
     glm::vec3 movement{0.f};
@@ -59,16 +132,16 @@ void playerUpdate(Entity* entity, float deltaTime) {
         movement.z += 1.f;
     }
 
-    if (entity->flying && keyDown(GLFW_KEY_LEFT_CONTROL)) {
+    if (flying && keyDown(GLFW_KEY_LEFT_CONTROL)) {
         movement.y -= 1.f;
     }
 
-    if (entity->flying && keyDown(GLFW_KEY_SPACE)) {
+    if (flying && keyDown(GLFW_KEY_SPACE)) {
         movement.y += 1.f;
     }
 
-    //float speed = entity->flying ? 10.79f : 4.317;
-    //speed = entity->flying ? 21.58f : 5.612;
+    //float speed = flying ? 10.79f : 4.317;
+    //speed = flying ? 21.58f : 5.612;
 
     //float speed = 0.098f * deltaTime;
     float speed = 0.15f * deltaTime;
@@ -77,96 +150,32 @@ void playerUpdate(Entity* entity, float deltaTime) {
         speed *= 2.f;
     }
 
-    if (entity->flying) {
+    if (flying) {
         speed *= 4.f;
     }
 
     glm::dvec2 mouseDelta = getMouseDelta() * SENSITIVITY;
-    entity->yaw -= mouseDelta.x;
-    entity->pitch -= mouseDelta.y;
-    entity->pitch = glm::clamp(entity->pitch, -glm::pi<float>() / 2.f + 0.01f, glm::pi<float>() / 2.f - 0.01f);
+    yaw -= mouseDelta.x;
+    pitch -= mouseDelta.y;
+    pitch = glm::clamp(pitch, -glm::pi<float>() / 2.f + 0.01f, glm::pi<float>() / 2.f - 0.01f);
 
-    movement = glm::vec3{glm::rotate(glm::mat4{1.f}, entity->yaw, {0.f, 1.f, 0.f}) * glm::vec4{movement, 1.f}};
+    movement = glm::vec3{glm::rotate(glm::mat4{1.f}, yaw, {0.f, 1.f, 0.f}) * glm::vec4{movement, 1.f}};
     if (movement != glm::vec3{0.f}) {
         movement = glm::normalize(movement);
     }
 
     movement *= speed;
 
-    if (!entity->flying && keyDown(GLFW_KEY_SPACE) && entity->onGround) {
-        entity->velocity.y += 0.5f;
+    if (!flying && keyDown(GLFW_KEY_SPACE) && onGround) {
+        velocity.y += 0.5f;
     }
 
-    entity->velocity += movement;
+    velocity += movement;
 }
 
-//#define UPDATE_POSITION_FIRST
-
-void updatePosition(Entity* entity, float deltaTime) {
-    glm::vec3 avgVelocity = (entity->velocity + entity->velocityOld) * deltaTime * 0.5f;
-    glm::vec3 baseVelocity = avgVelocity;
-
-    if (!entity->noClip) {
-        avgVelocity = aabbResolveCollisions(entity->world, entity->position, entity->boundingBox, avgVelocity);
-    }
-
-    entity->position = entity->position + avgVelocity;
-
-    if (avgVelocity.x != baseVelocity.x) {
-        entity->velocity.x = 0.f;
-    }
-
-    entity->onGround = false;
-    if (avgVelocity.y != baseVelocity.y) {
-        entity->velocity.y = 0.f;
-        entity->onGround = baseVelocity.y < 0.f;
-    }
-
-    if (avgVelocity.z != baseVelocity.z) {
-        entity->velocity.z = 0.f;
-    }
-
-
-    entity->velocityOld = entity->velocity;
-}
-
-void entityUpdate(Entity* entity, float deltaTime) {
-    ASSERT(entity);
-
-    if (entity->type == ENTITY_PLAYER) {
-        playerUpdate(entity, deltaTime);
-    }
-
-    // Minecraft entity physics: https://minecraft.wiki/w/Entity#Motion
-    // https://gamedev.stackexchange.com/questions/169558/how-can-i-fix-my-velocity-damping-to-work-with-any-delta-frame-time
-
-#ifdef UPDATE_POSITION_FIRST
-    updatePosition(entity, deltaTime);
-#endif
-
-    float horizontalDrag = 0.546f;
-    //float horizontalDrag = 0.91f;
-    float verticalDrag = 0.98f;
-
-
-    if (!entity->flying) {
-        entity->velocity.y -= (double)0.08 * deltaTime;
-    }
-
-    horizontalDrag = 1.f - powf(horizontalDrag, deltaTime);
-    if (!entity->flying) {
-        verticalDrag = 1.f - powf(verticalDrag, deltaTime);
-    } else {
-        verticalDrag = horizontalDrag;
-    }
-
-    entity->velocity.x = std::lerp(entity->velocity.x, 0.f, horizontalDrag);
-    entity->velocity.y = std::lerp(entity->velocity.y, 0.f, verticalDrag);//* deltaTime * 20;
-    entity->velocity.z = std::lerp(entity->velocity.z, 0.f, horizontalDrag);
-
-#ifndef UPDATE_POSITION_FIRST
-    updatePosition(entity, deltaTime);
-#endif
+void Player::draw(ShaderProgram& shader) {
+    (void)shader;
+    //Entity::draw(shader);
 }
 
 class EntityModelState {
@@ -240,10 +249,10 @@ glm::mat4 EntityModelPart::applyTransform(glm::mat4 transform, float yaw) const 
 
 class EntityModel {
 public:
-    void draw(Shader shader, EntityModelState state);
+    void draw(ShaderProgram& shader, EntityModelState state);
 };
 
-void drawPlayerModel(Shader shader, glm::vec3 position) {
+void drawPlayerModel(ShaderProgram& shader, glm::vec3 position) {
     float unit = 1.f / 16.f;
     float bodyHeight = 12.f * unit;
     float limbWidth = 4.f * unit;
@@ -280,8 +289,8 @@ void drawPlayerModel(Shader shader, glm::vec3 position) {
     drawCube(shader, rightArmPosition, {limbWidth, bodyHeight, limbWidth});
 }
 
-void entityDraw(Shader shader, const Entity* entity) {
-    ASSERT(entity);
+void entityDraw(ShaderProgram& shader, const Entity* entity) {
+    Logger::assertion(entity);
 
     if (entity->type != ENTITY_PLAYER) {
         drawPlayerModel(shader, entity->position);

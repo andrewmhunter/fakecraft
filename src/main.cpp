@@ -1,3 +1,4 @@
+#include <glm/fwd.hpp>
 #include <map>
 #include <stdbool.h>
 #include <format>
@@ -10,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "block.hpp"
+#include "chunk.hpp"
 #include "world.hpp"
 #include "util.hpp"
 #include "collision.hpp"
@@ -21,7 +23,7 @@
 #include "text.hpp"
 
 
-void drawThickWireCube(Shader shader, glm::vec3 position, float lineWidth) {
+void drawThickWireCube(ShaderProgram& shader, glm::vec3 position, float lineWidth) {
     float axisOffset = 0.f;
     float epsilon = 0.010;
 
@@ -51,7 +53,7 @@ void drawThickWireCube(Shader shader, glm::vec3 position, float lineWidth) {
 
 
 void errorCallbackGlfw(int error, const char* description) {
-    ERROR("GLFW Error %d: %s", error, description);
+    Logger::error(std::format("GLFW Error {}: {}", error, description));
 }
 
 void checkOpenglErrors() {
@@ -67,7 +69,7 @@ void checkOpenglErrors() {
 
     GLenum errorCode = 0;
     while ((errorCode = glGetError()) != GL_NO_ERROR) {
-        ERROR("OpenGL Error: %s", openglErrors[errorCode].c_str());
+        Logger::error(std::format("OpenGL Error: {}", openglErrors[errorCode]));
     }
 }
 
@@ -116,7 +118,7 @@ void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
         id, sources.at(source), types.at(type), message
     );
 
-    LOG(severities.at(severity), "%s", text.c_str());
+    Logger::log(severities.at(severity), text);
 }
 
 int windowWidth = 800;
@@ -173,49 +175,7 @@ void toggleFullscreen(GLFWwindow* window) {
     isFullscreen = !isFullscreen;
 }
 
-
-int main() {
-    setLogLevel(LOG_INFO);
-
-    // No matter where you run the executable from it will still be able to
-    // access the resources in its directory
-    //ChangeDirectory(GetApplicationDirectory());
-
-    if (!glfwInit()) {
-        FATAL("GLFW failed to initialize");
-    }
-
-    glfwSetErrorCallback(errorCallbackGlfw);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
-
-    GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Fakecraft", nullptr, nullptr);
-    if (window == nullptr) {
-        FATAL("Failed to create GLFW window");
-    }
-
-    glfwMakeContextCurrent(window);
-
-    glfwSetKeyCallback(window, keyCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    glfwSetCursorPosCallback(window, cursorPosCallback);
-    glfwSetScrollCallback(window, scrollCallback);
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        FATAL("Failed to initialize GLAD");
-    }
-
-    int glFlags = 0;
-    glGetIntegerv(GL_CONTEXT_FLAGS, &glFlags);
-    if (glFlags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(openglDebugCallback, nullptr);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
-    } else {
-        WARN("No debug context");
-    }
-
+void runGame(GLFWwindow* window) {
     initMeshes();
 
     framebufferSizeCallback(window, windowWidth, windowHeight);
@@ -224,8 +184,7 @@ int main() {
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
+    blendModeNormal();
 
     int targetFps = 60;
 
@@ -234,8 +193,8 @@ int main() {
 
     makeSaveDirectories();
 
-    Shader terrainShader = Shader::buildFiles("assets/terrain.vs.glsl", "assets/terrain.fs.glsl");
-    Shader simpleShader = Shader::buildFiles("assets/simple.vs.glsl", "assets/simple.fs.glsl");
+    ShaderProgram terrainShader = ShaderProgram::loadFiles("assets/terrain.vs.glsl", "assets/terrain.fs.glsl");
+    ShaderProgram simpleShader = ShaderProgram::loadFiles("assets/simple.vs.glsl", "assets/simple.fs.glsl");
 
     Texture terrainTexture{"assets/resources/alphaTerrain.png"};
     Font font{"assets/resources/font/default.png"};
@@ -259,7 +218,7 @@ int main() {
 
     glClearColor(world.skyColor.r, world.skyColor.g, world.skyColor.b, world.skyColor.a);
 
-    Entity* player = world.player;
+    Player* player = world.player;
 
     bool showGui = true;
 
@@ -298,7 +257,7 @@ int main() {
             toggleFullscreen(window);
         }
 
-        if (keyPressed(GLFW_KEY_F8) && world.renderDistance > 0) {
+        if (keyPressed(GLFW_KEY_F8) && world.renderDistance > 1) {
             world.renderDistance--;
         }
 
@@ -362,8 +321,8 @@ int main() {
         }
 
         if (keyPressed(GLFW_KEY_H)) {
-            Entity* mob = spawnEntity(&world, ENTITY_MOB, player->position, 0.6f, 1.8f);
-            mob->velocity = player->velocity * 2.f;
+            Entity& mob = world.spawnEntity<Entity>(player->position, glm::vec3{0.6f, 1.8f, 0.6f});// spawnEntity(&world, ENTITY_MOB, player->position, 0.6f, 1.8f);
+            mob.velocity = player->velocity * 2.f;
         }
 
         if (getMouseScroll() < 0) {
@@ -405,6 +364,9 @@ int main() {
             if (world.showChunkBorders) {
                 //TODO:
                 //DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
+                simpleShader.setUniformVec4("color", color::fromRGBA(0xffffff80));
+                //drawCube(simpleShader, glm::vec3{worldToChunkV(player->position)} * glm::vec3 CHUNK_SIZE - glm::vec3 CHUNK_SIZE / 2.f, glm::vec3 CHUNK_SIZE);
+                
             }
         }
 
@@ -427,7 +389,7 @@ int main() {
             indicator = glm::rotate(indicator, glm::pi<float>() / 8.f, {1.f, 0.f, 0.f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 4.f, {0.f, 1.f, 0.f});
             terrainShader.setUniformMat4("model", indicator);
-            blocks[selectedBlock].mesh.draw();
+            blocks[selectedBlock]->mesh.draw();
 
             glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-windowWidth / 2.f, windowHeight / 2.f, 0.f});
             terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView * cornerTransform);
@@ -435,12 +397,12 @@ int main() {
             font.texture.bind();
 
             TextBatch text{font};
-            text.drawString({5, -20}, std::format("{} FPS", static_cast<int>(1.f / (deltaTime / 20.f))));
-            text.drawString({5, -40}, std::format("P: {:.2f}", player->position));
-            text.drawString({5, -60}, std::format("V: {:.2f}", player->velocity));
-            text.drawString({5, -80}, std::format("L: {:.2f}", lookVec));
-            text.drawString({5, -100}, std::format("RD: {}", world.renderDistance));
-            text.drawString({5, -120}, std::format("E: {}", world.entities.size()));
+            text.drawString({5, -20}, "{} FPS", static_cast<int>(1.f / (deltaTime / 20.f)));
+            text.drawString({5, -40}, "P: {:.2f}", player->position);
+            text.drawString({5, -60}, "V: {:.2f}", player->velocity);
+            text.drawString({5, -80}, "L: {:.2f}", lookVec);
+            text.drawString({5, -100}, "RD: {}", world.renderDistance);
+            text.drawString({5, -120}, "E: {}", world.entities.size());
             text.draw();
 
             blendModeInvert();
@@ -470,7 +432,53 @@ int main() {
     }
 
     worldUnload(&world);
+    unloadMeshes();
+    unregisterBlocks();
+}
 
+
+int main() {
+    // No matter where you run the executable from it will still be able to
+    // access the resources in its directory
+    //ChangeDirectory(GetApplicationDirectory());
+
+    if (!glfwInit()) {
+        Logger::fatal("GLFW failed to initialize");
+    }
+
+    glfwSetErrorCallback(errorCallbackGlfw);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+
+    GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Fakecraft", nullptr, nullptr);
+    if (window == nullptr) {
+        Logger::fatal("Failed to create GLFW window");
+    }
+
+    glfwMakeContextCurrent(window);
+
+    glfwSetKeyCallback(window, keyCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetCursorPosCallback(window, cursorPosCallback);
+    glfwSetScrollCallback(window, scrollCallback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        Logger::fatal("Failed to initialize GLAD");
+    }
+
+    int glFlags = 0;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &glFlags);
+    if (glFlags & GL_CONTEXT_FLAG_DEBUG_BIT) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(openglDebugCallback, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
+    } else {
+        Logger::warning("No debug context");
+    }
+
+    runGame(window);
+    
     glfwTerminate();
 }
 

@@ -9,22 +9,22 @@
 #include "fileio.hpp"
 
 void saveFloat(float number, FILE* file) {
-    ASSERT(fwrite(&number, sizeof(number), 1, file) == 1);
+    Logger::assertion(fwrite(&number, sizeof(number), 1, file) == 1);
 }
 
 float loadFloat(FILE* file) {
     float number = 0.f;
-    ASSERT(fread(&number, sizeof(number), 1, file) == 1);
+    Logger::assertion(fread(&number, sizeof(number), 1, file) == 1);
     return number;
 }
 
 void saveI32(int32_t number, FILE* file) {
-    ASSERT(fwrite(&number, sizeof(number), 1, file) == 1);
+    Logger::assertion(fwrite(&number, sizeof(number), 1, file) == 1);
 }
 
 int32_t loadI32(FILE* file) {
     int32_t number = 0;
-    ASSERT(fread(&number, sizeof(number), 1, file) == 1);
+    Logger::assertion(fread(&number, sizeof(number), 1, file) == 1);
     return number;
 }
 
@@ -46,7 +46,7 @@ glm::vec3 loadVector3(FILE* file) {
 static void getChunkFileName(const Chunk* chunk, char* buffer, size_t maxSize) {
     int count = snprintf(buffer, maxSize, "save/level/c%d.%d.bin", chunk->coords.x, chunk->coords.z);
     if (count >= (int)maxSize) {
-        ERROR("Buffer not large enough for chunk filename");
+        Logger::error("Buffer not large enough for chunk filename");
     }
 }
 
@@ -55,14 +55,12 @@ void makeSaveDirectories(void) {
 }
 
 void saveChunk(const Chunk* chunk) {
-
 #ifdef NO_SAVE_CHUNKS
     return;
 #endif
+    Logger::assertion(chunk);
 
-    ASSERT(chunk);
-
-    TRACE("Saving chunk: %d, %d", chunk->coords.x, chunk->coords.z);
+    Logger::trace(std::format("Saving chunk: {}, {}", chunk->coords.x, chunk->coords.z));
 
     char fileName[FILENAME_MAX];
     getChunkFileName(chunk, fileName, sizeof(fileName));
@@ -91,25 +89,25 @@ void saveChunk(const Chunk* chunk) {
         fputc(currentBlock, file);
     }
 
-    ASSERT(savedCount == blocksSize);
+    Logger::assertion(savedCount == blocksSize);
 
     fclose(file);
 }
 
 bool loadChunk(Chunk* chunk) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     char fileName[FILENAME_MAX];
     getChunkFileName(chunk, fileName, sizeof(fileName));
 
     FILE* file = NULL;
-    if (!openFile(&file, fileName, "rb", LOG_TRACE)) {
+    if (!openFile(&file, fileName, "rb", LOG_NONE)) {
         return false;
     }
 
     //size_t blocksSize = sizeof(chunk->blocks);
 
-    TRACE("Loading chunk: %d, %d", chunk->coords.x, chunk->coords.z);
+    Logger::trace(std::format("Loading chunk: {}, {}", chunk->coords.x, chunk->coords.z));
 
     int currentNumber = 0;
     Block currentBlock = BLOCK_AIR;
@@ -120,7 +118,7 @@ bool loadChunk(Chunk* chunk) {
             int blockId = fgetc(file);
 
             if (currentNumber == EOF || blockId == EOF) {
-                ERROR("Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
+                Logger::error(std::format("Chunk {}, {} is courupted", chunk->coords.x, chunk->coords.z));
                 return false;
             }
 
@@ -132,7 +130,7 @@ bool loadChunk(Chunk* chunk) {
     }
 
     /*if (count != blocksSize) {
-        ERROR("Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
+        Logger::error("Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
         return false;
     }*/
 
@@ -149,17 +147,18 @@ bool loadChunk(Chunk* chunk) {
 }
 
 void saveWorld(const World* world) {
-    ASSERT(world);
+    Logger::assertion(world);
 
-    DEBUG("Saving world to file");
+    Logger::debug("Saving world to file");
 
     FILE* file = openFileRequired("save/world.bin", "wb");
 
     saveI32(world->seed, file);
     saveEntity(world->player, file);
 
-    for (const Entity* entity : world->entities) {
-        if (entity->type == ENTITY_PLAYER) {
+    for (const auto& entityPtr : world->entities) {
+        const Entity* entity = entityPtr.get();
+        if (dynamic_cast<const Player*>(entity) != nullptr) {
             continue;
         }
 
@@ -173,22 +172,22 @@ void saveWorld(const World* world) {
 }
 
 bool loadWorld(World* world) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     FILE* file = NULL;
     if (!openFile(&file, "save/world.bin", "rb", LOG_WARNING)) {
         return false;
     }
 
-    DEBUG("Loading world from file");
+    Logger::debug("Loading world from file");
 
     world->seed = loadI32(file);
     loadEntity(world->player, file);
 
     int ch = 0;
     while ((ch = fgetc(file)) == 1) {
-        Entity* entity = spawnEntity(world, ENTITY_MOB, glm::vec3{0.f}, 0.6, 1.8);
-        loadEntity(entity, file);
+        Entity& entity = world->spawnEntity<Entity>(glm::vec3{0.f}, glm::vec3{0.6, 1.8, 0.6f});
+        loadEntity(&entity, file);
     }
 
     fclose(file);
@@ -196,7 +195,7 @@ bool loadWorld(World* world) {
 }
 
 
-void saveEntity(const struct Entity* entity, FILE* file) {
+void saveEntity(const Entity* entity, FILE* file) {
     saveVector3(entity->position, file);
     saveVector3(entity->velocity, file);
     saveFloat(entity->yaw, file);

@@ -90,13 +90,13 @@ struct BlockInstance {
     uint8_t surfaceHeight;
 };
 
-struct World;
+class World;
 
 struct Chunk {
     glm::ivec3 coords;
-    struct World* world;
-    GPUMesh mesh;
-    GPUMesh translucentMesh;
+    class World* world;
+    std::optional<GPUMesh> mesh;
+    std::optional<GPUMesh> translucentMesh;
 #ifdef USE_IGNORED
     uint16_t ignored[CHUNK_HEIGHT];
 #endif
@@ -112,7 +112,7 @@ static inline Block chunkGetBlockRaw(const Chunk* chunk, glm::ivec3 local) {
     return chunk->blocks[local.x][local.y][local.z];
 }
 
-Chunk* chunkInit(struct World* world, glm::ivec3 coords);
+Chunk* chunkInit(World* world, glm::ivec3 coords);
 void chunkUnload(Chunk* chunk);
 
 void chunkPlaceFeatures(Chunk* chunk);
@@ -124,8 +124,8 @@ void chunkSetBlockRaw(Chunk* chunk, glm::ivec3 local, Block block);
 void chunkSetBlock(Chunk* chunk, glm::ivec3 local, Block block);
 Block chunkGetBlock(const Chunk* chunk, glm::ivec3 local);
 void chunkGenerateMesh(Chunk* chunk);
-void drawChunk(const Chunk* chunk, Shader shader);
-void drawChunkTranslucent(const Chunk* chunk, Shader shader);
+void drawChunk(const Chunk* chunk, ShaderProgram& shader);
+void drawChunkTranslucent(const Chunk* chunk, ShaderProgram& shader);
 
 void chunkMarkDirty(Chunk* chunk, glm::ivec3 local);
 bool verifyChunk(const Chunk* chunk);

@@ -25,8 +25,8 @@ static int getCharacterWidth(
 Font::Font(std::string textureFile) : Font{Image{textureFile}} {}
 
 Font::Font(const Image& fontImage) : texture{fontImage} {
-    ASSERT(fontImage.height % 16 == 0);
-    ASSERT(fontImage.width % 16 == 0);
+    Logger::assertion(fontImage.height % 16 == 0);
+    Logger::assertion(fontImage.width % 16 == 0);
 
     int baseCharacterWidth = fontImage.width / 16;
     characterHeight = fontImage.height / 16;
@@ -79,6 +79,5 @@ void TextBatch::drawString(int scale, glm::ivec2 position, glm::vec4 color, std:
 void TextBatch::draw() {
     GPUMesh gpuMesh = mesh.upload();
     gpuMesh.draw();
-    gpuMesh.unload();
 }
 

@@ -1,6 +1,12 @@
 #ifndef FAKECRAFT_LOGGER_HPP
 #define FAKECRAFT_LOGGER_HPP
 
+#include <exception>
+#include <format>
+#include <source_location>
+#include <string_view>
+#include <print>
+
 #define RAISE_ON_FATAL 1
 
 #include <stdarg.h>
@@ -9,55 +15,7 @@
 
 // To work with the preprocessor we have to use integer literals instead
 // of the TraceLogLevel which they are equal to
-#define MIN_LOG_LEVEL 3
-
-#define LOG(LEVEL, FORMAT, ...) printLog(LEVEL, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-
-#if 1 >= MIN_LOG_LEVEL
-#define TRACE(FORMAT, ...) printLog(LOG_TRACE, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#else
-#define TRACE(FORMAT, ...)
-#endif
-
-#if 2 >= MIN_LOG_LEVEL
-#define DEBUG(FORMAT, ...) printLog(LOG_DEBUG, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#else
-#define DEBUG(FORMAT, ...)
-#endif
-
-#if 3 >= MIN_LOG_LEVEL
-#define INFO(FORMAT, ...) printLog(LOG_INFO, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#else
-#define INFO(FORMAT, ...)
-#endif
-
-#if 4 >= MIN_LOG_LEVEL
-#define WARN(FORMAT, ...) printLog(LOG_WARNING, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#else
-#define WARN(FORMAT, ...)
-#endif
-
-#if 5 >= MIN_LOG_LEVEL
-#define ERROR(FORMAT, ...) printLog(LOG_ERROR, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#else
-#define ERROR(FORMAT, ...)
-#endif
-
-#define FATAL(FORMAT, ...) printLog(LOG_FATAL, __FUNCTION__, FORMAT __VA_OPT__(,) __VA_ARGS__)
-
-#define STRINGIFY(X) STRINGIFY_2(X)
-#define STRINGIFY_2(X) #X
-
-#define ASSERT(COND) assertion((COND), __FILE_NAME__ ":" STRINGIFY(__LINE__), #COND)
-#define ASSERTF(COND, FORMAT, ...) assertionf((COND), __FILE_NAME__ ":" STRINGIFY(__LINE__), #COND, FORMAT __VA_OPT__(,) __VA_ARGS__)
-
-#if ENABLE_DEBUG_ASSERT
-#define DEBUG_ASSERT(COND) ASSERT(COND)
-#define DEBUG_ASSERTF(COND, FORMAT, ...) ASSERTF(COND, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#else
-#define DEBUG_ASSERT(COND)
-#define DEBUG_ASSERTF(COND, FORMAT, ...)
-#endif
+#define MIN_LOG_LEVEL 0
 
 enum TraceLogLevel {
     LOG_ALL,
@@ -70,28 +28,101 @@ enum TraceLogLevel {
     LOG_NONE,
 };
 
-TraceLogLevel setLogLevel(TraceLogLevel level);
 
-__attribute__((format(printf, 3, 4)))
-void printLog(TraceLogLevel level, const char* where, const char* format, ...);
-void vprintLog(TraceLogLevel level, const char* where, const char* format, va_list args); 
+class FatalError : public std::exception {
+private:
+    std::string message;
+public:
+    FatalError(std::string message);
+    virtual const char* what() const noexcept override;
+};
 
-static inline void assertion(bool condition, const char* where, const char* conditionText) {
-    if (!condition) {
-        printLog(LOG_FATAL, where, "Assertion failed: %s", conditionText);
+class Logger {
+private:
+    static inline void log(std::string_view levelText, std::string_view message, TraceLogLevel level, std::source_location location = std::source_location::current()) {
+        if (level < MIN_LOG_LEVEL || level < Logger::logLevel) {
+            return;
+        }
+
+        std::println("{} {}:{}: {}\x1b[0m: {}", location.function_name(), location.file_name(), location.line(), levelText, message);
     }
-}
 
-__attribute__((format(printf, 4, 5)))
-static inline void assertionf(bool condition, const char* where, const char* conditionText, const char* format, ...) {
-    if (!condition) {
-        va_list args;
-        va_start(args, format);
-        vprintLog(LOG_ERROR, where, format, args);
-        va_end(args);
-        printLog(LOG_FATAL, where, "Assertion failed: %s", conditionText);
+public:
+    static TraceLogLevel logLevel;
+
+    static inline void trace(std::string_view message, std::source_location location = std::source_location::current()) {
+        Logger::log("\x1b[90mTRACE", message, LOG_TRACE, location);
     }
-}
+
+    static inline void debug(std::string_view message, std::source_location location = std::source_location::current()) {
+        Logger::log("\x1b[32mDEBUG", message, LOG_DEBUG, location);
+    }
+
+    static inline void info(std::string_view message, std::source_location location = std::source_location::current()) {
+        Logger::log("\x1b[36mINFO", message, LOG_INFO, location);
+    }
+
+    static inline void warning(std::string_view message, std::source_location location = std::source_location::current()) {
+        Logger::log("\x1b[35mWARN", message, LOG_WARNING, location);
+    }
+
+    static inline void error(std::string_view message, std::source_location location = std::source_location::current()) {
+        Logger::log("\x1b[31mERROR", message, LOG_ERROR, location);
+    }
+
+    [[noreturn]]
+    static inline void fatal(std::string_view message, std::source_location location = std::source_location::current()) {
+        Logger::log("\x1b[31mFATAL", message, LOG_FATAL, location);
+        throw FatalError{std::format("{}: {}", location.function_name(), message)};
+    }
+
+    static inline void log(TraceLogLevel level, std::string_view message, std::source_location location = std::source_location::current()) {
+        switch (level) {
+            case LOG_TRACE:
+                trace(message, location);
+                break;
+            case LOG_DEBUG:
+                debug(message, location);
+                break;
+            case LOG_INFO:
+                info(message, location);
+                break;
+            case LOG_WARNING:
+                warning(message, location);
+                break;
+            case LOG_ERROR:
+                error(message, location);
+                break;
+            case LOG_FATAL:
+                fatal(message, location);
+                break;
+            case LOG_NONE:
+                break;
+            default:
+                error(std::format("Invalid log level for message \"{}\"", message), location);
+                break;
+        }
+    }
+
+    static inline void assertion(bool assertion, std::string_view message, std::source_location location = std::source_location::current()) {
+        if (!assertion) {
+            Logger::fatal(message, location);
+        }
+    }
+
+    static inline void assertion(bool assertion, std::source_location location = std::source_location::current()) {
+        Logger::assertion(assertion, "Assertion failed", location);
+    }
+
+    static inline void debug_assertion(bool assertion, std::string_view message, std::source_location location = std::source_location::current()) {
+        if (ENABLE_DEBUG_ASSERT) {
+            Logger::assertion(assertion, message, location);
+        }
+    }
+
+    static inline void debug_assertion(bool assertion, std::source_location location = std::source_location::current()) {
+        Logger::debug_assertion(assertion, "Assertion failed", location);
+    }
+};
 
 #endif
-

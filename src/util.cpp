@@ -25,7 +25,7 @@ void saveScreenshot(void) {
     snprintf(finalFileName, sizeof(finalFileName) - 1, "screenshots/%s", fileName);
     rename(fileName, finalFileName);
 
-    INFO("Saved screenshot %s", finalFileName);
+    Logger::info(std::format("Saved screenshot {}", finalFileName));
 }
 
 void randomizeSeed() {

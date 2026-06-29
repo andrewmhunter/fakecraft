@@ -2,7 +2,7 @@
 #define BLOCK_HPP
 
 #include <stdbool.h>
-#include "point.hpp"
+#include <optional>
 #include "direction.hpp"
 #include "graphics.hpp"
 
@@ -67,9 +67,10 @@ typedef struct {
     Passability passability;
 } BlockProperties;
 
-extern BlockProperties blocks[BLOCK_COUNT];
+extern std::optional<BlockProperties> blocks[BLOCK_COUNT];
 
 void registerBlocks();
+void unregisterBlocks();
 
 #endif
 

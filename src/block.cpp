@@ -64,20 +64,21 @@ BlockModel blockModelNone() {
     return blockModelDefault(0, 14);
 }
 
-BlockProperties blocks[BLOCK_COUNT];
+std::optional<BlockProperties> blocks[BLOCK_COUNT];
 
 static void regBlock(Block block, const char* name, Solidness solid, Passability passability, BlockModel model) {
-    ASSERT(name);
+    Logger::assertion(name);
 
     BlockProperties props = {
         .name = name,
         .solidness = solid,
+        .mesh = {GL_TRIANGLES},
         .model = model,
-        .passability = passability
+        .passability = passability,
     };
 
-    blocks[block] = props;
-    blocks[block].mesh = blockMesh(block);
+    blocks[block] = std::move(props);
+    blocks[block]->mesh = blockMesh(block);
 }
 
 void registerBlocks() {
@@ -115,3 +116,8 @@ void registerBlocks() {
     regBlock(BLOCK_DANDELION, "dandelion", CROSS, PASSABLE, blockModelDefault(13, 0));
 }
 
+void unregisterBlocks() {
+    for (int i = 0; i < BLOCK_COUNT; ++i) {
+        blocks[i] = std::nullopt;
+    }
+}

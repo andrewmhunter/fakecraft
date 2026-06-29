@@ -1,4 +1,6 @@
 #include "graphics.hpp"
+#include <functional>
+#include <optional>
 #include <sstream>
 #include <fstream>
 #include <glad/glad.h>
@@ -11,13 +13,49 @@
 #include <stb_image.h>
 #include "logger.hpp"
 
+
+OpenGLObject::OpenGLObject(OpenGLObjectLifetimeFunction allocFunction, OpenGLObjectLifetimeFunction freeFunction) : freeFunction{freeFunction} {
+    allocFunction(1, &this->object);
+    Logger::trace("Allocating object");
+}
+
+OpenGLObject::OpenGLObject(OpenGLObject&& other) : freeFunction{other.freeFunction}, object{other.object} {
+    other.object = InvalidValue;
+    other.freeFunction = nullptr;
+}
+
+OpenGLObject& OpenGLObject::operator=(OpenGLObject&& other) {
+    if (this == &other) {
+        return *this;
+    }
+
+    if (object != InvalidValue) {
+        freeFunction(1, &object);
+    }
+
+    object = other.object;
+    freeFunction = other.freeFunction;
+    other.object = InvalidValue;
+    other.freeFunction = nullptr;
+
+    return *this;
+}
+
+OpenGLObject::~OpenGLObject() {
+    Logger::trace("Freeing object");
+    if (object != InvalidValue) {
+        freeFunction(1, &object);
+    }
+}
+
+
 Image::Image(std::string fileName) {
     int channels = 0;
     data = stbi_load(fileName.c_str(), &width, &height, &channels, 4);
 
     if (data == nullptr) {
         // TODO: Fix
-        FATAL("Failed to load image");
+        Logger::fatal("Failed to load image");
         std::cout << std::format("Failed to load image '{}'\n", fileName);
     }
 }
@@ -57,9 +95,9 @@ glm::vec4 Image::getPixel(glm::ivec2 position) const {
 }
 
 glm::vec4 Image::getPixel(int x, int y) const {
-    ASSERT(x < width);
-    ASSERT(x >= 0);
-    ASSERT(y >= 0);
+    Logger::assertion(x < width);
+    Logger::assertion(x >= 0);
+    Logger::assertion(y >= 0);
 
     int index = (y * height + x) * 4;
 
@@ -74,9 +112,8 @@ glm::vec4 Image::getPixel(int x, int y) const {
 Texture::Texture(const std::string& fileName) : Texture{Image{fileName}} {
 }
 
-Texture::Texture(const Image& image) {
-    glGenTextures(1, &textureId);
-    glBindTexture(GL_TEXTURE_2D, textureId);
+Texture::Texture(const Image& image) : textureId{glGenTextures, glDeleteTextures} {
+    glBindTexture(GL_TEXTURE_2D, textureId.object);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -88,28 +125,17 @@ Texture::Texture(const Image& image) {
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-Texture::Texture() : textureId{0} {
-}
-
 void Texture::bind() {
-    if (textureId == 0) {
-        ERROR("Texture invalid");
+    if (textureId.object == 0) {
+        Logger::error("Texture invalid");
     }
 
-    glBindTexture(GL_TEXTURE_2D, textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId.object);
 }
 
 void Texture::bind(int textureUnit) {
     glActiveTexture(GL_TEXTURE0 + textureUnit);
     bind();
-}
-
-void Texture::unload() {
-    if (textureId == 0) {
-        return;
-    }
-    glDeleteTextures(1, &textureId);
-    textureId = 0;
 }
 
 std::string loadFile(const std::string& fileName) {
@@ -125,10 +151,103 @@ std::string loadFile(const std::string& fileName) {
 }
 
 /*
- * FCShader
+ * Shader
  */
 
-GLuint Shader::loadShader(const std::string& string, GLenum shaderType) const {
+ Shader::Shader(GLenum shaderType, const std::string& source)
+    : shaderId{[shaderType](GLint, GLuint* id){*id = glCreateShader(shaderType);},
+        [](GLint, GLuint* id){glDeleteShader(*id);}}
+{
+    const char* c_str = source.c_str();
+    glShaderSource(shaderId.object, 1, &c_str, nullptr);
+    glCompileShader(shaderId.object);
+
+    int success = 0;
+    glGetShaderiv(shaderId.object, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(shaderId.object, sizeof(infoLog), nullptr, infoLog);
+        Logger::fatal(std::format("Shader '{}' compilation failed: {}", source, infoLog));
+    }
+}
+
+Shader Shader::fromSource(GLenum shaderType, const std::string& source) {
+    return Shader{shaderType, source};
+}
+
+Shader Shader::fromFile(GLenum shaderType, const std::string& fileName) {
+    return Shader{shaderType, loadFile(fileName)};
+}
+
+
+ShaderProgram::ShaderProgram(std::span<std::reference_wrapper<const Shader>> shaders)
+    : programId{[](GLint, GLuint* id){*id = glCreateProgram();},
+        [](GLint, GLuint* id){glDeleteProgram(*id);}}
+{
+    for (const Shader& shader : shaders) {
+        glAttachShader(programId.object, shader.shaderId.object);
+    }
+
+    glLinkProgram(programId.object);
+
+    int success = 0;
+    glGetProgramiv(programId.object, GL_LINK_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetProgramInfoLog(programId.object, sizeof(infoLog), nullptr, infoLog);
+
+        Logger::fatal(std::format("Shader program link failed: {}", infoLog));
+    }
+}
+
+ShaderProgram ShaderProgram::loadFiles(const std::string& vertexFileName, const std::string& fragmentFileName) {
+    Shader vertexShader = Shader::fromFile(GL_VERTEX_SHADER, vertexFileName);
+    Shader fragmentShader = Shader::fromFile(GL_FRAGMENT_SHADER, fragmentFileName);
+    std::array<std::reference_wrapper<const Shader>, 2> shaders = {vertexShader, fragmentShader};
+    return ShaderProgram{shaders};
+}
+
+
+void ShaderProgram::use() const {
+    glUseProgram(programId.object);
+}
+
+GLint ShaderProgram::uniformLocation(const std::string& name) {
+    return glGetUniformLocation(programId.object, name.c_str());
+}
+
+void ShaderProgram::setUniformFloat(const std::string& uniform, float value) {
+    glProgramUniform1f(programId.object, uniformLocation(uniform), value);
+}
+
+void ShaderProgram::setUniformInt(const std::string& uniform, int value) {
+    glProgramUniform1i(programId.object, uniformLocation(uniform), value);
+}
+
+void ShaderProgram::setUniformUInt(const std::string& uniform, unsigned int value) {
+    glProgramUniform1ui(programId.object, uniformLocation(uniform), value);
+}
+
+void ShaderProgram::setUniformVec3(const std::string& uniform, glm::vec3 value) {
+    glProgramUniform3fv(programId.object, uniformLocation(uniform), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setUniformVec4(const std::string& uniform, glm::vec4 value) {
+    glProgramUniform4fv(programId.object, uniformLocation(uniform), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setUniformMat4(const std::string& uniform, glm::mat4 value) {
+    glProgramUniformMatrix4fv(programId.object, uniformLocation(uniform), 1, false, glm::value_ptr(value));
+}
+
+
+
+/*
+ * ShaderProgram
+ */
+
+/*
+GLuint ShaderProgram::loadShader(const std::string& string, GLenum shaderType) const {
     const char* c_str = string.c_str();
 
     GLuint shader = glCreateShader(shaderType);
@@ -146,11 +265,11 @@ GLuint Shader::loadShader(const std::string& string, GLenum shaderType) const {
     return shader;
 }
 
-GLint Shader::uniformLocation(const std::string& name) {
+GLint ShaderProgram::uniformLocation(const std::string& name) {
     return glGetUniformLocation(shaderProgram, name.c_str());
 }
 
-Shader::Shader(const std::string& vertexShaderString, const std::string& fragmentShaderString) {
+ShaderProgram::ShaderProgram(const std::string& vertexShaderString, const std::string& fragmentShaderString) {
     GLuint vertexShader = this->loadShader(vertexShaderString, GL_VERTEX_SHADER);
     GLuint fragmentShader = this->loadShader(fragmentShaderString, GL_FRAGMENT_SHADER);
 
@@ -173,25 +292,25 @@ Shader::Shader(const std::string& vertexShaderString, const std::string& fragmen
     glDeleteShader(fragmentShader);
 }
 
-Shader Shader::buildFiles(const std::string& vertexShaderFilePath,
+ShaderProgram ShaderProgram::buildFiles(const std::string& vertexShaderFilePath,
         const std::string& fragmentShaderFilePath
 ) {
-    return Shader::buildStrings(loadFile(vertexShaderFilePath), loadFile(fragmentShaderFilePath));
+    return ShaderProgram::buildStrings(loadFile(vertexShaderFilePath), loadFile(fragmentShaderFilePath));
 }
 
-Shader Shader::buildStrings(const std::string& vertexShader, const std::string& fragmentShader) {
-    return Shader{vertexShader, fragmentShader};
+ShaderProgram ShaderProgram::buildStrings(const std::string& vertexShader, const std::string& fragmentShader) {
+    return ShaderProgram{vertexShader, fragmentShader};
 }
 
-void Shader::use() const {
+void ShaderProgram::use() const {
     if (shaderProgram == 0) {
-        ERROR("Shader invalid");
+        Logger::error("Shader invalid");
     }
 
     glUseProgram(shaderProgram);
 }
 
-void Shader::unload() {
+void ShaderProgram::unload() {
     if (shaderProgram == 0) {
         return;
     }
@@ -200,86 +319,60 @@ void Shader::unload() {
     shaderProgram = 0;
 }
 
-void Shader::setUniformFloat(const std::string& uniform, float value) {
+void ShaderProgram::setUniformFloat(const std::string& uniform, float value) {
     glProgramUniform1f(shaderProgram, uniformLocation(uniform), value);
 }
 
-void Shader::setUniformInt(const std::string& uniform, int value) {
+void ShaderProgram::setUniformInt(const std::string& uniform, int value) {
     glProgramUniform1i(shaderProgram, uniformLocation(uniform), value);
 }
 
-void Shader::setUniformUInt(const std::string& uniform, unsigned int value) {
+void ShaderProgram::setUniformUInt(const std::string& uniform, unsigned int value) {
     glProgramUniform1ui(shaderProgram, uniformLocation(uniform), value);
 }
 
-void Shader::setUniformVec3(const std::string& uniform, glm::vec3 value) {
+void ShaderProgram::setUniformVec3(const std::string& uniform, glm::vec3 value) {
     glProgramUniform3fv(shaderProgram, uniformLocation(uniform), 1, glm::value_ptr(value));
 }
 
-void Shader::setUniformVec4(const std::string& uniform, glm::vec4 value) {
+void ShaderProgram::setUniformVec4(const std::string& uniform, glm::vec4 value) {
     glProgramUniform4fv(shaderProgram, uniformLocation(uniform), 1, glm::value_ptr(value));
 }
 
-void Shader::setUniformMat4(const std::string& uniform, glm::mat4 value) {
+void ShaderProgram::setUniformMat4(const std::string& uniform, glm::mat4 value) {
     glProgramUniformMatrix4fv(shaderProgram, uniformLocation(uniform), 1, false, glm::value_ptr(value));
 }
+*/
 
 
 /*
  * GPUMesh
  */
 
-GPUMesh::GPUMesh(GLenum primative, GLuint vertexArrayObject, GLuint vertexBufferObject, GLuint elementBufferObject, int elementCount)
-    : primative{primative}, vertexArrayObject{vertexArrayObject}, vertexBufferObject{vertexBufferObject},
-    elementBufferObject{elementBufferObject}, elementCount{elementCount}
-{}
-
-GPUMesh::GPUMesh() : GPUMesh{GL_TRIANGLES, 0, 0, 0, 0} {}
-
-GPUMesh GPUMesh::generate(GLenum primative) {
-    GLuint vao = 0;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    return GPUMesh{primative, vao, 0, 0, 0};
+GPUMesh::GPUMesh(GLenum primative)
+    : primative{primative},
+    vertexArrayObject{glGenVertexArrays, glDeleteVertexArrays},
+    vertexBufferObject{glGenBuffers, glDeleteBuffers},
+    elementBufferObject{glGenBuffers, glDeleteBuffers},
+    elementCount{0}
+{
+    glBindVertexArray(vertexArrayObject.object);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject.object);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferObject.object);
 }
 
 void GPUMesh::bind() const {
-    if (vertexArrayObject == 0 || !glIsVertexArray(vertexArrayObject)) {
-        FATAL("GPUMesh invalid %d", vertexArrayObject);
+    if (vertexArrayObject.object == 0 || !glIsVertexArray(vertexArrayObject.object)) {
+        Logger::fatal(std::format("GPUMesh invalid {}", vertexArrayObject.object));
     }
 
-    glBindVertexArray(vertexArrayObject);
+    glBindVertexArray(vertexArrayObject.object);
 }
 
 void GPUMesh::draw() const {
     bind();
     glDrawElements(primative, elementCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-}
-
-void GPUMesh::unload() {
-    if (vertexArrayObject == 0) {
-        return;
-    }
-
-    //if (vertexArrayObject == 150) {
-    //    ERROR("Unloading mesh 150");
-    //}
-
-    if (vertexBufferObject != 0) {
-        glDeleteBuffers(1, &vertexBufferObject);
-    }
-
-    if (elementBufferObject != 0) {
-        glDeleteBuffers(1, &elementBufferObject);
-    }
-
-    glDeleteVertexArrays(1, &vertexArrayObject);
-
-
-    vertexBufferObject = 0;
-    elementBufferObject = 0;
-    vertexArrayObject = 0;
 }
 
 /*
@@ -291,15 +384,15 @@ Mesh::Mesh(GLenum primative) : primative{primative} {}
 Mesh::Mesh() {}
 
 GPUMesh Mesh::upload() const {
-    GPUMesh gpuMesh = GPUMesh::generate(primative);
+    GPUMesh gpuMesh{primative};
     gpuMesh.bind();
     gpuMesh.elementCount = indicies.elementLength();
 
     std::size_t vertexBufferSize = positions.sizeBytes() + normals.sizeBytes()
         + texcoords.sizeBytes() + colors.sizeBytes();
 
-    glGenBuffers(1, &gpuMesh.vertexBufferObject);
-    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vertexBufferObject);
+    glGenBuffers(1, &gpuMesh.vertexBufferObject.object);
+    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vertexBufferObject.object);
     glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, nullptr, GL_DYNAMIC_DRAW);
 
     std::size_t offset = 0;
@@ -308,8 +401,8 @@ GPUMesh Mesh::upload() const {
     offset = normals.bufferData(2, offset);
     offset = colors.bufferData(3, offset);
 
-    glGenBuffers(1, &gpuMesh.elementBufferObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.elementBufferObject);
+    glGenBuffers(1, &gpuMesh.elementBufferObject.object);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.elementBufferObject.object);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.sizeBytes(), indicies.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
@@ -406,9 +499,9 @@ void wireframeDisable() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-GPUMesh cubeMesh{};
-GPUMesh rectangleMesh{};
-GPUMesh cubeMeshWires{};
+std::optional<GPUMesh> cubeMesh{};
+std::optional<GPUMesh> rectangleMesh{};
+std::optional<GPUMesh> cubeMeshWires{};
 
 void initMeshes() {
     Mesh cubeCpuMesh{};
@@ -428,7 +521,7 @@ void initMeshes() {
     rectangleMesh = rectangleCpuMesh.upload();
 
 
-    /*Mesh cubeWiresCpuMesh{};
+    /*Mesh cubeWiresCpuMesh{GL_LINES};
     cubeWiresCpuMesh.pushVertex({-0.5, -0.5, -0.5}, {0, 1, 0}, {0, 0}, color::white);
     cubeWiresCpuMesh.pushVertex({-0.5, -0.5, -0.5}, {0, 1, 0}, {0, 0}, color::white);
     cubeWiresCpuMesh.pushVertex({-0.5, -0.5, -0.5}, {0, 1, 0}, {0, 0}, color::white);
@@ -437,7 +530,16 @@ void initMeshes() {
     cubeWiresCpuMesh.pushVertex({-0.5, -0.5, -0.5}, {0, 1, 0}, {0, 0}, color::white);
     cubeWiresCpuMesh.pushVertex({-0.5, -0.5, -0.5}, {0, 1, 0}, {0, 0}, color::white);
     cubeWiresCpuMesh.pushVertex({-0.5, -0.5, -0.5}, {0, 1, 0}, {0, 0}, color::white);
+
+    cubeWiresCpuMesh.indicies.push(0);
+
     cubeMeshWires = cubeWiresCpuMesh.upload();*/
+}
+
+void unloadMeshes() {
+    cubeMesh = std::nullopt;
+    rectangleMesh = std::nullopt;
+    cubeMeshWires = std::nullopt;
 }
 
 void blendModeInvert() {
@@ -455,19 +557,18 @@ void blendModeReplace() {
     glBlendEquation(GL_FUNC_ADD);
 }
 
-void drawCube(Shader shader, glm::vec3 position, glm::vec3 size) {
+void drawCube(ShaderProgram& shader, glm::vec3 position, glm::vec3 size) {
     glm::mat4 transform{1.f};
     transform = glm::translate(transform, position);
     transform = glm::scale(transform, size);
     shader.setUniformMat4("model", transform);
-    cubeMesh.draw();
+    cubeMesh->draw();
 }
 
-void drawRectangle(Shader shader, glm::vec2 position, glm::vec2 size) {
+void drawRectangle(ShaderProgram& shader, glm::vec2 position, glm::vec2 size) {
     glm::mat4 transform{1.f};
     transform = glm::translate(transform, glm::vec3{position, 0.f});
     transform = glm::scale(transform, glm::vec3{size, 1.f});
     shader.setUniformMat4("model", transform);
-    rectangleMesh.draw();
+    rectangleMesh->draw();
 }
-

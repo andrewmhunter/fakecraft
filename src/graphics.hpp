@@ -1,7 +1,9 @@
 #ifndef GRAPHICS_HPP
 #define GRAPHICS_HPP
 
+#include <cstddef>
 #include <glad/glad.h>
+#include <glm/detail/qualifier.hpp>
 #include <glm/glm.hpp>
 #include <span>
 #include <string>
@@ -9,9 +11,11 @@
 #include <cassert>
 #include <span>
 #include <cstdint>
+#include <functional>
+#include <optional>
 
 namespace color {
-    static inline constexpr glm::vec4 fromRGBA(std::uint32_t hexcode) {
+    static constexpr glm::vec4 fromRGBA(std::uint32_t hexcode) {
         return glm::vec4{
             ((hexcode >> 24) & 0xff) / 255.f,
             ((hexcode >> 16) & 0xff) / 255.f,
@@ -20,8 +24,20 @@ namespace color {
         };
     }
 
-    static inline constexpr glm::vec4 fromRGB(std::uint32_t hexcode) {
+    static constexpr glm::vec4 fromRGB(std::uint32_t hexcode) {
         return fromRGBA((hexcode << 8) | 0xff);
+    }
+
+    static constexpr glm::vec4 fromComponents(glm::ivec4 components) {
+        return glm::vec4{components} / 255.f;
+    }
+
+    static constexpr glm::vec4 fromComponents(glm::ivec3 components) {
+        return fromComponents(glm::ivec4{components, 1});
+    }
+
+    static constexpr glm::vec4 fromComponents(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha = 255) {
+        return fromComponents(glm::ivec4{red, green, blue, alpha});
     }
 
     static constexpr glm::vec4 white{1.f, 1.f, 1.f, 1.f};
@@ -36,51 +52,28 @@ namespace color {
     static constexpr glm::vec4 magenta{1.f, 0.f, 1.f, 1.f};
     static constexpr glm::vec4 yellow{1.f, 1.f, 0.f, 1.f};
 
-    static constexpr glm::vec4 skyblue = glm::vec4{102, 191, 255, 255} / 255.f;
+    static constexpr glm::vec4 skyblue = fromComponents(102, 191, 255);
 }
 
-template<void (*Alloc)(GLint, GLuint*), void (*Free)(GLint, GLuint*)>
+using OpenGLObjectLifetimeFunction = std::function<void(GLint, GLuint*)>;
+
 class OpenGLObject {
 private:
+    OpenGLObjectLifetimeFunction freeFunction;
     static constexpr GLuint InvalidValue = 0;
-    using Type = OpenGLObject<Alloc, Free>;
 
 public:
     GLuint object;
 
-    OpenGLObject() {
-        Alloc(1, &this->object);
-    }
+    OpenGLObject(OpenGLObjectLifetimeFunction allocFunction, OpenGLObjectLifetimeFunction freeFunction);
 
-    OpenGLObject(Type&& other) : object{other.object} {
-        other.object = InvalidValue;
-    }
+    OpenGLObject(OpenGLObject&& other);
+    OpenGLObject(const OpenGLObject& other) = delete;
 
-    OpenGLObject(const Type& other) = delete;
+    OpenGLObject& operator=(OpenGLObject&& other);
+    OpenGLObject& operator=(const OpenGLObject& other) = delete;
 
-    Type& operator=(Type&& other) {
-        if (this == &other) {
-            return *this;
-        }
-
-        if (object != InvalidValue) {
-            Free(1, &object);
-        }
-
-        object = other.object;
-        other.object = InvalidValue;
-
-        return *this;
-    }
-
-    Type& operator=(const Type& other) = delete;
-
-
-    ~OpenGLObject() {
-        if (object != InvalidValue) {
-            Free(1, &object);
-        }
-    }
+    ~OpenGLObject();
 };
 
 
@@ -106,29 +99,60 @@ public:
 
 class Texture {
 private:
-    GLuint textureId;
+    OpenGLObject textureId;
+
 public:
     Texture(const std::string& fileName);
     Texture(const Image& image);
-    Texture();
 
     void bind();
     void bind(int textureUnit);
-    void unload();
 };
 
 class Shader {
 private:
+    Shader(GLenum shaderType, const std::string& source);
+
+public:
+    OpenGLObject shaderId;
+
+    static Shader fromSource(GLenum shaderType, const std::string& source);
+    static Shader fromFile(GLenum shaderType, const std::string& fileName);
+};
+
+class ShaderProgram {
+private:
+    OpenGLObject programId;
+
+    GLint uniformLocation(const std::string& name);
+    
+public:
+    ShaderProgram(std::span<std::reference_wrapper<const Shader>> shaders);
+
+    static ShaderProgram loadFiles(const std::string& vertexFileName, const std::string& fragmentFileName);
+
+    void use() const;
+
+    void setUniformFloat(const std::string& uniform, float value);
+    void setUniformInt(const std::string& uniform, int value);
+    void setUniformUInt(const std::string& uniform, unsigned int value);
+    void setUniformVec3(const std::string& uniform, glm::vec3 value);
+    void setUniformVec4(const std::string& uniform, glm::vec4 value);
+    void setUniformMat4(const std::string& uniform, glm::mat4 value);
+};
+
+/*class ShaderProgram {
+private:
     GLuint shaderProgram;
 
-    Shader(const std::string& vertexShaderString, const std::string& fragmentShaderString);
+    ShaderProgram(const std::string& vertexShaderString, const std::string& fragmentShaderString);
 
     GLuint loadShader(const std::string& fileName, GLenum shaderType) const;
     GLint uniformLocation(const std::string& name);
 
 public:
-    static Shader buildFiles(const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
-    static Shader buildStrings(const std::string& vertexShader, const std::string& fragmentShader);
+    static ShaderProgram buildFiles(const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
+    static ShaderProgram buildStrings(const std::string& vertexShader, const std::string& fragmentShader);
 
     void setUniformFloat(const std::string& uniform, float value);
     void setUniformInt(const std::string& uniform, int value);
@@ -139,24 +163,21 @@ public:
 
     void use() const;
     void unload();
-};
+};*/
 
 class GPUMesh {
 private:
 public:
     GLenum primative;
-    GLuint vertexArrayObject;
-    GLuint vertexBufferObject;
-    GLuint elementBufferObject;
+    OpenGLObject vertexArrayObject;
+    OpenGLObject vertexBufferObject;
+    OpenGLObject elementBufferObject;
     int elementCount;
 
-    GPUMesh(GLenum primative, GLuint vertexArrayObject, GLuint vertexBufferObject, GLuint elementBufferObject, int elementCount);
-    GPUMesh();
-
-    static GPUMesh generate(GLenum primative);
+    GPUMesh(GLenum primative);
+    //GPUMesh();
 
     void bind() const;
-    void unload();
 
     void draw() const;
 };
@@ -220,7 +241,6 @@ public:
 };
 
 class Mesh {
-
 public:
     GLenum primative{GL_TRIANGLES};
 
@@ -238,20 +258,20 @@ public:
 
     void pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color);
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-            glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal);
+        glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal);
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-            std::pair<glm::vec2, glm::vec2> texcoord, glm::vec4 color, glm::vec3 normal);
+        std::pair<glm::vec2, glm::vec2> texcoord, glm::vec4 color, glm::vec3 normal);
 
     void makeTriangle(int offset0, int offset1, int offset2);
 
     void pushTexturedPrism(glm::mat4 transformation,
-            std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords);
+        std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords);
 
     void pushTexturedPrism(glm::mat4 transformation,
-            std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords);
+        std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords);
 
     void pushTexturedPrism(glm::mat4 transformation,
-            std::pair<glm::vec2, glm::vec2> texcoords);
+        std::pair<glm::vec2, glm::vec2> texcoords);
 };
 
 void wireframeEnable();
@@ -261,14 +281,15 @@ void blendModeInvert();
 void blendModeNormal();
 void blendModeReplace();
 
-void drawCube(Shader shader, glm::vec3 position, glm::vec3 size);
-void drawRectangle(Shader shader, glm::vec2 position, glm::vec2 size);
+void drawCube(ShaderProgram& shader, glm::vec3 position, glm::vec3 size);
+void drawRectangle(ShaderProgram& shader, glm::vec2 position, glm::vec2 size);
 
 void initMeshes();
+void unloadMeshes();
 
-extern GPUMesh cubeMesh;
-extern GPUMesh rectangleMesh;
-extern GPUMesh cubeMeshWires;
+extern std::optional<GPUMesh> cubeMesh;
+extern std::optional<GPUMesh> rectangleMesh;
+extern std::optional<GPUMesh> cubeMeshWires;
 
 
 #endif

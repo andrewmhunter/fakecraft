@@ -15,7 +15,7 @@ int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
 }
 
 void placeDungeon(World* world, glm::ivec3 worldPoint) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     worldPlaceBox(world, worldPoint, {10, 6, 10}, BLOCK_COBBLESTONE);
     worldPlaceBox(world, worldPoint + 1, {8, 4, 8}, BLOCK_AIR);
@@ -34,7 +34,7 @@ static void placeCactus(World* world, glm::ivec3 worldPoint) {
 }
 
 void placeTree(World* world, glm::ivec3 worldPoint) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     Block surfaceBlock = worldGetBlock(world, worldPoint);
 
@@ -88,7 +88,7 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
 }
 
 void generateTerrain(Chunk* chunk) {
-    ASSERT(chunk);
+    Logger::assertion(chunk);
 
     //World* world = chunk->world;
     glm::ivec3 coords = chunk->coords;

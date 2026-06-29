@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "world.hpp"
+#include "entity.hpp"
 #include "util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
@@ -7,7 +8,7 @@
 #include "logger.hpp"
 
 void worldTryPlaceBox(World* world, glm::ivec3 start, glm::ivec3 size, Block block) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     glm::ivec3 end = start + size;
     glm::ivec3 realStart = glm::min(start, end);
@@ -23,7 +24,7 @@ void worldTryPlaceBox(World* world, glm::ivec3 start, glm::ivec3 size, Block blo
 }
 
 void worldPlaceBox(World* world, glm::ivec3 start, glm::ivec3 size, Block block) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     glm::ivec3 end = start + size;
     glm::ivec3 realStart = glm::min(start, end);
@@ -39,7 +40,7 @@ void worldPlaceBox(World* world, glm::ivec3 start, glm::ivec3 size, Block block)
 }
 
 void worldInit(World* world) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     world->renderDistance = DEFAULT_RENDER_DISTANCE;
     world->showChunkBorders = false;
@@ -54,7 +55,7 @@ void worldInit(World* world) {
         0.f
     };
 
-    world->player = spawnEntity(world, ENTITY_PLAYER, playerPosition, 0.6f, 1.8f);
+    world->player = &world->spawnEntity<Player>(playerPosition); // spawnEntity(world, ENTITY_PLAYER, playerPosition, 0.6f, 1.8f);
 
     if (loadWorld(world)) {
         return;
@@ -84,10 +85,6 @@ void worldUnload(World* world) {
         Chunk* chunk = entry.second;
         chunkUnload(chunk);
         delete chunk;
-    }
-
-    for (size_t i = 0; i < world->entities.size(); ++i) {
-        entityUnload(world->entities[i]);
     }
 }
 
@@ -166,7 +163,7 @@ bool iterateCircleIterator(CircleIterator* state, glm::ivec3* pointOut) {
 }
 
 void worldUpdate(World* world, float deltaTime) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     static int lightDirection = 1;
 
@@ -181,8 +178,8 @@ void worldUpdate(World* world, float deltaTime) {
     world->skyLight += lightDirection * deltaTime * 0.1;
     world->skyLight = 1.f;
 
-    for (Entity* entity : world->entities) {
-        entityUpdate(entity, deltaTime);
+    for (auto& entity : world->entities) {
+        entity->update(deltaTime);
     }
 
     int renderDistance = world->renderDistance;
@@ -245,8 +242,8 @@ void worldUpdate(World* world, float deltaTime) {
     }
 }
 
-void worldDraw(World* world, Shader terrainShader, Shader entityShader) {
-    ASSERT(world);
+void worldDraw(World* world, ShaderProgram& terrainShader, ShaderProgram& entityShader) {
+    Logger::assertion(world);
 
     terrainShader.setUniformFloat("skyLight", world->skyLight);
     terrainShader.setUniformVec4("fogColor", world->skyColor);
@@ -298,13 +295,13 @@ void worldDraw(World* world, Shader terrainShader, Shader entityShader) {
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));*/
 
     entityShader.use();
-    for (const Entity* entity : world->entities) {
-        entityDraw(entityShader, entity);
+    for (auto& entity : world->entities) {
+        entity->draw(entityShader);
     }
 }
 
 void worldMarkDirty(World* world, glm::ivec3 worldPoint) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     Chunk* chunk = worldGetChunk(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
@@ -326,7 +323,7 @@ bool chunkCoordsInArray(const World* world, glm::ivec3 chunkCoords) {
 }
 
 const Chunk* worldGetChunkConst(const World* world, glm::ivec3 chunkCoords) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     if (world->chunks.count(chunkCoords) == 0) {
         return nullptr;
@@ -336,7 +333,7 @@ const Chunk* worldGetChunkConst(const World* world, glm::ivec3 chunkCoords) {
 }
 
 Chunk* worldGetChunk(World* world, glm::ivec3 chunkCoords) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     if (world->chunks.count(chunkCoords) == 0) {
         return nullptr;
@@ -346,7 +343,7 @@ Chunk* worldGetChunk(World* world, glm::ivec3 chunkCoords) {
 }
 
 Block worldGetBlock(const World* world, glm::ivec3 worldPoint) {
-    //ASSERT(world);
+    //Logger::assertion(world);
 
     const Chunk* chunk = worldGetChunkConst(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
@@ -357,18 +354,18 @@ Block worldGetBlock(const World* world, glm::ivec3 worldPoint) {
 }
 
 void worldSetBlock(World* world, glm::ivec3 worldPoint, Block block) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     Chunk* chunk = worldGetChunk(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
-        INFO("Block attempted to be placed outside of loaded chunks");
+        Logger::info("Block attempted to be placed outside of loaded chunks");
         return;
     }
     chunkSetBlock(chunk, worldToLocal(worldPoint), block);
 }
 
 void worldTryPlaceBlock(World* world, glm::ivec3 worldPoint, Block block) {
-    ASSERT(world);
+    Logger::assertion(world);
 
     Chunk* chunk = worldGetChunk(world, worldToChunk(worldPoint));
     if (chunk == NULL) {
@@ -378,16 +375,3 @@ void worldTryPlaceBlock(World* world, glm::ivec3 worldPoint, Block block) {
     glm::ivec3 local = worldToLocal(worldPoint);
     chunkTryPlaceBlock(chunk, local.x, local.y, local.z, block);
 }
-
-
-Entity* spawnEntity(World* world, EntityType type, glm::vec3 position, float width, float height) {
-    ASSERT(world);
-
-    Entity* entity = new Entity;
-    ASSERT(entity);
-
-    world->entities.push_back(entity);
-    entityInit(entity, type, world, position, width, height);
-    return entity;
-}
-
