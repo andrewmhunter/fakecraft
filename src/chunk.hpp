@@ -1,6 +1,7 @@
 #ifndef CHUNK_HPP
 #define CHUNK_HPP
 
+#include <glm/fwd.hpp>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdint.h>
@@ -39,7 +40,9 @@ static inline glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
 }
 
 static inline glm::ivec3 worldToChunkV(glm::vec3 worldVector) {
-    return vector3ToPoint(worldVector / glm::vec3 CHUNK_SIZE);
+    glm::ivec3 chunkPosition = vector3ToPoint(worldVector / glm::vec3 CHUNK_SIZE);
+    chunkPosition.y = 0;
+    return chunkPosition;
     //return worldToChunk(vector3ToPoint(worldPoint));
 }
 
@@ -92,45 +95,51 @@ struct BlockInstance {
 
 class World;
 
-struct Chunk {
+class Chunk {
+private:
+    void drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const;
+
+public:
+    World* world;
     glm::ivec3 coords;
-    class World* world;
     std::optional<GPUMesh> mesh;
     std::optional<GPUMesh> translucentMesh;
 #ifdef USE_IGNORED
     uint16_t ignored[CHUNK_HEIGHT];
 #endif
     bool dirty;
-    struct Chunk* adjacentChunks[DIRECTION_CARDINAL_COUNT];
+    Chunk* adjacentChunks[DIRECTION_CARDINAL_COUNT];
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     LightValues light[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
-    bool loaded;
+    bool loaded{false};
+
+    explicit Chunk(World* world, glm::ivec3 coords);
+    Chunk();
+    ~Chunk();
+
+    Chunk(const Chunk& other) = delete;
+    Chunk& operator=(const Chunk& other) = delete;
+
+    inline Block getBlockRaw(glm::ivec3 local) const {
+        return blocks[local.x][local.y][local.z];
+    }
+
+    void unload();
+    void placeFeatures();
+    void tryPlaceBlock(glm::ivec3 local, Block block);
+    void tryPlaceBlock(int x, int y, int z, Block block);
+    void setBlockRaw(glm::ivec3 local, Block block);
+    void setBlock(glm::ivec3 local, Block block);
+    void markDirty(glm::ivec3 local);
+    Block getBlock(glm::ivec3 local) const;
+    void draw(ShaderProgram& shader) const;
+    void drawTranslucent(ShaderProgram& shader) const;
+    bool verify() const;
+    void computeLightValues();
+
+    static bool blockInChunk(glm::ivec3 local);
 };
-
-static inline Block chunkGetBlockRaw(const Chunk* chunk, glm::ivec3 local) {
-    return chunk->blocks[local.x][local.y][local.z];
-}
-
-Chunk* chunkInit(World* world, glm::ivec3 coords);
-void chunkUnload(Chunk* chunk);
-
-void chunkPlaceFeatures(Chunk* chunk);
-void chunkTryPlaceBlock(Chunk* chunk, int x, int y, int z, Block block);
-
-bool blockInChunk(const Chunk* chunk, glm::ivec3 local);
-void chunkMarkDirty(Chunk* chunk, glm::ivec3 local);
-void chunkSetBlockRaw(Chunk* chunk, glm::ivec3 local, Block block);
-void chunkSetBlock(Chunk* chunk, glm::ivec3 local, Block block);
-Block chunkGetBlock(const Chunk* chunk, glm::ivec3 local);
-void chunkGenerateMesh(Chunk* chunk);
-void drawChunk(const Chunk* chunk, ShaderProgram& shader);
-void drawChunkTranslucent(const Chunk* chunk, ShaderProgram& shader);
-
-void chunkMarkDirty(Chunk* chunk, glm::ivec3 local);
-bool verifyChunk(const Chunk* chunk);
-
-void chunkComputeLightValues(Chunk* chunk);
 
 #endif
 

@@ -143,7 +143,7 @@ bool loadChunk(Chunk* chunk) {
     }
 
     chunk->dirty = true;
-    return verifyChunk(chunk);
+    return chunk->verify();
 }
 
 void saveWorld(const World* world) {

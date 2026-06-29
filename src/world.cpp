@@ -1,3 +1,4 @@
+#include <memory>
 #include <stdint.h>
 #include "world.hpp"
 #include "entity.hpp"
@@ -47,8 +48,6 @@ void worldInit(World* world) {
     world->skyLight = 0.f;
     world->skyColor = color::skyblue;
 
-    world->chunks = {};
-
     glm::vec3 playerPosition{
         0.f,
         SURFACE_OFFSET + 10.f, // worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f,
@@ -81,11 +80,7 @@ void worldInit(World* world) {
 void worldUnload(World* world) {
     saveWorld(world);
 
-    for (auto entry : world->chunks) {
-        Chunk* chunk = entry.second;
-        chunkUnload(chunk);
-        delete chunk;
-    }
+    world->chunks.clear();
 }
 
 int shaderModelUniform = 0;
@@ -195,7 +190,7 @@ void worldUpdate(World* world, float deltaTime) {
             chunkCoord.y = 0;
             Chunk* chunk = worldGetChunk(world, chunkCoord);
 
-            if (chunk != NULL) {
+            if (chunk != nullptr) {
                 continue;
             }
 
@@ -208,15 +203,16 @@ void worldUpdate(World* world, float deltaTime) {
                 continue;
             }
             maxChunkLoads--;
-
-            chunkInit(world, chunkCoord);
+            
+            std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(world, chunkCoord);
+            world->chunks[chunkCoord] = std::move(newChunk);
         } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
     }
 
     std::vector<Chunk*> toUnload{};
 
-    for (auto entry : world->chunks) {
-        Chunk* chunk = entry.second;
+    for (auto& entry : world->chunks) {
+        Chunk* chunk = entry.second.get();
 
         glm::ivec3 playerChunk = worldToChunkV(world->player->position);
 
@@ -228,13 +224,11 @@ void worldUpdate(World* world, float deltaTime) {
     }
 
     for (Chunk* chunk : toUnload) {
-        chunkUnload(chunk);
         world->chunks.erase(chunk->coords);
-        delete chunk;
     }
 
-    for (auto entry : world->chunks) {
-        Chunk* chunk = entry.second;
+    for (auto& entry : world->chunks) {
+        Chunk* chunk = entry.second.get();
 
         if (chunk->dirty) {
             chunkGenerateMesh(chunk);
@@ -278,8 +272,8 @@ void worldDraw(World* world, ShaderProgram& terrainShader, ShaderProgram& entity
         if (chunk == NULL) {
             continue;
         }
-        drawChunk(chunk, terrainShader);
-        drawChunkTranslucent(chunk, terrainShader);
+        chunk->draw(terrainShader);
+        chunk->drawTranslucent(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
     //blendModeNormal();
@@ -307,7 +301,7 @@ void worldMarkDirty(World* world, glm::ivec3 worldPoint) {
     if (chunk == NULL) {
         return;
     }
-    chunkMarkDirty(chunk, worldToLocal(worldPoint));
+    chunk->markDirty(worldToLocal(worldPoint));
 }
 
 bool chunkCoordsInArray(const World* world, glm::ivec3 chunkCoords) {
@@ -329,7 +323,7 @@ const Chunk* worldGetChunkConst(const World* world, glm::ivec3 chunkCoords) {
         return nullptr;
     }
 
-    return world->chunks.at(chunkCoords);
+    return world->chunks.at(chunkCoords).get();
 }
 
 Chunk* worldGetChunk(World* world, glm::ivec3 chunkCoords) {
@@ -339,7 +333,7 @@ Chunk* worldGetChunk(World* world, glm::ivec3 chunkCoords) {
         return nullptr;
     }
 
-    return world->chunks.at(chunkCoords);
+    return world->chunks.at(chunkCoords).get();
 }
 
 Block worldGetBlock(const World* world, glm::ivec3 worldPoint) {
@@ -350,7 +344,7 @@ Block worldGetBlock(const World* world, glm::ivec3 worldPoint) {
         //return BLOCK_BARRIER;
         return BLOCK_AIR;
     }
-    return chunkGetBlockRaw(chunk, worldToLocal(worldPoint));
+    return chunk->getBlockRaw(worldToLocal(worldPoint));
 }
 
 void worldSetBlock(World* world, glm::ivec3 worldPoint, Block block) {
@@ -361,7 +355,7 @@ void worldSetBlock(World* world, glm::ivec3 worldPoint, Block block) {
         Logger::info("Block attempted to be placed outside of loaded chunks");
         return;
     }
-    chunkSetBlock(chunk, worldToLocal(worldPoint), block);
+    chunk->setBlock(worldToLocal(worldPoint), block);
 }
 
 void worldTryPlaceBlock(World* world, glm::ivec3 worldPoint, Block block) {
@@ -373,5 +367,5 @@ void worldTryPlaceBlock(World* world, glm::ivec3 worldPoint, Block block) {
     }
 
     glm::ivec3 local = worldToLocal(worldPoint);
-    chunkTryPlaceBlock(chunk, local.x, local.y, local.z, block);
+    chunk->tryPlaceBlock(local.x, local.y, local.z, block);
 }

@@ -6,18 +6,18 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-struct Chunk;
-struct World;
-struct Entity;
+class Chunk;
+class World;
+class Entity;
 
-void saveChunk(const struct Chunk* chunk);
-bool loadChunk(struct Chunk* chunk);
+void saveChunk(const Chunk* chunk);
+bool loadChunk(Chunk* chunk);
 
-void saveWorld(const struct World* world);
-bool loadWorld(struct World* world);
+void saveWorld(const World* world);
+bool loadWorld(World* world);
 
-void saveEntity(const struct Entity* entity, FILE* file);
-void loadEntity(struct Entity* entity, FILE* file);
+void saveEntity(const Entity* entity, FILE* file);
+void loadEntity(Entity* entity, FILE* file);
 
 void makeSaveDirectories(void);
 

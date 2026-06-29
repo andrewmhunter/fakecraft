@@ -6,7 +6,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-const Chunk dummyChunk = {.coords = glm::ivec3{0}};
+// This relies on initialization of global variables to all 0s.
+const Chunk dummyChunk{};
 
 void chunkGenerateMesh(Chunk* chunk) {
     Logger::assertion(chunk);
@@ -110,7 +111,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                 for (int dir = 0; dir < DIRECTION_CARDINAL_COUNT; ++dir) {
                     const Chunk* adjacentChunk = adjacentChunks[x][z][dir];
                     glm::ivec3 adjacentLocalPoint = worldToLocal(point + directionToPoint(static_cast<Direction>(dir)));
-                    Block adjacentBlock = chunkGetBlockRaw(adjacentChunk, adjacentLocalPoint); 
+                    Block adjacentBlock = adjacentChunk->getBlockRaw(adjacentLocalPoint); 
                     if (blocks[adjacentBlock]->solidness == SOLID || ((properties->solidness == TRANSPARENT || properties->solidness == TRANSLUCENT) && block == adjacentBlock)) {
                         continue;
                     }
@@ -121,7 +122,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                             sides[dir].x, sides[dir].y);
                 }
 
-                Block adjacentBlock = chunkGetBlockRaw(chunk, point + glm::ivec3{0, -1, 0});
+                Block adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, -1, 0});
                 if (y != 0 && (blocks[adjacentBlock]->solidness != SOLID && (properties->solidness == SOLID || block != adjacentBlock))) {
                     meshFaceSmart(mesh, x, y, z, DIRECTION_DOWN,
                             sides[DIRECTION_DOWN].x, sides[DIRECTION_DOWN].y);
@@ -129,7 +130,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                     SET_HAS_FACES();
                 }
 
-                adjacentBlock = chunkGetBlockRaw(chunk, point + glm::ivec3{0, 1, 0});
+                adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, 1, 0});
                 if ((y == CHUNK_HEIGHT - 1 || blocks[adjacentBlock]->solidness != SOLID) && (properties->solidness == SOLID || block != adjacentBlock)) {
                     meshFaceSmart(mesh, x, y, z, DIRECTION_UP,
                             sides[DIRECTION_UP].x, sides[DIRECTION_UP].y);

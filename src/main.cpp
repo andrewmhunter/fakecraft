@@ -365,7 +365,11 @@ void runGame(GLFWwindow* window) {
                 //TODO:
                 //DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
                 simpleShader.setUniformVec4("color", color::fromRGBA(0xffffff80));
-                //drawCube(simpleShader, glm::vec3{worldToChunkV(player->position)} * glm::vec3 CHUNK_SIZE - glm::vec3 CHUNK_SIZE / 2.f, glm::vec3 CHUNK_SIZE);
+                glDisable(GL_CULL_FACE);
+                glm::ivec3 chunkPosition = worldToChunkV(player->position);
+                chunkPosition += glm::ivec3{1, 0, 1};
+                drawCube(simpleShader, glm::vec3{chunkPosition} * glm::vec3 CHUNK_SIZE + glm::vec3 CHUNK_SIZE / glm::vec3{-2.f, 2.f, -2.f}, glm::vec3 CHUNK_SIZE);
+                glEnable(GL_CULL_FACE);
                 
             }
         }
@@ -438,10 +442,6 @@ void runGame(GLFWwindow* window) {
 
 
 int main() {
-    // No matter where you run the executable from it will still be able to
-    // access the resources in its directory
-    //ChangeDirectory(GetApplicationDirectory());
-
     if (!glfwInit()) {
         Logger::fatal("GLFW failed to initialize");
     }

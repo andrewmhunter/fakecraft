@@ -230,7 +230,7 @@ void placeFeatures(Chunk* chunk) {
         int z = seededNumber(flowerIndex, FEATURE_Z, 0, CHUNK_WIDTH);
         int y = chunk->surfaceHeight[x][z];
 
-        chunkTryPlaceBlock(chunk, x, y + 1, z, flowerType);
+        chunk->tryPlaceBlock(x, y + 1, z, flowerType);
     }
 }
 

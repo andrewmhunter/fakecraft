@@ -11,7 +11,7 @@
 
 class World {
 public:
-    std::map<glm::ivec3, Chunk*, CompareIvec3FO> chunks;
+    std::map<glm::ivec3, std::unique_ptr<Chunk>, CompareIvec3FO> chunks;
     std::vector<std::unique_ptr<Entity>> entities;
     int seed;
     bool showChunkBorders;
