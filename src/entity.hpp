@@ -50,9 +50,4 @@ public:
     virtual void draw(ShaderProgram& shader) override;
 };
 
-void entityInit(Entity* entity, EntityType type, World* world, glm::vec3 position, float width, float height);
-void entityUnload(Entity* entity);
-void entityUpdate(Entity* entity, float deltaTime);
-void entityDraw(ShaderProgram& shader, const Entity* entity);
-
 #endif

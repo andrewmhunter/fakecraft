@@ -4,8 +4,6 @@
 #include "graphics.hpp"
 #include "logger.hpp"
 #include "input.hpp"
-#include "timer.hpp"
-#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <GLFW/glfw3.h>
