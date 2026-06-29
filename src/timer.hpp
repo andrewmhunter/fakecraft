@@ -1,8 +1,6 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
 
-#include <stdbool.h>
-
 typedef struct {
     double remainingTime;
     double startTime;
@@ -15,4 +13,3 @@ void timerReset(Timer* timer);
 void timerResetTime(Timer* timer, double startTime);
 
 #endif
-

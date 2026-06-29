@@ -213,8 +213,7 @@ void runGame(GLFWwindow* window) {
     randomizeSeed();
 #endif
 
-    World world;
-    worldInit(&world);
+    World world{};
 
     glClearColor(world.skyColor.r, world.skyColor.g, world.skyColor.b, world.skyColor.a);
 
@@ -287,29 +286,29 @@ void runGame(GLFWwindow* window) {
 
         if (rayCast.collided) {
             if (mouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-                worldTryPlaceBlock(&world, rayCast.blockBefore, static_cast<Block>(selectedBlock));
+                world.tryPlaceBlock(rayCast.blockBefore, static_cast<Block>(selectedBlock));
                 timerResetTime(&player->breakTimer, initialBreakTime);
             }
 
             if (mouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT) && timerUpdate(&player->breakTimer, deltaTime)) {
-                worldTryPlaceBlock(&world, rayCast.blockBefore, static_cast<Block>(selectedBlock));
+                world.tryPlaceBlock(rayCast.blockBefore, static_cast<Block>(selectedBlock));
                 timerResetTime(&player->breakTimer, repeatedBreakTime);
             }
 
 
             if (mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-                worldSetBlock(&world, rayCast.blockAt, BLOCK_AIR);
+                world.setBlock(rayCast.blockAt, BLOCK_AIR);
                 timerResetTime(&player->breakTimer, initialBreakTime);
             }
 
             if (mouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) && timerUpdate(&player->breakTimer, deltaTime)) {
-                worldSetBlock(&world, rayCast.blockAt, BLOCK_AIR);
+                world.setBlock(rayCast.blockAt, BLOCK_AIR);
                 timerResetTime(&player->breakTimer, repeatedBreakTime);
             }
 
 
             if (mouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
-                selectedBlock = worldGetBlock(&world, rayCast.blockAt);
+                selectedBlock = world.getBlock(rayCast.blockAt);
             }
         }
 
@@ -335,7 +334,7 @@ void runGame(GLFWwindow* window) {
 
         selectedBlock = wrapInt(selectedBlock, 2, BLOCK_COUNT);
 
-        worldUpdate(&world, deltaTime);
+        world.update(deltaTime);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -345,7 +344,7 @@ void runGame(GLFWwindow* window) {
 
         terrainTexture.bind();
 
-        worldDraw(&world, terrainShader, simpleShader);
+        world.draw(terrainShader, simpleShader);
 
         glm::vec4 inversionColor = color::fromRGB(0xc8c8c8);
 
@@ -435,7 +434,6 @@ void runGame(GLFWwindow* window) {
 #endif
     }
 
-    worldUnload(&world);
     unloadMeshes();
     unregisterBlocks();
 }

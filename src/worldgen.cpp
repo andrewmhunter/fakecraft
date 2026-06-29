@@ -17,26 +17,26 @@ int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
 void placeDungeon(World* world, glm::ivec3 worldPoint) {
     Logger::assertion(world);
 
-    worldPlaceBox(world, worldPoint, {10, 6, 10}, BLOCK_COBBLESTONE);
-    worldPlaceBox(world, worldPoint + 1, {8, 4, 8}, BLOCK_AIR);
+    world->placeBox(worldPoint, {10, 6, 10}, BLOCK_COBBLESTONE);
+    world->placeBox(worldPoint + 1, {8, 4, 8}, BLOCK_AIR);
 }
 
 static void placeCactus(World* world, glm::ivec3 worldPoint) {
     int cactusHeight = randomRange(1, 4);
     worldPoint += glm::ivec3{0, 1, 0};
-    if (worldGetBlock(world, worldPoint) != BLOCK_AIR) {
+    if (world->getBlock(worldPoint) != BLOCK_AIR) {
         return;
     }
 
     for (int i = 0; i < cactusHeight; ++i) {
-        worldSetBlock(world, worldPoint + glm::ivec3{0, i, 0}, BLOCK_CACTUS);
+        world->setBlock(worldPoint + glm::ivec3{0, i, 0}, BLOCK_CACTUS);
     }
 }
 
 void placeTree(World* world, glm::ivec3 worldPoint) {
     Logger::assertion(world);
 
-    Block surfaceBlock = worldGetBlock(world, worldPoint);
+    Block surfaceBlock = world->getBlock(worldPoint);
 
     if (surfaceBlock == BLOCK_SAND) {
         placeCactus(world, worldPoint);
@@ -54,16 +54,16 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
         {1, 0, -1},
     };
 
-    worldSetBlock(world, worldPoint, BLOCK_DIRT);
+    world->setBlock(worldPoint, BLOCK_DIRT);
     worldPoint += glm::ivec3{0, 1, 0};
 
     int height = randomRange(5, 7);
-    worldPlaceBox(world, worldPoint, {1, height, 1}, BLOCK_LOG);
+    world->placeBox(worldPoint, {1, height, 1}, BLOCK_LOG);
 
     //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), BLOCK_LEAVES);
 
-    worldTryPlaceBox(world, worldPoint + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, BLOCK_LEAVES);
-    worldTryPlaceBox(world, worldPoint + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, BLOCK_LEAVES);
+    world->tryPlaceBox(worldPoint + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, BLOCK_LEAVES);
+    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, BLOCK_LEAVES);
 
     for (int i = 0; i < 4; ++i) {
         glm::ivec3 scaledCorner = corners[i] * 2;
@@ -71,19 +71,19 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
             if (!randomChance(1, 2)) {
                 continue;
             }
-            worldTryPlaceBlock(world, worldPoint + scaledCorner + glm::ivec3{0, j, 0}, BLOCK_LEAVES);
+            world->tryPlaceBlock(worldPoint + scaledCorner + glm::ivec3{0, j, 0}, BLOCK_LEAVES);
         }
     }
 
-    worldTryPlaceBox(world, worldPoint + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, BLOCK_LEAVES);
-    worldTryPlaceBox(world, worldPoint + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, BLOCK_LEAVES);
+    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, BLOCK_LEAVES);
+    world->tryPlaceBox(worldPoint + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, BLOCK_LEAVES);
 
     for (int i = 0; i < 4; ++i) {
         if (!randomChance(1, 2)) {
             continue;
         }
 
-        worldTryPlaceBlock(world, worldPoint + corners[i] + glm::ivec3{0, height - 1, 0}, BLOCK_LEAVES);
+        world->tryPlaceBlock(worldPoint + corners[i] + glm::ivec3{0, height - 1, 0}, BLOCK_LEAVES);
     }
 }
 

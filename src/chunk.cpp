@@ -18,7 +18,7 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
     Logger::assertion(world);
 
     for (int i = 0; i < DIRECTION_CARDINAL_COUNT; i += 1) {
-        Chunk* adjacent = worldGetChunk(world, coords + directionToPoint(static_cast<Direction>(i)));
+        Chunk* adjacent = world->getChunk(coords + directionToPoint(static_cast<Direction>(i)));
         adjacentChunks[i] = adjacent;
         if (adjacent != NULL) {
             adjacent->adjacentChunks[invertDirection(static_cast<Direction>(i))] = this;
@@ -101,7 +101,7 @@ void Chunk::setBlock(glm::ivec3 local, Block block) {
     glm::ivec3 worldPoint = localToWorld(coords, local);
 
     for (int i = 0; i < DIRECTION_COUNT; ++i) {
-        worldMarkDirty(world, worldPoint + directionToPoint(static_cast<Direction>(i)));
+        world->markDirty(worldPoint + directionToPoint(static_cast<Direction>(i)));
     }
 }
 
