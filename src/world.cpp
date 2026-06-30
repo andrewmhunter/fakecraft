@@ -1,6 +1,8 @@
+#include <glm/fwd.hpp>
 #include <memory>
 #include "world.hpp"
 #include "entity.hpp"
+#include "graphics.hpp"
 #include "util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
@@ -12,7 +14,10 @@ static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
 }
 
 
-World::World() {
+World::World()
+    : seed{Config::settings->worldgen.setSeed.value_or(randomInt(10000))},
+    renderDistance{Config::settings->graphics.renderDistance}
+{
     glm::vec3 playerPosition{
         0.f,
         SURFACE_OFFSET + 10.f, // worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f,
@@ -25,10 +30,6 @@ World::World() {
         return;
     }
 
-#ifndef DEFAULT_SET_SEED
-    seed = randomInt(10000);
-#endif
-
     /*const int renderDistance = 1;
 
     for (int x = -renderDistance; x <= renderDistance; ++x) {
@@ -38,6 +39,8 @@ World::World() {
             chunkInit(world, point);
         }
     }*/
+
+    Logger::info(std::format("World seed: {}", seed));
 }
 
 World::~World() {
@@ -137,14 +140,6 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
 
     terrainShader.use();
 
-    /*HashEntry* chunkIt = NULL;
-    while (setIterate(&world->chunks, &chunkIt)) {
-        Chunk* chunk = chunkIt->contents;
-
-        drawChunk(chunk, material);
-    }*/
-
-    //blendModeReplace();
     glm::ivec3 chunkOffset{0};
     CircleIterator offsetIterator = circleIteratorInit(renderDistance + 1);
     do {
@@ -155,20 +150,23 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
             continue;
         }
         chunk->draw(terrainShader);
-        chunk->drawTranslucent(terrainShader);
+        //chunk->drawTranslucent(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
-    //blendModeNormal();
-    /*offsetIterator = circleIteratorInit(renderDistance + 1);
+    glDisable(GL_CULL_FACE);
+    chunkOffset = glm::ivec3{0};
+    offsetIterator = circleIteratorInit(renderDistance + 1);
     do {
-        Point chunkCoord = pointAdd(chunkOffset, worldToChunkV(player->position));
+        glm::ivec3 chunkCoord = chunkOffset + worldToChunkV(player->position);
         chunkCoord.y = 0;
-        Chunk* chunk = worldGetChunk(world, chunkCoord);
+        const Chunk* chunk = getChunk(chunkCoord);
         if (chunk == NULL) {
             continue;
         }
-        drawChunkTranslucent(chunk, terrainShader);
-    } while (iterateCircleIterator(&offsetIterator, &chunkOffset));*/
+        chunk->drawTranslucent(terrainShader);
+    } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
+    glEnable(GL_CULL_FACE);
+
 
     entityShader.use();
     for (auto& entity : entities) {
@@ -179,8 +177,8 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
 Block World::getBlock(glm::ivec3 worldPoint) const {
     const Chunk* chunk = getChunk(worldToChunk(worldPoint));
     if (chunk == NULL) {
-        //return BLOCK_BARRIER;
-        return BLOCK_AIR;
+        return BLOCK_BARRIER;
+        //return BLOCK_AIR;
     }
     return chunk->getBlockRaw(worldToLocal(worldPoint));
 }

@@ -1,4 +1,5 @@
 #include "text.hpp"
+#include "config.hpp"
 #include "graphics.hpp"
 #include "logger.hpp"
 #include <glm/ext/matrix_transform.hpp>
@@ -45,7 +46,7 @@ Font::Font(const Image& fontImage) : texture{fontImage} {
 TextBatch::TextBatch(const Font& font) : font{font} {}
 
 void TextBatch::drawString(glm::ivec2 position, std::string string) {
-    drawString(Font::defaultScale, position, color::white, string);
+    drawString(Config::settings->gui.scale, position, color::white, string);
 }
 
 void TextBatch::drawString(int scale, glm::ivec2 position, glm::vec4 color, std::string string) {
@@ -95,4 +96,8 @@ void TextBatch::drawHighlighted(ShaderProgram& shader, int scale) {
     shader.setUniformVec4("color", color::white);
     shader.setUniformMat4("model", glm::mat4{1.f});
     gpuMesh.draw();
+}
+
+void TextBatch::drawHighlighted(ShaderProgram& shader) {
+    drawHighlighted(shader, Config::settings->gui.scale);
 }

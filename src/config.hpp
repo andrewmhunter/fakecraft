@@ -1,19 +1,12 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
-#define FAST_LEAVES 0
+#include <filesystem>
+
 //#define USE_IGNORED
 
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 256
-
-#define WORLD_MAX_CHUNK_WIDTH 32
-
-#define DEFAULT_RENDER_DISTANCE 7
-
-#define SENSITIVITY 0.0075
-
-//#define DEFAULT_SET_SEED 1000
 
 #define DIRT_LAYER 2
 #define SURFACE_OFFSET 73
@@ -21,19 +14,42 @@
 
 #define PLAYER_EYE 1.62f
 
-#define NO_SAVE_CHUNKS
-
 //#define TIME_MESHER
 
-//#define PROFILING_STARTUP
+class Config {
+public:
+    struct {
+        std::string name;
+    } player;
 
-#define SUPERFLAT 0
-#define GENERATE_CAVES 0
+    struct {
+        bool fastLeaves;
+        int renderDistance;
+    } graphics;
 
-#ifdef PROFILING_STARTUP
-#ifndef DEFAULT_SET_SEED
-#define DEFAULT_SET_SEED 1000
-#endif
-#endif
+    struct {
+        bool saveChunks;
+        bool loadChunks;
+    } game;
+
+    struct {
+        bool superflat;
+        bool generateCaves;
+        bool generateFeatures;
+        std::optional<int> setSeed;
+    } worldgen;
+
+    struct {
+        float sensitivity;
+    } controls;
+
+    struct {
+        int scale;
+    } gui;
+
+    Config(std::filesystem::path filePath);
+
+    static std::optional<Config> settings;
+};
 
 #endif

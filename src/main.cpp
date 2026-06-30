@@ -1,5 +1,7 @@
 #include <map>
 #include <format>
+#include <print>
+#include <string>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -426,10 +428,6 @@ void runGame(GLFWwindow* window) {
 
         inputStatePrepare();
         glfwPollEvents();
-
-#ifdef PROFILING_STARTUP
-        break;
-#endif
     }
 
     unloadMeshes();
@@ -438,6 +436,8 @@ void runGame(GLFWwindow* window) {
 
 
 int main() {
+    Config::settings = Config{"config.ini"};
+
     if (!glfwInit()) {
         Logger::fatal("GLFW failed to initialize");
     }
@@ -477,5 +477,3 @@ int main() {
     
     glfwTerminate();
 }
-
-

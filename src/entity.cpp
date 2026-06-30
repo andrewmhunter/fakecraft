@@ -153,7 +153,7 @@ void Player::update(float deltaTime) {
         speed *= 4.f;
     }
 
-    glm::dvec2 mouseDelta = getMouseDelta() * SENSITIVITY;
+    glm::dvec2 mouseDelta = getMouseDelta() * static_cast<double>(Config::settings->controls.sensitivity);
     yaw -= mouseDelta.x;
     pitch -= mouseDelta.y;
     pitch = glm::clamp(pitch, -glm::pi<float>() / 2.f + 0.01f, glm::pi<float>() / 2.f - 0.01f);

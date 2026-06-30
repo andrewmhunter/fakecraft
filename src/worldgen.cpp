@@ -112,13 +112,13 @@ void generateTerrain(Chunk* chunk) {
             float biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, 2.f, 0.5f, 10) + 0.5f;
             biome *= 255.f;
 
-#if !SUPERFLAT
-            float scale = 0.001f;
-            float stretch = 128.f;
-            int octaves = 12;
-            float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, 1.f, 2.f, 0.5f, octaves);
-            surface = noise * stretch + SURFACE_OFFSET;
-#endif
+            if (!Config::settings->worldgen.superflat) {
+                float scale = 0.001f;
+                float stretch = 128.f;
+                int octaves = 12;
+                float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, 1.f, 2.f, 0.5f, octaves);
+                surface = noise * stretch + SURFACE_OFFSET;
+            }
 
             surface = clampInt(surface, 1, CHUNK_HEIGHT - 1);
 
@@ -139,15 +139,15 @@ void generateTerrain(Chunk* chunk) {
             }
 
             for (int y = 1; y <= surface; ++y) {
-#if GENERATE_CAVES
-                float caveThreshold = -0.5f;
-                float caveScale = 0.025;
-                float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale, wx * caveScale, 2.f, 0.5f, 4);
+                if (Config::settings->worldgen.generateCaves) {
+                    float caveThreshold = -0.5f;
+                    float caveScale = 0.025;
+                    float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale, wx * caveScale, 2.f, 0.5f, 4);
 
-                if (caveNoise < caveThreshold) {
-                    continue;
+                    if (caveNoise < caveThreshold) {
+                        continue;
+                    }
                 }
-#endif
 
                 Block block = topLayerBlock;
                 if (y < surface - DIRT_LAYER) {
@@ -192,9 +192,9 @@ void generateTerrain(Chunk* chunk) {
 }
 
 void placeFeatures(Chunk* chunk) {
-#if SUPERFLAT
-    return;
-#endif
+    if (!Config::settings->worldgen.generateFeatures) {
+        return;
+    }
 
     Hash chunkSeed = hashInt(FNV_OFFSET, chunk->world->seed);
     chunkSeed = hashInt(chunkSeed, chunk->coords.x);

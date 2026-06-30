@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <filesystem>
 #include "serialize.hpp"
+#include "config.hpp"
 #include "world.hpp"
 #include "chunk.hpp"
 #include "entity.hpp"
@@ -55,9 +56,10 @@ void makeSaveDirectories(void) {
 }
 
 void saveChunk(const Chunk* chunk) {
-#ifdef NO_SAVE_CHUNKS
-    return;
-#endif
+    if (!Config::settings->game.saveChunks) {
+        return;
+    }
+
     Logger::assertion(chunk);
 
     Logger::trace(std::format("Saving chunk: {}, {}", chunk->coords.x, chunk->coords.z));
@@ -95,6 +97,10 @@ void saveChunk(const Chunk* chunk) {
 }
 
 bool loadChunk(Chunk* chunk) {
+    if (!Config::settings->game.loadChunks) {
+        return false;
+    }
+
     Logger::assertion(chunk);
 
     char fileName[FILENAME_MAX];

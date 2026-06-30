@@ -96,11 +96,11 @@ void registerBlocks() {
     regBlock(BLOCK_SAND, "sand", SOLID, IMPASSABLE, blockModelDefault(2, 1));
     regBlock(BLOCK_GLASS, "glass", TRANSPARENT, IMPASSABLE, blockModelDefault(1, 3));
 
-#if FAST_LEAVES
-    regBlock(BLOCK_LEAVES, "leaves", SOLID, IMPASSABLE, blockModelDefault(5, 3));
-#else
-    regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, IMPASSABLE, blockModelDefault(4, 3));
-#endif
+    if (Config::settings->graphics.fastLeaves) {
+        regBlock(BLOCK_LEAVES, "leaves", SOLID, IMPASSABLE, blockModelDefault(5, 3));
+    } else {
+        regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, IMPASSABLE, blockModelDefault(4, 3));
+    }
 
     regBlock(BLOCK_LOG, "log", SOLID, IMPASSABLE, blockModelLog(4, 1, 5, 1));
     regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, IMPASSABLE, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));

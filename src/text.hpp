@@ -9,7 +9,7 @@
 class Font {
 private:
 public:
-    static constexpr int defaultScale = 2;
+    //static constexpr int defaultScale = 2;
 
     std::array<int, UCHAR_MAX + 1> characterWidths{};
     int characterHeight{};
@@ -41,7 +41,8 @@ public:
     }
 
     void draw();
-    void drawHighlighted(ShaderProgram& shader, int scale = Font::defaultScale);
+    void drawHighlighted(ShaderProgram& shader, int scale);
+    void drawHighlighted(ShaderProgram& shader);
 };
 
 #endif

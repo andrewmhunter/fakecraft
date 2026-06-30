@@ -88,5 +88,12 @@ static inline float squaref(float x) {
     return x * x;
 }
 
+std::string toLower(std::string_view input);
+std::string toUpper(std::string_view input);
+
+void trimLeft(std::string& input);
+void trimRight(std::string& input);
+void trim(std::string& input);
+
 #endif
 

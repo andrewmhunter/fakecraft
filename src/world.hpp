@@ -16,9 +16,9 @@ class World {
 public:
     std::map<glm::ivec3, std::unique_ptr<Chunk>, CompareIvec3FO> chunks{};
     std::vector<std::unique_ptr<Entity>> entities{};
-    int seed = 1000;
+    int seed;
     bool showChunkBorders = false;
-    int renderDistance = DEFAULT_RENDER_DISTANCE;
+    int renderDistance;
     Player* player;
     float skyLight = 0.f;
     glm::vec4 skyColor = color::skyblue;
