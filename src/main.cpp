@@ -1,6 +1,5 @@
 #include <map>
 #include <format>
-#include <print>
 #include <string>
 
 #include <glad/glad.h>
@@ -135,7 +134,7 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     windowHeight = height;
 
     cameraProjection = glm::perspective(
-        glm::radians(90.f),
+        glm::radians(Config::settings->graphics.fov),
         static_cast<float>(windowWidth) / static_cast<float>(windowHeight),
         0.1f,
         10000.f

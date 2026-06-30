@@ -25,6 +25,7 @@ public:
     struct {
         bool fastLeaves;
         int renderDistance;
+        float fov;
     } graphics;
 
     struct {
@@ -37,7 +38,7 @@ public:
         bool generateCaves;
         bool generateFeatures;
         std::optional<int> setSeed;
-    } worldgen;
+    } world;
 
     struct {
         float sensitivity;

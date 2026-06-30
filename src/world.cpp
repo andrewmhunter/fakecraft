@@ -15,7 +15,7 @@ static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
 
 
 World::World()
-    : seed{Config::settings->worldgen.setSeed.value_or(randomInt(10000))},
+    : seed{Config::settings->world.setSeed.value_or(randomInt(10000))},
     renderDistance{Config::settings->graphics.renderDistance}
 {
     glm::vec3 playerPosition{

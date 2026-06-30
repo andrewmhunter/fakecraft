@@ -1,6 +1,7 @@
 #ifndef INI_PARSER_HPP
 #define INI_PARSER_HPP
 
+#include "logger.hpp"
 #include <filesystem>
 #include <format>
 #include <istream>
@@ -12,24 +13,26 @@
 class IniFile {
 private:
     std::map<std::string, std::map<std::string, std::string, std::less<>>, std::less<>> contents;
+    std::string fileName;
 
-    void parse(std::istream& stream, std::string_view fileName, std::source_location location);
+    void parse(std::istream& stream, std::source_location location);
+    void iniParseError(int lineNumber, std::string_view message, std::source_location location);
 
 public:
-    IniFile(std::istream& stream, std::string_view fileName, std::source_location location = std::source_location::current());
+    IniFile(std::istream& stream, std::string fileName, std::source_location location = std::source_location::current());
     IniFile(std::filesystem::path filePath, std::source_location location = std::source_location::current());
 
-    std::optional<std::reference_wrapper<const std::string>> getString(std::string_view section, std::string_view key) const;
-    const std::string& getString(std::string_view section, std::string_view key, std::string defaultValue) const;
+    std::optional<std::reference_wrapper<const std::string>> getString(std::string_view section, std::string_view key, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
+    const std::string& getString(std::string_view section, std::string_view key, std::string defaultValue, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
 
-    std::optional<int> getInt(std::string_view section, std::string_view key) const;
-    int getInt(std::string_view section, std::string_view key, int defaultValue) const;
+    std::optional<int> getInt(std::string_view section, std::string_view key, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
+    int getInt(std::string_view section, std::string_view key, int defaultValue, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
 
-    std::optional<bool> getBool(std::string_view section, std::string_view key) const;
-    bool getBool(std::string_view section, std::string_view key, int defaultValue) const;
+    std::optional<bool> getBool(std::string_view section, std::string_view key, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
+    bool getBool(std::string_view section, std::string_view key, int defaultValue, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
 
-    std::optional<float> getFloat(std::string_view section, std::string_view key) const;
-    float getFloat(std::string_view section, std::string_view key, float defaultValue) const;
+    std::optional<float> getFloat(std::string_view section, std::string_view key, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
+    float getFloat(std::string_view section, std::string_view key, float defaultValue, LogLevel requirement = LogLevel::warning, std::source_location location = std::source_location::current()) const;
 
     std::format_context::iterator format_to(std::format_context::iterator it) const;
 };

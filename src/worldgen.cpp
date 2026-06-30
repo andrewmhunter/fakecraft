@@ -112,7 +112,7 @@ void generateTerrain(Chunk* chunk) {
             float biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, 2.f, 0.5f, 10) + 0.5f;
             biome *= 255.f;
 
-            if (!Config::settings->worldgen.superflat) {
+            if (!Config::settings->world.superflat) {
                 float scale = 0.001f;
                 float stretch = 128.f;
                 int octaves = 12;
@@ -139,7 +139,7 @@ void generateTerrain(Chunk* chunk) {
             }
 
             for (int y = 1; y <= surface; ++y) {
-                if (Config::settings->worldgen.generateCaves) {
+                if (Config::settings->world.generateCaves) {
                     float caveThreshold = -0.5f;
                     float caveScale = 0.025;
                     float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale, wx * caveScale, 2.f, 0.5f, 4);
@@ -192,7 +192,7 @@ void generateTerrain(Chunk* chunk) {
 }
 
 void placeFeatures(Chunk* chunk) {
-    if (!Config::settings->worldgen.generateFeatures) {
+    if (!Config::settings->world.generateFeatures) {
         return;
     }
 

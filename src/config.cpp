@@ -8,14 +8,17 @@ Config::Config(std::filesystem::path filePath) {
 
     graphics.fastLeaves = ini.getBool("graphics", "fast_leaves", false);
     graphics.renderDistance = ini.getInt("graphics", "render_distance", 7);
+    graphics.fov = ini.getFloat("graphics", "fov", 90.f);
 
     game.saveChunks = ini.getBool("game", "save_chunks", true);
     game.loadChunks = ini.getBool("game", "load_chunks", true);
 
-    worldgen.superflat = ini.getBool("worldgen", "superflat", false);
-    worldgen.generateCaves = ini.getBool("worldgen", "generate_caves", false);
-    worldgen.generateFeatures = ini.getBool("worldgen", "generate_features", true);
-    worldgen.setSeed = ini.getInt("worldgen", "set_seed");
+    world.superflat = ini.getBool("world", "superflat", false);
+    world.generateCaves = ini.getBool("world", "generate_caves", false);
+    world.generateFeatures = ini.getBool("world", "generate_features", true);
+    if (ini.getBool("world", "use_set_seed", false)) {
+        world.setSeed = ini.getInt("world", "set_seed");
+    }
 
     controls.sensitivity = ini.getFloat("controls", "sensitivity", 0.0075);
 

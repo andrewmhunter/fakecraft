@@ -51,7 +51,7 @@ void TextBatch::drawString(glm::ivec2 position, std::string string) {
 
 void TextBatch::drawString(int scale, glm::ivec2 position, glm::vec4 color, std::string string) {
     glm::ivec2 charSize{8 * scale};
-    glm::ivec2 offset = position;
+    offset = position;
 
     for (unsigned char ch : string) {
         if (ch == '\n') {

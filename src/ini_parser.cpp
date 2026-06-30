@@ -8,21 +8,24 @@
 #include <source_location>
 #include <string>
 
-template<typename... Args>
-static void iniParseError(std::string_view fileName, int lineNumber, std::string_view message, std::source_location location) {
-    Logger::warning(std::format("While parsing {}:{}: {}", fileName, lineNumber, message), location);
+void IniFile::iniParseError(int lineNumber, std::string_view message, std::source_location location) {
+    Logger::error(std::format("While parsing {}:{}: {}", fileName, lineNumber, message), location);
 }
 
-IniFile::IniFile(std::istream& stream, std::string_view fileName, std::source_location location) {
-    parse(stream, fileName, location);
+IniFile::IniFile(std::istream& stream, std::string fileName, std::source_location location)
+    : fileName{fileName}
+{
+    parse(stream, location);
 }
 
-IniFile::IniFile(std::filesystem::path filePath, std::source_location location) {
+IniFile::IniFile(std::filesystem::path filePath, std::source_location location)
+    : fileName{filePath.filename().string()}
+{
     std::ifstream stream{filePath};
-    parse(stream, filePath.filename().string(), location);
+    parse(stream, location);
 }
 
-void IniFile::parse(std::istream& stream, std::string_view fileName, std::source_location location) {
+void IniFile::parse(std::istream& stream, std::source_location location) {
     std::string line{};
     std::string currentSection{};
     int lineNumber = 0;
@@ -37,7 +40,7 @@ void IniFile::parse(std::istream& stream, std::string_view fileName, std::source
 
         if (line.starts_with('[')) {
             if (!line.ends_with(']')) {
-                iniParseError(fileName, lineNumber, "Missing closing ]", location);
+                iniParseError(lineNumber, "Missing closing ]", location);
                 continue;
             }
             line.erase(line.begin());
@@ -50,7 +53,7 @@ void IniFile::parse(std::istream& stream, std::string_view fileName, std::source
 
         std::size_t equalsSign = line.find('=');
         if (equalsSign == std::string::npos) {
-            iniParseError(fileName, lineNumber, "Expected section or key value pair", location);
+            iniParseError(lineNumber, "Expected section or key value pair", location);
             continue;
         }
 
@@ -60,11 +63,11 @@ void IniFile::parse(std::istream& stream, std::string_view fileName, std::source
         trimLeft(value);
 
         if (key.empty()) {
-            iniParseError(fileName, lineNumber, std::format("Missing key for value \"{}\"", value), location);
+            iniParseError(lineNumber, std::format("Missing key for value \"{}\"", value), location);
             continue;
         }
         if (value.empty()) {
-            iniParseError(fileName, lineNumber, std::format("Missing value for key \"{}\"", key), location);
+            iniParseError(lineNumber, std::format("Missing value for key \"{}\"", key), location);
             continue;
         }
 
@@ -72,38 +75,39 @@ void IniFile::parse(std::istream& stream, std::string_view fileName, std::source
         bool inserted = sectionMap.insert_or_assign(key, value).second;
 
         if (!inserted) {
-            iniParseError(fileName, lineNumber, std::format("Duplicate key \"{}\"", key), location);
+            iniParseError(lineNumber, std::format("Duplicate key \"{}\"", key), location);
             continue;
         }
     }
 }
 
-std::optional<std::reference_wrapper<const std::string>> IniFile::getString(std::string_view section, std::string_view key) const {
+std::optional<std::reference_wrapper<const std::string>> IniFile::getString(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
     if (contents.contains(section)) {
         const auto& sectionMap = contents.find(section);
         if (sectionMap->second.contains(key)) {
             return sectionMap->second.find(key)->second;
         }
     }
+    Logger::log(requirement, std::format("\"{}\" missing field \"{}.{}\"", fileName, section, key), location);
     return std::nullopt;
 }
 
-const std::string& IniFile::getString(std::string_view section, std::string_view key, std::string defaultValue) const {
-    return getString(section, key).value_or(defaultValue);
+const std::string& IniFile::getString(std::string_view section, std::string_view key, std::string defaultValue, LogLevel requirement, std::source_location location) const {
+    return getString(section, key, requirement, location).value_or(defaultValue);
 }
 
-std::optional<int> IniFile::getInt(std::string_view section, std::string_view key) const {
-    return getString(section, key).and_then([](auto str) {
+std::optional<int> IniFile::getInt(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
+    return getString(section, key, requirement, location).and_then([](auto str) {
         return std::optional{std::stoi(str)};
     });
 }
 
-int IniFile::getInt(std::string_view section, std::string_view key, int defaultValue) const {
-    return getInt(section, key).value_or(defaultValue);
+int IniFile::getInt(std::string_view section, std::string_view key, int defaultValue, LogLevel requirement, std::source_location location) const {
+    return getInt(section, key, requirement, location).value_or(defaultValue);
 }
 
-std::optional<bool> IniFile::getBool(std::string_view section, std::string_view key) const {
-    return getString(section, key).and_then([](auto str) {
+std::optional<bool> IniFile::getBool(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
+    return getString(section, key, requirement, location).and_then([](auto str) {
         std::string lowered = toLower(str.get());
         if (lowered == "true") {
             return std::optional{true};
@@ -116,18 +120,18 @@ std::optional<bool> IniFile::getBool(std::string_view section, std::string_view 
     });
 }
 
-bool IniFile::getBool(std::string_view section, std::string_view key, int defaultValue) const {
-    return getBool(section, key).value_or(defaultValue);
+bool IniFile::getBool(std::string_view section, std::string_view key, int defaultValue, LogLevel requirement, std::source_location location) const {
+    return getBool(section, key, requirement, location).value_or(defaultValue);
 }
 
-std::optional<float> IniFile::getFloat(std::string_view section, std::string_view key) const {
-    return getString(section, key).and_then([](auto str) {
+std::optional<float> IniFile::getFloat(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
+    return getString(section, key, requirement, location).and_then([](auto str) {
         return std::optional{std::stof(str)};
     });
 }
 
-float IniFile::getFloat(std::string_view section, std::string_view key, float defaultValue) const {
-    return getFloat(section, key).value_or(defaultValue);
+float IniFile::getFloat(std::string_view section, std::string_view key, float defaultValue, LogLevel requirement, std::source_location location) const {
+    return getFloat(section, key, requirement, location).value_or(defaultValue);
 }
 
 
