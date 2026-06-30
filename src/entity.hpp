@@ -7,10 +7,10 @@
 
 class World;
 
-typedef enum {
-    ENTITY_PLAYER,
-    ENTITY_MOB,
-} EntityType;
+enum class EntityType {
+    player,
+    mob,
+};
 
 class Entity {
 private:
@@ -40,7 +40,7 @@ class Human : public Entity {
 public:
 };
 
-class Player : public Entity {
+class Player final : public Entity {
 public:
     Timer breakTimer{timerInit(0.25)};
 

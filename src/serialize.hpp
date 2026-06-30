@@ -19,7 +19,7 @@ bool loadWorld(World* world);
 void saveEntity(const Entity* entity, FILE* file);
 void loadEntity(Entity* entity, FILE* file);
 
-void makeSaveDirectories(void);
+void makeSaveDirectories();
 
 #endif
 

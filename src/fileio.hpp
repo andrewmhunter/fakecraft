@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "logger.hpp"
 
-bool openFile(FILE** file, const char* fileName, const char* mode, TraceLogLevel logLevel);
+bool openFile(FILE** file, const char* fileName, const char* mode, LogLevel logLevel);
 FILE* openFileRequired(const char* fileName, const char* mode);
 
 #endif

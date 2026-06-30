@@ -1,10 +1,9 @@
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "chunk.hpp"
 #include "mesh.hpp"
 #include "chunk_mesh.hpp"
 #include "logger.hpp"
-#include <stdio.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 // This relies on initialization of global variables to all 0s.
 const Chunk dummyChunk{};
@@ -13,7 +12,7 @@ void chunkGenerateMesh(Chunk* chunk) {
     Logger::assertion(chunk);
 
     /*FCMesh mesh2{};
-    mesh2.pushTexturedPrism(glm::scale(glm::translate(glm::mat4{1.f}, {0.f, 0.5f, 0.f}), CHUNK_SIZE),
+    mesh2.pushTexturedPrism(glm::scale(glm::translate(glm::mat4{1.f}, {0.f, 0.5f, 0.f}), chunkSize),
             {{0.f, 0.f}, {1.f, 1.f}});
     chunk->mesh = mesh2.upload();
 

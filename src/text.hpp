@@ -9,6 +9,8 @@
 class Font {
 private:
 public:
+    static constexpr int defaultScale = 2;
+
     std::array<int, UCHAR_MAX + 1> characterWidths{};
     int characterHeight{};
     Texture texture;
@@ -39,6 +41,7 @@ public:
     }
 
     void draw();
+    void drawHighlighted(ShaderProgram& shader, int scale = Font::defaultScale);
 };
 
 #endif

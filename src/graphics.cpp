@@ -213,7 +213,16 @@ void ShaderProgram::use() const {
 }
 
 GLint ShaderProgram::uniformLocation(const std::string& name) {
-    return glGetUniformLocation(programId.object, name.c_str());
+    if (uniformCache.contains(name)) {
+        return uniformCache[name];
+    }
+
+    GLint location = glGetUniformLocation(programId.object, name.c_str());
+    if (location == -1) {
+        Logger::error(std::format("Uniform location of \"{}\" not found", name));
+    }
+    uniformCache[name] = location;
+    return location;
 }
 
 void ShaderProgram::setUniformFloat(const std::string& uniform, float value) {
@@ -239,111 +248,6 @@ void ShaderProgram::setUniformVec4(const std::string& uniform, glm::vec4 value) 
 void ShaderProgram::setUniformMat4(const std::string& uniform, glm::mat4 value) {
     glProgramUniformMatrix4fv(programId.object, uniformLocation(uniform), 1, false, glm::value_ptr(value));
 }
-
-
-
-/*
- * ShaderProgram
- */
-
-/*
-GLuint ShaderProgram::loadShader(const std::string& string, GLenum shaderType) const {
-    const char* c_str = string.c_str();
-
-    GLuint shader = glCreateShader(shaderType);
-    glShaderSource(shader, 1, &c_str, NULL);
-    glCompileShader(shader);
-
-    int success = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, sizeof(infoLog), NULL, infoLog);
-        std::cout << std::format("Shader '{}' compilation failed: {}\n", string, infoLog);
-    }
-
-    return shader;
-}
-
-GLint ShaderProgram::uniformLocation(const std::string& name) {
-    return glGetUniformLocation(shaderProgram, name.c_str());
-}
-
-ShaderProgram::ShaderProgram(const std::string& vertexShaderString, const std::string& fragmentShaderString) {
-    GLuint vertexShader = this->loadShader(vertexShaderString, GL_VERTEX_SHADER);
-    GLuint fragmentShader = this->loadShader(fragmentShaderString, GL_FRAGMENT_SHADER);
-
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    int success = 0;
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetProgramInfoLog(shaderProgram, sizeof(infoLog), NULL, infoLog);
-
-        std::cout << std::format("Shader program '{}' & '{}' link failed: {}\n",
-                vertexShader, fragmentShader, infoLog);
-    }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-}
-
-ShaderProgram ShaderProgram::buildFiles(const std::string& vertexShaderFilePath,
-        const std::string& fragmentShaderFilePath
-) {
-    return ShaderProgram::buildStrings(loadFile(vertexShaderFilePath), loadFile(fragmentShaderFilePath));
-}
-
-ShaderProgram ShaderProgram::buildStrings(const std::string& vertexShader, const std::string& fragmentShader) {
-    return ShaderProgram{vertexShader, fragmentShader};
-}
-
-void ShaderProgram::use() const {
-    if (shaderProgram == 0) {
-        Logger::error("Shader invalid");
-    }
-
-    glUseProgram(shaderProgram);
-}
-
-void ShaderProgram::unload() {
-    if (shaderProgram == 0) {
-        return;
-    }
-
-    glDeleteProgram(shaderProgram);
-    shaderProgram = 0;
-}
-
-void ShaderProgram::setUniformFloat(const std::string& uniform, float value) {
-    glProgramUniform1f(shaderProgram, uniformLocation(uniform), value);
-}
-
-void ShaderProgram::setUniformInt(const std::string& uniform, int value) {
-    glProgramUniform1i(shaderProgram, uniformLocation(uniform), value);
-}
-
-void ShaderProgram::setUniformUInt(const std::string& uniform, unsigned int value) {
-    glProgramUniform1ui(shaderProgram, uniformLocation(uniform), value);
-}
-
-void ShaderProgram::setUniformVec3(const std::string& uniform, glm::vec3 value) {
-    glProgramUniform3fv(shaderProgram, uniformLocation(uniform), 1, glm::value_ptr(value));
-}
-
-void ShaderProgram::setUniformVec4(const std::string& uniform, glm::vec4 value) {
-    glProgramUniform4fv(shaderProgram, uniformLocation(uniform), 1, glm::value_ptr(value));
-}
-
-void ShaderProgram::setUniformMat4(const std::string& uniform, glm::mat4 value) {
-    glProgramUniformMatrix4fv(shaderProgram, uniformLocation(uniform), 1, false, glm::value_ptr(value));
-}
-*/
-
 
 /*
  * GPUMesh

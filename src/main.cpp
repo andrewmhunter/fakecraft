@@ -1,6 +1,4 @@
-#include <glm/fwd.hpp>
 #include <map>
-#include <stdbool.h>
 #include <format>
 
 #include <glad/glad.h>
@@ -9,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/fwd.hpp>
 
 #include "block.hpp"
 #include "chunk.hpp"
@@ -101,11 +100,11 @@ void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
         {GL_DEBUG_TYPE_OTHER,               "Other"},
     };
 
-    static const std::map<GLenum, TraceLogLevel> severities {
-        {GL_DEBUG_SEVERITY_HIGH,         LOG_FATAL},
-        {GL_DEBUG_SEVERITY_MEDIUM,       LOG_ERROR},
-        {GL_DEBUG_SEVERITY_LOW,          LOG_WARNING},
-        {GL_DEBUG_SEVERITY_NOTIFICATION, LOG_INFO},
+    static const std::map<GLenum, LogLevel> severities {
+        {GL_DEBUG_SEVERITY_HIGH,         LogLevel::fatal},
+        {GL_DEBUG_SEVERITY_MEDIUM,       LogLevel::error},
+        {GL_DEBUG_SEVERITY_LOW,          LogLevel::warning},
+        {GL_DEBUG_SEVERITY_NOTIFICATION, LogLevel::info},
     };
 
     // ignore non-significant error/warning codes
@@ -361,20 +360,19 @@ void runGame(GLFWwindow* window) {
             }
 
             if (world.showChunkBorders) {
-                //TODO:
                 //DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
                 simpleShader.setUniformVec4("color", color::fromRGBA(0xffffff80));
                 glDisable(GL_CULL_FACE);
                 glm::ivec3 chunkPosition = worldToChunkV(player->position);
                 chunkPosition += glm::ivec3{1, 0, 1};
-                drawCube(simpleShader, glm::vec3{chunkPosition} * glm::vec3 CHUNK_SIZE + glm::vec3 CHUNK_SIZE / glm::vec3{-2.f, 2.f, -2.f}, glm::vec3 CHUNK_SIZE);
+                drawCube(simpleShader, glm::vec3{chunkPosition} * glm::vec3{chunkSize} + glm::vec3{chunkSize} / glm::vec3{-2.f, 2.f, -2.f}, glm::vec3{chunkSize});
                 glEnable(GL_CULL_FACE);
                 
             }
         }
 
         if (showGui) {
-            glDepthMask(false);
+            glDisable(GL_DEPTH_TEST);
 
             int screenMiddleX = windowWidth / 2;
             int screenMiddleY = windowHeight / 2;
@@ -406,7 +404,7 @@ void runGame(GLFWwindow* window) {
             text.drawString({5, -80}, "L: {:.2f}", lookVec);
             text.drawString({5, -100}, "RD: {}", world.renderDistance);
             text.drawString({5, -120}, "E: {}", world.entities.size());
-            text.draw();
+            text.drawHighlighted(terrainShader);
 
             blendModeInvert();
 
@@ -418,7 +416,7 @@ void runGame(GLFWwindow* window) {
 
             blendModeNormal();
 
-            glDepthMask(true);
+            glEnable(GL_DEPTH_TEST);
         }
 
 

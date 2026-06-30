@@ -7,6 +7,4 @@ const char* FatalError::what() const noexcept {
 }
 
 
-TraceLogLevel Logger::logLevel = LOG_INFO;
-
-
+LogLevel Logger::logLevel = LogLevel::info;

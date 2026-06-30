@@ -31,14 +31,14 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
 #endif
 
     if (loadChunk(this)) {
-        Logger::debug(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
+        Logger::trace(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
         return;
     }
 
     generateTerrain(this);
-    placeFeatures();
+    placeFeatures(this);
 
-    Logger::debug(std::format("Chunk {}, {} generated", coords.x, coords.z));
+    Logger::trace(std::format("Chunk {}, {} generated", coords.x, coords.z));
 }
 
 Chunk::~Chunk() {
@@ -65,11 +65,7 @@ void Chunk::unload() {
     }
 
     saveChunk(this);
-    Logger::debug(std::format("Chunk {}, {} saved", coords.x, coords.z));
-}
-
-void Chunk::placeFeatures() {
-
+    Logger::trace(std::format("Chunk {}, {} saved", coords.x, coords.z));
 }
 
 void Chunk::tryPlaceBlock(glm::ivec3 local, Block block) {
@@ -124,7 +120,7 @@ Block Chunk::getBlock(glm::ivec3 local) const {
 
 void Chunk::drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const {
     glm::mat4 transform = glm::mat4{1.f};
-    transform = glm::translate(transform, glm::vec3{coords * (glm::ivec3)CHUNK_SIZE});
+    transform = glm::translate(transform, glm::vec3{coords * chunkSize});
     //transform = glm::scale(transform, CHUNK_SIZE);
     //transform = glm::translate(transform, pointToVector3(chunk->coords));
 
@@ -151,7 +147,7 @@ void Chunk::drawTranslucent(ShaderProgram& shader) const {
 }
 
 bool Chunk::verify() const {
-    Logger::debug(std::format("Verifying chunk {}, {}", coords.x, coords.z));
+    Logger::trace(std::format("Verifying chunk {}, {}", coords.x, coords.z));
 
     ITERATE_CHUNK(x, y, z) {
         Block block = blocks[x][y][z];

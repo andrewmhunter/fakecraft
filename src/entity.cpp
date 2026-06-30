@@ -1,16 +1,17 @@
 #include <cmath>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "entity.hpp"
 #include "collision.hpp"
 #include "graphics.hpp"
 #include "logger.hpp"
 #include "input.hpp"
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <GLFW/glfw3.h>
 
 Entity::Entity(World* world, glm::vec3 position, glm::vec3 boundingBox)
     : world{world},
-    type{ENTITY_PLAYER},
+    type{EntityType::player},
     position{position},
     boundingBox{boundingBox},
     pitch{0.f},
@@ -286,14 +287,3 @@ void drawPlayerModel(ShaderProgram& shader, glm::vec3 position) {
     shader.setUniformVec4("color", color::magenta);
     drawCube(shader, rightArmPosition, {limbWidth, bodyHeight, limbWidth});
 }
-
-void entityDraw(ShaderProgram& shader, const Entity* entity) {
-    Logger::assertion(entity);
-
-    if (entity->type != ENTITY_PLAYER) {
-        drawPlayerModel(shader, entity->position);
-
-        //DrawBoundingBox(genBoundingBox(entity->position, entity->boundingBox), WHITE);
-    }
-}
-

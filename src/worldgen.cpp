@@ -1,4 +1,5 @@
 #include <stb_perlin.h>
+#include "block.hpp"
 #include "chunk.hpp"
 #include "world.hpp"
 #include "hash.hpp"
@@ -35,6 +36,7 @@ static void placeCactus(World* world, glm::ivec3 worldPoint) {
 
 void placeTree(World* world, glm::ivec3 worldPoint) {
     Logger::assertion(world);
+    Logger::debug("Placing Tree");
 
     Block surfaceBlock = world->getBlock(worldPoint);
 
@@ -230,7 +232,9 @@ void placeFeatures(Chunk* chunk) {
         int z = seededNumber(flowerIndex, FEATURE_Z, 0, CHUNK_WIDTH);
         int y = chunk->surfaceHeight[x][z];
 
-        chunk->tryPlaceBlock(x, y + 1, z, flowerType);
+        if (chunk->getBlock(glm::ivec3{x, y, z}) == BLOCK_GRASS) {
+            chunk->tryPlaceBlock(x, y + 1, z, flowerType);
+        }
     }
 }
 

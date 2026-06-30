@@ -5,6 +5,7 @@ uniform float skyLight;
 uniform vec4 fogColor;
 uniform float fogDistance;
 uniform float fogDropoff;
+uniform vec4 color;
 
 in vec2 fragTexcoord;
 in vec4 fragColor;
@@ -36,7 +37,7 @@ void main()
 
 	float lighting = fragColor.r + fragColor.g * skyLight;
 	shade *= lighting;
-	finalColor = texColor * vec4(shade, shade, shade, 1.0);
+	finalColor = texColor * vec4(shade, shade, shade, 1.0) * color;
 
 
 	//finalColor = mix(fogColor, finalColor, fog);

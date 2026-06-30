@@ -5,6 +5,7 @@
 #include <glad/glad.h>
 #include <glm/detail/qualifier.hpp>
 #include <glm/glm.hpp>
+#include <map>
 #include <span>
 #include <string>
 #include <vector>
@@ -123,9 +124,10 @@ public:
 class ShaderProgram {
 private:
     OpenGLObject programId;
+    std::map<std::string, GLint> uniformCache{};
 
     GLint uniformLocation(const std::string& name);
-    
+
 public:
     ShaderProgram(std::span<std::reference_wrapper<const Shader>> shaders);
 

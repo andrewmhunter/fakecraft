@@ -1,10 +1,7 @@
 #ifndef CHUNK_HPP
 #define CHUNK_HPP
 
-#include <glm/fwd.hpp>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdint.h>
+#include <glm/glm.hpp>
 #include "block.hpp"
 #include "config.hpp"
 #include "util.hpp"
@@ -12,7 +9,8 @@
 #include "direction.hpp"
 #include "graphics.hpp"
 
-#define CHUNK_SIZE {CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH}
+constexpr glm::ivec3 chunkSize{CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH};
+//#define CHUNK_SIZE {CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH}
 
 #define ITERATE_CHUNK(XIDENT, YIDENT, ZIDENT) \
     for (int XIDENT = 0; XIDENT < CHUNK_WIDTH; ++XIDENT) \
@@ -32,7 +30,7 @@
 // Positions
 
 static inline glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
-    return (glm::ivec3){
+    return glm::ivec3{
         floorDiv(worldPoint.x, CHUNK_WIDTH),
         floorDiv(worldPoint.y, CHUNK_HEIGHT),
         floorDiv(worldPoint.z, CHUNK_WIDTH)
@@ -40,29 +38,27 @@ static inline glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
 }
 
 static inline glm::ivec3 worldToChunkV(glm::vec3 worldVector) {
-    glm::ivec3 chunkPosition = vector3ToPoint(worldVector / glm::vec3 CHUNK_SIZE);
+    glm::ivec3 chunkPosition = vector3ToPoint(worldVector / glm::vec3{chunkSize});
     chunkPosition.y = 0;
     return chunkPosition;
     //return worldToChunk(vector3ToPoint(worldPoint));
 }
 
 static inline glm::ivec3 worldToLocal(glm::ivec3 worldPoint) {
-    glm::ivec3 p = {
+    return glm::ivec3{
         positiveModulo(worldPoint.x, CHUNK_WIDTH),
         positiveModulo(worldPoint.y, CHUNK_HEIGHT),
         positiveModulo(worldPoint.z, CHUNK_WIDTH)
     };
-
-    return p;
 }
 
 static inline glm::ivec3 localToWorld(glm::ivec3 chunkCoord, glm::ivec3 local) {
-    return chunkCoord * (glm::ivec3)CHUNK_SIZE + local;
+    return chunkCoord * chunkSize + local;
 }
 
 static inline glm::vec3 worldToLocalV(glm::vec3 worldVector) {
     glm::vec3 v = worldVector
-        - glm::vec3{worldToChunkV(worldVector) * (glm::ivec3)CHUNK_SIZE};
+        - glm::vec3{worldToChunkV(worldVector) * chunkSize};
 
     if (v.x < 0) {
         v.x += CHUNK_WIDTH;
@@ -77,7 +73,7 @@ static inline glm::vec3 worldToLocalV(glm::vec3 worldVector) {
 }
 
 static inline glm::vec3 localToWorldV(glm::ivec3 chunkCoord, glm::vec3 local) {
-    return glm::vec3{chunkCoord * (glm::ivec3)CHUNK_SIZE} + local;
+    return glm::vec3{chunkCoord * chunkSize} + local;
 }
 
 
@@ -126,7 +122,6 @@ public:
     }
 
     void unload();
-    void placeFeatures();
     void tryPlaceBlock(glm::ivec3 local, Block block);
     void tryPlaceBlock(int x, int y, int z, Block block);
     void setBlockRaw(glm::ivec3 local, Block block);

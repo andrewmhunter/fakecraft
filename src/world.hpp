@@ -1,9 +1,9 @@
 #ifndef WORLD_HPP
 #define WORLD_HPP
 
-#include <glm/fwd.hpp>
 #include <map>
 #include <memory>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/vector_relational.hpp>
 #include "chunk.hpp"

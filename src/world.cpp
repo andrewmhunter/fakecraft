@@ -1,5 +1,4 @@
 #include <memory>
-#include <stdint.h>
 #include "world.hpp"
 #include "entity.hpp"
 #include "util.hpp"

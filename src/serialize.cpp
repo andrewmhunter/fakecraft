@@ -101,7 +101,7 @@ bool loadChunk(Chunk* chunk) {
     getChunkFileName(chunk, fileName, sizeof(fileName));
 
     FILE* file = NULL;
-    if (!openFile(&file, fileName, "rb", LOG_NONE)) {
+    if (!openFile(&file, fileName, "rb", LogLevel::none)) {
         return false;
     }
 
@@ -149,7 +149,7 @@ bool loadChunk(Chunk* chunk) {
 void saveWorld(const World* world) {
     Logger::assertion(world);
 
-    Logger::debug("Saving world to file");
+    Logger::info("Saving world to file");
 
     FILE* file = openFileRequired("save/world.bin", "wb");
 
@@ -175,11 +175,11 @@ bool loadWorld(World* world) {
     Logger::assertion(world);
 
     FILE* file = NULL;
-    if (!openFile(&file, "save/world.bin", "rb", LOG_WARNING)) {
+    if (!openFile(&file, "save/world.bin", "rb", LogLevel::warning)) {
         return false;
     }
 
-    Logger::debug("Loading world from file");
+    Logger::info("Loading world from file");
 
     world->seed = loadI32(file);
     loadEntity(world->player, file);
@@ -208,4 +208,3 @@ void loadEntity(Entity* entity, FILE* file) {
     entity->yaw = loadFloat(file);
     entity->pitch = loadFloat(file);
 }
-

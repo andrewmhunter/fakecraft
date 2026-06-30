@@ -17,15 +17,15 @@
 // of the TraceLogLevel which they are equal to
 #define MIN_LOG_LEVEL 0
 
-enum TraceLogLevel {
-    LOG_ALL,
-    LOG_TRACE,
-    LOG_DEBUG,
-    LOG_INFO,
-    LOG_WARNING,
-    LOG_ERROR,
-    LOG_FATAL,
-    LOG_NONE,
+enum class LogLevel {
+    all,
+    trace,
+    debug,
+    info,
+    warning,
+    error,
+    fatal,
+    none,
 };
 
 
@@ -39,8 +39,8 @@ public:
 
 class Logger {
 private:
-    static inline void log(std::string_view levelText, std::string_view message, TraceLogLevel level, std::source_location location = std::source_location::current()) {
-        if (level < MIN_LOG_LEVEL || level < Logger::logLevel) {
+    static inline void log(std::string_view levelText, std::string_view message, LogLevel level, std::source_location location = std::source_location::current()) {
+        if (static_cast<int>(level) < MIN_LOG_LEVEL || level < Logger::logLevel) {
             return;
         }
 
@@ -48,55 +48,55 @@ private:
     }
 
 public:
-    static TraceLogLevel logLevel;
+    static LogLevel logLevel;
 
     static inline void trace(std::string_view message, std::source_location location = std::source_location::current()) {
-        Logger::log("\x1b[90mTRACE", message, LOG_TRACE, location);
+        Logger::log("\x1b[90mTRACE", message, LogLevel::trace, location);
     }
 
     static inline void debug(std::string_view message, std::source_location location = std::source_location::current()) {
-        Logger::log("\x1b[32mDEBUG", message, LOG_DEBUG, location);
+        Logger::log("\x1b[32mDEBUG", message, LogLevel::debug, location);
     }
 
     static inline void info(std::string_view message, std::source_location location = std::source_location::current()) {
-        Logger::log("\x1b[36mINFO", message, LOG_INFO, location);
+        Logger::log("\x1b[36mINFO", message, LogLevel::info, location);
     }
 
     static inline void warning(std::string_view message, std::source_location location = std::source_location::current()) {
-        Logger::log("\x1b[35mWARN", message, LOG_WARNING, location);
+        Logger::log("\x1b[35mWARN", message, LogLevel::warning, location);
     }
 
     static inline void error(std::string_view message, std::source_location location = std::source_location::current()) {
-        Logger::log("\x1b[31mERROR", message, LOG_ERROR, location);
+        Logger::log("\x1b[31mERROR", message, LogLevel::error, location);
     }
 
     [[noreturn]]
     static inline void fatal(std::string_view message, std::source_location location = std::source_location::current()) {
-        Logger::log("\x1b[31mFATAL", message, LOG_FATAL, location);
+        Logger::log("\x1b[31mFATAL", message, LogLevel::fatal, location);
         throw FatalError{std::format("{}: {}", location.function_name(), message)};
     }
 
-    static inline void log(TraceLogLevel level, std::string_view message, std::source_location location = std::source_location::current()) {
+    static inline void log(LogLevel level, std::string_view message, std::source_location location = std::source_location::current()) {
         switch (level) {
-            case LOG_TRACE:
+            case LogLevel::trace:
                 trace(message, location);
                 break;
-            case LOG_DEBUG:
+            case LogLevel::debug:
                 debug(message, location);
                 break;
-            case LOG_INFO:
+            case LogLevel::info:
                 info(message, location);
                 break;
-            case LOG_WARNING:
+            case LogLevel::warning:
                 warning(message, location);
                 break;
-            case LOG_ERROR:
+            case LogLevel::error:
                 error(message, location);
                 break;
-            case LOG_FATAL:
+            case LogLevel::fatal:
                 fatal(message, location);
                 break;
-            case LOG_NONE:
+            case LogLevel::none:
                 break;
             default:
                 error(std::format("Invalid log level for message \"{}\"", message), location);

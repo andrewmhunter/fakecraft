@@ -1,5 +1,8 @@
 #include "text.hpp"
+#include "graphics.hpp"
 #include "logger.hpp"
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/fwd.hpp>
 
 static int getCharacterWidth(
         const Image& fontImage,
@@ -42,7 +45,7 @@ Font::Font(const Image& fontImage) : texture{fontImage} {
 TextBatch::TextBatch(const Font& font) : font{font} {}
 
 void TextBatch::drawString(glm::ivec2 position, std::string string) {
-    drawString(2, position, color::white, string);
+    drawString(Font::defaultScale, position, color::white, string);
 }
 
 void TextBatch::drawString(int scale, glm::ivec2 position, glm::vec4 color, std::string string) {
@@ -81,3 +84,15 @@ void TextBatch::draw() {
     gpuMesh.draw();
 }
 
+void TextBatch::drawHighlighted(ShaderProgram& shader, int scale) {
+    GPUMesh gpuMesh = mesh.upload();
+
+    shader.setUniformVec4("color", glm::vec4{0.f, 0.f, 0.f, 0.5f});
+    glm::vec3 offset = glm::vec3{static_cast<float>(scale), static_cast<float>(-scale), 0.f};
+    shader.setUniformMat4("model", glm::translate(glm::mat4{1.f}, offset));
+    gpuMesh.draw();
+
+    shader.setUniformVec4("color", color::white);
+    shader.setUniformMat4("model", glm::mat4{1.f});
+    gpuMesh.draw();
+}

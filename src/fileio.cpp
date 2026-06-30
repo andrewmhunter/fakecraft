@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <string.h>
 
-bool openFile(FILE** file, const char* fileName, const char* mode, TraceLogLevel level) {
+bool openFile(FILE** file, const char* fileName, const char* mode, LogLevel level) {
     *file = fopen(fileName, mode);
     if (*file == NULL) {
         Logger::log(level, std::format("Could not open file '{}' mode '{}'. OS Error {}: {}", fileName, mode, errno, strerror(errno)));
@@ -14,7 +14,7 @@ bool openFile(FILE** file, const char* fileName, const char* mode, TraceLogLevel
 
 FILE* openFileRequired(const char* fileName, const char* mode) {
     FILE* file = NULL;
-    openFile(&file, fileName, mode, LOG_FATAL);
+    openFile(&file, fileName, mode, LogLevel::fatal);
     return file;
 }
 
