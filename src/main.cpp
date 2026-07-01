@@ -187,7 +187,7 @@ void runGame(GLFWwindow* window) {
 
     bool showGui = true;
 
-    glfwSwapInterval(0);
+    glfwSwapInterval(Config::settings->graphics.vsync ? 1 : 0);
 
     double clock = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {

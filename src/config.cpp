@@ -9,6 +9,7 @@ Config::Config(std::filesystem::path filePath) {
     graphics.fastLeaves = ini.getBool("graphics", "fast_leaves", false);
     graphics.renderDistance = ini.getInt("graphics", "render_distance", 7);
     graphics.fov = ini.getFloat("graphics", "fov", 90.f);
+    graphics.vsync = ini.getBool("graphics", "vsync", false);
 
     game.saveChunks = ini.getBool("game", "save_chunks", true);
     game.loadChunks = ini.getBool("game", "load_chunks", true);

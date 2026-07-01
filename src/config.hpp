@@ -23,6 +23,7 @@ public:
         bool fastLeaves;
         int renderDistance;
         float fov;
+        bool vsync;
     } graphics;
 
     struct {
