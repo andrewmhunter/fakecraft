@@ -44,7 +44,7 @@ private:
             return;
         }
 
-        std::println("{} {}:{}: {}\x1b[0m: {}", location.function_name(), location.file_name(), location.line(), levelText, message);
+        std::println("[{}\x1b[0m] {}:{}: {}", levelText, location.file_name(), location.line(), message);
     }
 
 public:
