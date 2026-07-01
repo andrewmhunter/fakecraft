@@ -4,6 +4,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <stb_image_write.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -175,6 +176,35 @@ void toggleFullscreen(GLFWwindow* window) {
     isFullscreen = !isFullscreen;
 }
 
+void saveScreenshot(void) {
+    // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
+
+    std::time_t currentTime;
+    std::tm* local;
+    std::time(&currentTime);
+    local = std::localtime(&currentTime);
+    char fileName[64];
+    std::strftime(fileName, sizeof(fileName) - 1, "screenshots/screenshot%FT%T.png", local);
+    fileName[sizeof(fileName) - 1] = '\0';
+
+    char* image = new char[3 * windowWidth * windowHeight];
+    glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, image);
+    // glReadPixels starts from the bottom left corner, stbt_write_png starts at the top left
+    // so the image must be vertically flipped or it will save upside down
+    for (int row = 0; row < windowHeight / 2; ++row) {
+        for (int column = 0; column < windowWidth * 3; ++column) {
+            std::swap(image[row * windowWidth * 3 + column], image[(windowHeight - row - 1) * windowWidth * 3 + column]);
+        }
+    }
+    if (stbi_write_png(fileName, windowWidth, windowHeight, 3, image, 3 * windowWidth)) {
+        Logger::info(std::format("Saved screenshot {}", fileName));
+    } else {
+        Logger::error(std::format("Failed to save screenshot {}", fileName));
+    }
+    delete[] image;
+
+}
+
 void runGame(GLFWwindow* window) {
     initMeshes();
 
@@ -241,7 +271,7 @@ void runGame(GLFWwindow* window) {
         }
 
         if (keyPressed(GLFW_KEY_F2)) {
-            //saveScreenshot();
+            saveScreenshot();
         }
 
         if (keyPressed(GLFW_KEY_F1)) {

@@ -28,9 +28,6 @@ struct std::formatter<glm::vec<Length, T>> : std::formatter<T> {
     }
 };
 
-
-void saveScreenshot(void);
-
 // Random numbers
 
 void randomizeSeed();

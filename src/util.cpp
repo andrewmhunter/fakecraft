@@ -5,27 +5,8 @@
 #include <ranges>
 #include <GLFW/glfw3.h>
 #include "util.hpp"
-#include "logger.hpp"
+#include "stb_image_write.h"
 
-void saveScreenshot(void) {
-    // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
-
-    std::time_t currentTime;
-    std::tm* local;
-    std::time(&currentTime);
-    local = std::localtime(&currentTime);
-    char fileName[64];
-    std::strftime(fileName, sizeof(fileName) - 1, "screenshot%FT%T.png", local);
-    fileName[sizeof(fileName) - 1] = '\0';
-    // TODO:
-    //TakeScreenshot(fileName);
-
-    char finalFileName[128];
-    std::snprintf(finalFileName, sizeof(finalFileName) - 1, "screenshots/%s", fileName);
-    std::rename(fileName, finalFileName);
-
-    Logger::info(std::format("Saved screenshot {}", finalFileName));
-}
 
 void randomizeSeed() {
     std::srand(std::time(NULL));
