@@ -1,4 +1,3 @@
-#include <map>
 #include <format>
 #include <string>
 
@@ -57,70 +56,7 @@ void errorCallbackGlfw(int error, const char* description) {
     Logger::error(std::format("GLFW Error {}: {}", error, description));
 }
 
-void checkOpenglErrors() {
-    std::map<GLenum, std::string> openglErrors{
-        {GL_INVALID_ENUM,                   "GL_INVALID_ENUM"},
-        {GL_INVALID_VALUE,                  "GL_INVALID_VALUE"},
-        {GL_INVALID_OPERATION,              "GL_INVALID_OPERATION"},
-        {GL_STACK_OVERFLOW,                 "GL_STACK_OVERFLOW"},
-        {GL_STACK_UNDERFLOW,                "GL_STACK_UNDERFLOW"},
-        {GL_OUT_OF_MEMORY,                  "GL_OUT_OF_MEMORY"},
-        {GL_INVALID_FRAMEBUFFER_OPERATION,  "GL_INVALID_FRAMEBUFFER_OPERATION"},
-    };
 
-    GLenum errorCode = 0;
-    while ((errorCode = glGetError()) != GL_NO_ERROR) {
-        Logger::error(std::format("OpenGL Error: {}", openglErrors[errorCode]));
-    }
-}
-
-// From learnopengl
-void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
-        GLenum severity, GLsizei length, const char *message, const void *userParam
-) {
-    (void)length;
-    (void)userParam;
-
-    static const std::map<GLenum, std::string_view> sources {
-        {GL_DEBUG_SOURCE_API,             "API"},
-        {GL_DEBUG_SOURCE_WINDOW_SYSTEM,   "Window System"},
-        {GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader Compiler"},
-        {GL_DEBUG_SOURCE_THIRD_PARTY,     "Third Party"},
-        {GL_DEBUG_SOURCE_APPLICATION,     "Application"},
-        {GL_DEBUG_SOURCE_OTHER,           "Other"},
-    };
-
-    static const std::map<GLenum, std::string_view> types {
-        {GL_DEBUG_TYPE_ERROR,               "Error"},
-        {GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated Behaviour"},
-        {GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR,  "Undefined Behaviour"},
-        {GL_DEBUG_TYPE_PORTABILITY,         "Portability"},
-        {GL_DEBUG_TYPE_PERFORMANCE,         "Performance"},
-        {GL_DEBUG_TYPE_MARKER,              "Marker"},
-        {GL_DEBUG_TYPE_PUSH_GROUP,          "Push Group"},
-        {GL_DEBUG_TYPE_POP_GROUP,           "Pop Group"},
-        {GL_DEBUG_TYPE_OTHER,               "Other"},
-    };
-
-    static const std::map<GLenum, LogLevel> severities {
-        {GL_DEBUG_SEVERITY_HIGH,         LogLevel::fatal},
-        {GL_DEBUG_SEVERITY_MEDIUM,       LogLevel::error},
-        {GL_DEBUG_SEVERITY_LOW,          LogLevel::warning},
-        {GL_DEBUG_SEVERITY_NOTIFICATION, LogLevel::info},
-    };
-
-    // ignore non-significant error/warning codes
-    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) {
-        return;
-    }
-
-    std::string text = std::format(
-        "OpenGL({}), source: {}, type: {}: {}",
-        id, sources.at(source), types.at(type), message
-    );
-
-    Logger::log(severities.at(severity), text);
-}
 
 int windowWidth = 800;
 int windowHeight = 600;
@@ -450,9 +386,6 @@ void runGame(GLFWwindow* window) {
             glEnable(GL_DEPTH_TEST);
         }
 
-
-        checkOpenglErrors();
-
         glfwSwapBuffers(window);
 
         inputStatePrepare();
@@ -491,16 +424,7 @@ int main() {
         Logger::fatal("Failed to initialize GLAD");
     }
 
-    int glFlags = 0;
-    glGetIntegerv(GL_CONTEXT_FLAGS, &glFlags);
-    if (glFlags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(openglDebugCallback, nullptr);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
-    } else {
-        Logger::warning("No debug context");
-    }
+    initializeOpenGLDebugContext();
 
     runGame(window);
     

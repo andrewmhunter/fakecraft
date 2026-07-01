@@ -293,6 +293,7 @@ extern std::optional<GPUMesh> cubeMesh;
 extern std::optional<GPUMesh> rectangleMesh;
 extern std::optional<GPUMesh> cubeMeshWires;
 
+void initializeOpenGLDebugContext();
 
 #endif
 

@@ -476,3 +476,66 @@ void drawRectangle(ShaderProgram& shader, glm::vec2 position, glm::vec2 size) {
     shader.setUniformMat4("model", transform);
     rectangleMesh->draw();
 }
+
+
+// From learnopengl
+static void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
+        GLenum severity, GLsizei length, const char *message, const void *userParam
+) {
+    (void)length;
+    (void)userParam;
+
+    static const std::map<GLenum, std::string_view> sources {
+        {GL_DEBUG_SOURCE_API,             "API"},
+        {GL_DEBUG_SOURCE_WINDOW_SYSTEM,   "Window System"},
+        {GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader Compiler"},
+        {GL_DEBUG_SOURCE_THIRD_PARTY,     "Third Party"},
+        {GL_DEBUG_SOURCE_APPLICATION,     "Application"},
+        {GL_DEBUG_SOURCE_OTHER,           "Other"},
+    };
+
+    static const std::map<GLenum, std::string_view> types {
+        {GL_DEBUG_TYPE_ERROR,               "Error"},
+        {GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated Behaviour"},
+        {GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR,  "Undefined Behaviour"},
+        {GL_DEBUG_TYPE_PORTABILITY,         "Portability"},
+        {GL_DEBUG_TYPE_PERFORMANCE,         "Performance"},
+        {GL_DEBUG_TYPE_MARKER,              "Marker"},
+        {GL_DEBUG_TYPE_PUSH_GROUP,          "Push Group"},
+        {GL_DEBUG_TYPE_POP_GROUP,           "Pop Group"},
+        {GL_DEBUG_TYPE_OTHER,               "Other"},
+    };
+
+    static const std::map<GLenum, LogLevel> severities {
+        {GL_DEBUG_SEVERITY_HIGH,         LogLevel::fatal},
+        {GL_DEBUG_SEVERITY_MEDIUM,       LogLevel::error},
+        {GL_DEBUG_SEVERITY_LOW,          LogLevel::warning},
+        {GL_DEBUG_SEVERITY_NOTIFICATION, LogLevel::info},
+    };
+
+    // ignore non-significant error/warning codes
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) {
+        return;
+    }
+
+    std::string text = std::format(
+        "OpenGL({}), source: {}, type: {}: {}",
+        id, sources.at(source), types.at(type), message
+    );
+
+    Logger::log(severities.at(severity), text);
+}
+
+void initializeOpenGLDebugContext() {
+    int glFlags = 0;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &glFlags);
+    if (glFlags & GL_CONTEXT_FLAG_DEBUG_BIT) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(openglDebugCallback, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
+        Logger::debug("OpenGL debug context initialized");
+    } else {
+        Logger::warning("No debug context");
+    }
+}
