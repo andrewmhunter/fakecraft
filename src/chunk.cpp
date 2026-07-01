@@ -29,7 +29,17 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
 #ifdef USE_IGNORED
     memset(ignored, 0xff, sizeof(ignored));
 #endif
+}
 
+Chunk::~Chunk() {
+    if (loaded) {
+        unload();
+    }
+}
+
+Chunk::Chunk() {}
+
+void Chunk::generateOrLoad() {
     if (loadChunk(this)) {
         Logger::trace(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
         return;
@@ -39,16 +49,6 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
     placeFeatures(this);
 
     Logger::trace(std::format("Chunk {}, {} generated", coords.x, coords.z));
-}
-
-Chunk::~Chunk() {
-    if (loaded) {
-        unload();
-    }
-}
-
-Chunk::Chunk() {
-    
 }
 
 void Chunk::unload() {

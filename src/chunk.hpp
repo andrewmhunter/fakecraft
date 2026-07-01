@@ -121,6 +121,8 @@ public:
         return blocks[local.x][local.y][local.z];
     }
 
+    void generateOrLoad();
+
     void unload();
     void tryPlaceBlock(glm::ivec3 local, Block block);
     void tryPlaceBlock(int x, int y, int z, Block block);

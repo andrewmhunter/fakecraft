@@ -8,9 +8,6 @@
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 256
 
-#define DIRT_LAYER 2
-#define SURFACE_OFFSET 73
-#define OCEAN_LEVEL 60
 
 #define PLAYER_EYE 1.62f
 

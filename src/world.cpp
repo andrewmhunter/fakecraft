@@ -1,3 +1,4 @@
+#include <future>
 #include <glm/fwd.hpp>
 #include <memory>
 #include "world.hpp"
@@ -20,25 +21,15 @@ World::World()
 {
     glm::vec3 playerPosition{
         0.f,
-        SURFACE_OFFSET + 10.f, // worldGetChunk(&world, point(0, 0, 0))->surfaceHeight[0][0] + PLAYER_EYE + 2.f,
+        70.f + 10.f,
         0.f
     };
 
-    player = &spawnEntity<Player>(playerPosition); // spawnEntity(world, ENTITY_PLAYER, playerPosition, 0.6f, 1.8f);
+    player = &spawnEntity<Player>(playerPosition);
 
     if (loadWorld(this)) {
         return;
     }
-
-    /*const int renderDistance = 1;
-
-    for (int x = -renderDistance; x <= renderDistance; ++x) {
-        for (int z = -renderDistance; z <= renderDistance; ++z) {
-            Point point = {x, 0, z};
-
-            chunkInit(world, point);
-        }
-    }*/
 
     Logger::info(std::format("World seed: {}", seed));
 }
@@ -67,10 +58,12 @@ void World::update(float deltaTime) {
     }
 
     if (player) {
-        int maxChunkLoads = 2;
+        int maxChunkLoads = 5;
 
         glm::ivec3 chunkOffset{0};
         CircleIterator offsetIterator = circleIteratorInit(renderDistance);
+
+        std::vector<std::future<void>> asyncGenerators{};
 
         do {
             glm::ivec3 chunkCoord = chunkOffset + worldToChunkV(player->position);
@@ -93,7 +86,15 @@ void World::update(float deltaTime) {
             
             std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(this, chunkCoord);
             chunks[chunkCoord] = std::move(newChunk);
+
+            asyncGenerators.push_back(std::async([this, chunkCoord](){
+                this->chunks[chunkCoord]->generateOrLoad();
+            }));
         } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
+
+        for (auto& handle : asyncGenerators) {
+            handle.get();
+        }
     }
 
     std::vector<Chunk*> toUnload{};
@@ -150,8 +151,14 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
             continue;
         }
         chunk->draw(terrainShader);
-        //chunk->drawTranslucent(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
+    
+    entityShader.use();
+    for (auto& entity : entities) {
+        entity->draw(entityShader);
+    }
+
+    terrainShader.use();
 
     glDisable(GL_CULL_FACE);
     chunkOffset = glm::ivec3{0};
@@ -166,12 +173,6 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
         chunk->drawTranslucent(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
     glEnable(GL_CULL_FACE);
-
-
-    entityShader.use();
-    for (auto& entity : entities) {
-        entity->draw(entityShader);
-    }
 }
 
 Block World::getBlock(glm::ivec3 worldPoint) const {
@@ -318,8 +319,6 @@ bool iterateCircleIterator(CircleIterator* state, glm::ivec3* pointOut) {
     point = point + offsetColumn;
 
     *pointOut = point;
-
-    //fprintf(stderr, "% d % d\n", point.x, point.z);
 
     return true;
 }

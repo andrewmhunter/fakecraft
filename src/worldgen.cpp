@@ -6,6 +6,10 @@
 #include "worldgen.hpp"
 #include "logger.hpp"
 
+#define DIRT_LAYER 2
+#define SURFACE_OFFSET 65
+#define OCEAN_LEVEL 60
+
 Hash featureSeed(Hash seed, FeatureId feature) {
     return hashChar(seed, feature);
 }
@@ -113,9 +117,9 @@ void generateTerrain(Chunk* chunk) {
             biome *= 255.f;
 
             if (!Config::settings->world.superflat) {
-                float scale = 0.001f;
-                float stretch = 128.f;
-                int octaves = 12;
+                float scale = 0.004f;
+                float stretch = 32.f;
+                int octaves = 15;
                 float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, 1.f, 2.f, 0.5f, octaves);
                 surface = noise * stretch + SURFACE_OFFSET;
             }
@@ -141,7 +145,7 @@ void generateTerrain(Chunk* chunk) {
             for (int y = 1; y <= surface; ++y) {
                 if (Config::settings->world.generateCaves) {
                     float caveThreshold = -0.5f;
-                    float caveScale = 0.025;
+                    float caveScale = 0.05;
                     float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale, wx * caveScale, 2.f, 0.5f, 4);
 
                     if (caveNoise < caveThreshold) {
