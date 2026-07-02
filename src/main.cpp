@@ -315,19 +315,17 @@ void runGame(GLFWwindow* window) {
         glm::vec4 inversionColor = color::fromRGB(0xc8c8c8);
 
         if (showGui) {
+            simpleShader.use();
             if (rayCast.collided) {
                 blendModeInvert();
 
-                simpleShader.use();
                 simpleShader.setUniformVec4("color", inversionColor);
                 drawThickWireCube(simpleShader, cubePos, 0.02f);
-                //drawCube(simpleShader, cubePos, glm::vec3{1.05f});
 
                 blendModeNormal();
             }
 
             if (world.showChunkBorders) {
-                //DrawLine3D(Vector3Zero(), (Vector3){0, CHUNK_HEIGHT, 0}, BLUE);
                 simpleShader.setUniformVec4("color", color::fromRGBA(0xffffff80));
                 glDisable(GL_CULL_FACE);
                 glm::ivec3 chunkPosition = worldToChunkV(player->position);
