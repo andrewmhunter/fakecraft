@@ -219,7 +219,7 @@ GLint ShaderProgram::uniformLocation(const std::string& name) {
 
     GLint location = glGetUniformLocation(programId.object, name.c_str());
     if (location == -1) {
-        Logger::error(std::format("Uniform location of \"{}\" not found", name));
+        Logger::warning(std::format("Uniform location of \"{}\" not found", name));
     }
     uniformCache[name] = location;
     return location;
