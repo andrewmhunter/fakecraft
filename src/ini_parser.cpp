@@ -6,6 +6,7 @@
 #include <functional>
 #include <optional>
 #include <source_location>
+#include <stdexcept>
 #include <string>
 
 void IniFile::iniParseError(int lineNumber, std::string_view message, std::source_location location) {
@@ -97,9 +98,21 @@ const std::string& IniFile::getString(std::string_view section, std::string_view
 }
 
 std::optional<int> IniFile::getInt(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
-    return getString(section, key, requirement, location).and_then([](auto str) {
+    std::optional<std::string> value = getString(section, key, requirement, location);
+    if (!value.has_value()) {
+        return std::nullopt;
+    }
+    std::string& str = value.value();
+
+    try {
         return std::optional{std::stoi(str)};
-    });
+    } catch (std::invalid_argument& ex) {
+        Logger::error(std::format("In \"{}\" field \"{}.{} = {}\" must be an integer", fileName, section, key, str), location);
+    } catch (std::out_of_range& ex) {
+        Logger::error(std::format("In \"{}\" field \"{}.{} = {}\" is to large or to small", fileName, section, key, str), location);
+    }
+
+    return std::nullopt;
 }
 
 int IniFile::getInt(std::string_view section, std::string_view key, int defaultValue, LogLevel requirement, std::source_location location) const {
@@ -107,17 +120,18 @@ int IniFile::getInt(std::string_view section, std::string_view key, int defaultV
 }
 
 std::optional<bool> IniFile::getBool(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
-    return getString(section, key, requirement, location).and_then([](auto str) {
-        std::string lowered = toLower(str.get());
-        if (lowered == "true") {
-            return std::optional{true};
-        }
-        if (lowered == "false") {
-            return std::optional{false};
-        }
+    std::optional<std::string> value = getString(section, key, requirement, location);
+    
+    std::string lowered = toLower(value.value());
+    if (lowered == "true") {
+        return std::optional{true};
+    }
+    if (lowered == "false") {
+        return std::optional{false};
+    }
 
-        return std::optional<bool>{std::nullopt};
-    });
+    Logger::error(std::format("In \"{}\" field \"{}.{} = {}\" must be 'true' or 'false'", fileName, section, key, value.value()), location);
+    return std::optional<bool>{std::nullopt};
 }
 
 bool IniFile::getBool(std::string_view section, std::string_view key, int defaultValue, LogLevel requirement, std::source_location location) const {
@@ -125,9 +139,21 @@ bool IniFile::getBool(std::string_view section, std::string_view key, int defaul
 }
 
 std::optional<float> IniFile::getFloat(std::string_view section, std::string_view key, LogLevel requirement, std::source_location location) const {
-    return getString(section, key, requirement, location).and_then([](auto str) {
+    std::optional<std::string> value = getString(section, key, requirement, location);
+    if (!value.has_value()) {
+        return std::nullopt;
+    }
+    std::string& str = value.value();
+
+    try {
         return std::optional{std::stof(str)};
-    });
+    } catch (std::invalid_argument& ex) {
+        Logger::error(std::format("In \"{}\" field \"{}.{} = {}\" must be an number", fileName, section, key, str), location);
+    } catch (std::out_of_range& ex) {
+        Logger::error(std::format("In \"{}\" field \"{}.{} = {}\" is to large or to small", fileName, section, key, str), location);
+    }
+
+    return std::nullopt;
 }
 
 float IniFile::getFloat(std::string_view section, std::string_view key, float defaultValue, LogLevel requirement, std::source_location location) const {
