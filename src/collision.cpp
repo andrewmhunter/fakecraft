@@ -1,7 +1,18 @@
 #include "collision.hpp"
 #include "logger.hpp"
+#include <glm/common.hpp>
+#include <glm/fwd.hpp>
+#include <sys/cdefs.h>
+#include <cmath>
 
-#define COLLISION_EPSILON 0.00001
+constexpr float collisionEpsilon = 0.002;
+
+WalkCollision::WalkCollision(glm::ivec3 startBlock, glm::vec3 startPosition)
+    : blockAt{startBlock},
+    blockBefore{startBlock},
+    collisionAt{startPosition},
+    collisionBefore{startPosition}
+{}
 
 // Digital differential analysis, extended to work in 3d
 // https://www.youtube.com/watch?v=NbSee-XM7WA
@@ -12,48 +23,38 @@ WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 directio
     direction = glm::normalize(direction);
 
     glm::vec3 deltaDistance = {
-        sqrtf(1 + squaref(direction.y / direction.x) + squaref(direction.z / direction.x)),
-        sqrtf(1 + squaref(direction.x / direction.y) + squaref(direction.z / direction.y)),
-        sqrtf(1 + squaref(direction.x / direction.z) + squaref(direction.y / direction.z))
+        std::sqrt(1 + squaref(direction.y / direction.x) + squaref(direction.z / direction.x)),
+        std::sqrt(1 + squaref(direction.x / direction.y) + squaref(direction.z / direction.y)),
+        std::sqrt(1 + squaref(direction.x / direction.z) + squaref(direction.y / direction.z))
     };
 
     const glm::ivec3 worldPoint = vector3ToPoint(start);
-    WalkCollision collision = {
-        .blockAt = worldPoint,
-        .blockBefore = worldPoint,
-        .collisionAt = start,
-        .collisionBefore = glm::vec3{},
-        .distance = glm::vec3{},
-        .distanceBefore = glm::vec3{},
-        .length = 0.f,
-        .lengthBefore = 0.f,
-        .collided = false,
-    };
+    WalkCollision collision{worldPoint, start};
 
 
     glm::vec3 sideDistance{0.f};
 
-    glm::ivec3 step = {1, 1, 1};
+    glm::ivec3 step{1};
 
     if (direction.x < 0) {
         step.x = -1;
-        sideDistance.x = (start.x - floor(worldPoint.x)) * deltaDistance.x;
+        sideDistance.x = (start.x - std::floor(worldPoint.x)) * deltaDistance.x;
     } else {
-        sideDistance.x = (floorf(worldPoint.x) - start.x + 1.f) * deltaDistance.x;
+        sideDistance.x = (std::floorf(worldPoint.x) - start.x + 1.f) * deltaDistance.x;
     } 
 
     if (direction.y < 0) {
         step.y = -1;
-        sideDistance.y = (start.y - floor(worldPoint.y)) * deltaDistance.y;
+        sideDistance.y = (start.y - std::floor(worldPoint.y)) * deltaDistance.y;
     } else {
         sideDistance.y = (floorf(worldPoint.y) - start.y + 1.f) * deltaDistance.y;
     } 
 
     if (direction.z < 0) {
         step.z = -1;
-        sideDistance.z = (start.z - floor(worldPoint.z)) * deltaDistance.z;
+        sideDistance.z = (start.z - std::floor(worldPoint.z)) * deltaDistance.z;
     } else {
-        sideDistance.z = (floorf(worldPoint.z) - start.z + 1.f) * deltaDistance.z;
+        sideDistance.z = (std::floorf(worldPoint.z) - start.z + 1.f) * deltaDistance.z;
     }
 
     collision.collided = false;
@@ -82,7 +83,7 @@ WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 directio
         
     }
 
-    collision.lengthBefore = MAX(collision.length - 0.0001f, 0.f);
+    collision.lengthBefore = std::max(collision.length - 0.0001f, 0.f);
     collision.distance = direction * collision.length;
     collision.distanceBefore = direction * collision.lengthBefore;
     collision.collisionAt = start + collision.distance;
@@ -90,220 +91,104 @@ WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 directio
     return collision;
 }
 
-FCBoundingBox genBoundingBox(glm::vec3 position, glm::vec3 bounds) {
+BoundingBox::BoundingBox(glm::vec3 min, glm::vec3 max)
+    : min{min}, max{max}
+{}
+
+BoundingBox genBoundingBox(glm::vec3 position, glm::vec3 bounds) {
     glm::vec3 sides{bounds.x / 2, 0.f, bounds.z / 2.f};
     glm::vec3 min = position - sides;
     sides.y = bounds.y;
     glm::vec3 max = position + sides;
-    return (FCBoundingBox) {.min = min, .max = max};
+    return BoundingBox{min, max};
 }
 
 
 // https://medium.com/@andrebluntindie/3d-aabb-collision-detection-and-resolution-for-voxel-games-5fcbfdb8cdb4
 
-static bool overlapsX(FCBoundingBox boundingBox, glm::vec3 block) {
-    return boundingBox.max.x > block.x && boundingBox.min.x < block.x + 1;
-}
-
-static bool overlapsY(FCBoundingBox boundingBox, glm::vec3 block) {
-    return boundingBox.max.y > block.y && boundingBox.min.y < block.y + 1;
-}
-
-static bool overlapsZ(FCBoundingBox boundingBox, glm::vec3 block) {
-    return boundingBox.max.z > block.z && boundingBox.min.z < block.z + 1;
-}
-
-template<int Axis>
-static bool overlapsAxis(FCBoundingBox boundingBox, glm::vec3 block) {
-    return boundingBox.max[Axis] > block[Axis] && boundingBox.min[Axis] < block[Axis] + 1;
+static constexpr bool overlapsAxis(BoundingBox boundingBox, glm::vec3 block, int axis, float offset = 0.f) {
+    return boundingBox.max[axis] > (block[axis] + offset) && boundingBox.min[axis] < (block[axis] + 1 - offset);
 }
 
 bool isPassable(Block block) {
     return blocks[block]->passability == PASSABLE;
 }
 
-template<int Axis>
-static float aabbResolveAxis(const World* world, FCBoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition) {
-    constexpr int axis1 = (Axis + 1) % 3;
-    constexpr int axis2 = (Axis + 2) % 3;
+static float aabbResolveAxisBlock(const World* world, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {
+    const int axis1 = (axis + 1) % 3;
+    const int axis2 = (axis + 2) % 3;
 
+    // If the block can be walked through we don't
+    // care if the bounding box is colliding
     if (isPassable(world->getBlock(blockPosition))) {
-        return velocity[Axis];
+        return velocity[axis];
     }
 
     glm::vec3 worldVector = glm::vec3{blockPosition};
 
-    FCBoundingBox bb = {
-        .min = boundingBox.min + velocity,
-        .max = boundingBox.max + velocity
+    // The final target bounding box for this moving entity
+    BoundingBox bb{
+        boundingBox.min + velocity,
+        boundingBox.max + velocity
     };
 
-    bool intersects0 = overlapsAxis<Axis>(boundingBox, worldVector);
-    bool intersects1 = overlapsY<axis1>(boundingBox, worldVector);
-    bool intersects2 = overlapsZ<axis2>(boundingBox, worldVector);
+    bool intersects0 = overlapsAxis(boundingBox, worldVector, axis);
+    bool intersects1 = overlapsAxis(boundingBox, worldVector, axis1);
+    bool intersects2 = overlapsAxis(boundingBox, worldVector, axis2);
 
+    // If the entity is already inside a block allow it move around to get out
     if (intersects0 && intersects1 && intersects2) {
-        return velocity[Axis];
+        return velocity[axis];
     }
 
-    bool willIntersect0 = overlapsAxis<Axis>(bb, worldVector);
+    bool willIntersect0 = overlapsAxis(bb, worldVector, axis, -collisionEpsilon);
 
     if (intersects1 && intersects2 && willIntersect0) {
-        if (velocity[Axis] < 0.f && bb.min[Axis] <= worldVector[Axis] + 1.f) {
-            velocity[Axis] = MIN(worldVector[Axis] + 1.f - boundingBox.min[Axis] + COLLISION_EPSILON, 0.f);
-        } else if (velocity[Axis] > 0.f && bb.max[Axis] >= worldVector[Axis]) {
-            velocity[Axis] = MAX(worldVector[Axis] - boundingBox.max[Axis] - COLLISION_EPSILON, 0.f);
+        return 0.f;
+        if (velocity[axis] < 0.f) {
+            velocity[axis] = std::min(worldVector[axis] + 1.f - boundingBox.min[axis] + collisionEpsilon, 0.f);
+        } else {
+            velocity[axis] = std::max(worldVector[axis] - boundingBox.max[axis] - collisionEpsilon, 0.f);
         }
     }
 
-    return velocity[Axis];
+    return velocity[axis];
 }
 
-static float aabbResolveX(const World* world, FCBoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition) {
-    if (isPassable(world->getBlock(blockPosition))) {
-        return velocity.x;
-    }
-
-    glm::vec3 worldVector = glm::vec3{blockPosition};
-
-    FCBoundingBox bb = {
-        .min = boundingBox.min + velocity,
-        .max = boundingBox.max + velocity
-    };
-
-    bool intersectsX = overlapsX(boundingBox, worldVector);
-    bool intersectsY = overlapsY(boundingBox, worldVector);
-    bool intersectsZ = overlapsZ(boundingBox, worldVector);
-
-    if (intersectsX && intersectsY && intersectsZ) {
-        return velocity.x;
-    }
-
-    bool willIntersectX = overlapsX(bb, worldVector);
-
-    if (intersectsY && intersectsZ && willIntersectX) {
-        if (velocity.x < 0.f && bb.min.x <= worldVector.x + 1.f) {
-            velocity.x = MIN(worldVector.x + 1.f - boundingBox.min.x + COLLISION_EPSILON, 0.f);
-        } else if (velocity.x > 0.f && bb.max.x >= worldVector.x) {
-            velocity.x = MAX(worldVector.x - boundingBox.max.x - COLLISION_EPSILON, 0.f);
-        }
-    }
-
-    return velocity.x;
-}
-
-static float aabbResolveY(const World* world, FCBoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition) {
-    if (isPassable(world->getBlock(blockPosition))) {
-        return velocity.y;
-    }
-
-    glm::vec3 worldVector = glm::vec3{blockPosition};
-
-    FCBoundingBox bb = {
-        .min = boundingBox.min + velocity,
-        .max = boundingBox.max + velocity
-    };
-
-    bool intersectsX = overlapsX(boundingBox, worldVector);
-    bool intersectsY = overlapsY(boundingBox, worldVector);
-    bool intersectsZ = overlapsZ(boundingBox, worldVector);
-
-    if (intersectsX && intersectsY && intersectsZ) {
-        return velocity.y;
-    }
-
-    bool willIntersectY = overlapsY(bb, worldVector);
-
-    if (intersectsX && intersectsZ && willIntersectY) {
-        if (velocity.y < 0.f && bb.min.y <= worldVector.y + 1.f) {
-            velocity.y = MIN(worldVector.y + 1.f - boundingBox.min.y + COLLISION_EPSILON, 0.f);
-        } else if (velocity.y > 0.f && bb.max.y >= worldVector.y) {
-            velocity.y = MAX(worldVector.y - boundingBox.max.y - COLLISION_EPSILON, 0.f);
-        }
-    }
-
-    return velocity.y;
-}
-
-static float aabbResolveZ(const World* world, FCBoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition) {
-    if (isPassable(world->getBlock(blockPosition))) {
-        return velocity.z;
-    }
-
-    glm::vec3 worldVector = glm::vec3{blockPosition};
-
-    FCBoundingBox bb = {
-        .min = boundingBox.min + velocity,
-        .max = boundingBox.max + velocity
-    };
-
-    bool intersectsX = overlapsX(boundingBox, worldVector);
-    bool intersectsY = overlapsY(boundingBox, worldVector);
-    bool intersectsZ = overlapsZ(boundingBox, worldVector);
-
-    if (intersectsX && intersectsY && intersectsZ) {
-        return velocity.z;
-    }
-
-    bool willIntersectZ = overlapsZ(bb, worldVector);
-
-    if (intersectsX && intersectsY && willIntersectZ) {
-        if (velocity.z < 0.f && bb.min.z <= worldVector.z + 1.f) {
-            velocity.z = MIN(worldVector.z + 1.f - boundingBox.min.z + COLLISION_EPSILON, 0.f);
-        } else if (velocity.z > 0.f && bb.max.z > worldVector.z) {
-            velocity.z = MAX(worldVector.z - boundingBox.max.z - COLLISION_EPSILON, 0.f);
-        }
-    }
-
-    return velocity.z;
-}
-
-static inline float absMinf(float a, float b) {
-    if (fabs(a) <= fabs(b)) {
+static inline constexpr float absMinf(float a, float b) {
+    if (std::fabs(a) <= std::fabs(b)) {
         return a;
     }
     return b;
 }
 
+static void aabbResolveAxis(const World* world, BoundingBox& boundingBox, glm::vec3& velocity, int axis) {
+    // One is added or subtracted to the positions to round them up using truncate
+    glm::vec3 blockOffset{1 + collisionEpsilon};
+    glm::ivec3 mins = glm::ivec3{glm::trunc(glm::min(boundingBox.min + velocity, boundingBox.min) - blockOffset)};
+    glm::ivec3 maxes = glm::ivec3{glm::trunc(glm::max(boundingBox.max + velocity, boundingBox.max) + blockOffset)};
+
+    for (int x = mins.x; x <= maxes.x; ++x) {
+        for (int y = mins.y; y <= maxes.y; ++y) {
+            for (int z = mins.z; z <= maxes.z; ++z) {
+                // glm::ivec3 blockPosition = vector3ToPoint(position) + glm::ivec3{x, y, z};
+                glm::ivec3 blockPosition{x, y, z};
+                float resolved = aabbResolveAxisBlock(world, boundingBox, velocity, blockPosition, axis);
+                velocity[axis] = absMinf(velocity[axis], resolved);
+            }
+        }
+    }
+
+    boundingBox.min[axis] += velocity[axis];
+    boundingBox.max[axis] += velocity[axis];
+}
+
 glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, glm::vec3 bounds, glm::vec3 velocity) {
-    FCBoundingBox boundingBox = genBoundingBox(position, bounds);
+    BoundingBox boundingBox = genBoundingBox(position, bounds);
 
-    for (int i = -2; i <= 2; ++i) {
-        for (int j = -2; j <= 4; ++j) {
-            for (int k = -2; k <= 2; ++k) {
-                glm::ivec3 blockPosition = vector3ToPoint(position) + glm::ivec3{i, j, k};
-                float resolved = aabbResolveX(world, boundingBox, velocity, blockPosition);
-                velocity.x = absMinf(velocity.x, resolved);
-            }
-        }
-    }
-
-    boundingBox.min.x += velocity.x;
-    boundingBox.max.x += velocity.x;
-
-    for (int i = -2; i <= 2; ++i) {
-        for (int j = -2; j <= 4; ++j) {
-            for (int k = -2; k <= 2; ++k) {
-                glm::ivec3 blockPosition = vector3ToPoint(position) + glm::ivec3{i, j, k};
-                float resolved = aabbResolveY(world, boundingBox, velocity, blockPosition);
-                velocity.y = absMinf(velocity.y, resolved);
-            }
-        }
-    }
-
-    boundingBox.min.y += velocity.y;
-    boundingBox.max.y += velocity.y;
-
-    for (int i = -2; i <= 2; ++i) {
-        for (int j = -2; j <= 4; ++j) {
-            for (int k = -2; k <= 2; ++k) {
-                glm::ivec3 blockPosition = vector3ToPoint(position) + glm::ivec3{i, j, k};
-                float resolved = aabbResolveZ(world, boundingBox, velocity, blockPosition);
-                velocity.z = absMinf(velocity.z, resolved);
-            }
-        }
+    for (int axis = 0; axis < 3; ++axis) {
+        aabbResolveAxis(world, boundingBox, velocity, axis);
     }
 
     return velocity;
 }
-
