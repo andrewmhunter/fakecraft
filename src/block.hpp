@@ -59,7 +59,7 @@ enum class Passability {
 };
 
 struct BlockModel {
-    glm::ivec3 sides[DIRECTION_COUNT];
+    glm::ivec3 sides[directionCount];
 };
 
 struct BlockProperties {

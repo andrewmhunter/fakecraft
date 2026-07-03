@@ -31,7 +31,7 @@ void meshFaceSmart(
     const glm::vec3 rtb = {x + 1.f, y + 1.f, z + 0.f};
     const glm::vec3 rtf = {x + 1.f, y + 1.f, z + 1.f};
 
-    const glm::vec3 vertexOffsets[DIRECTION_COUNT][4] = {
+    const glm::vec3 vertexOffsets[directionCount][4] = {
         {ltf, lbf, rbf, rtf},
         {rtf, rbf, rbb, rtb},
         {rtb, rbb, lbb, ltb},
@@ -52,7 +52,7 @@ void meshFaceSmart(
 void meshAddCube(Mesh& mesh, int x, int y, int z, Block block) {
     const glm::ivec3* sides = getBlock(block).model.sides;
 
-    for (int dir = 0; dir < DIRECTION_COUNT; ++dir) {
+    for (int dir = 0; dir < directionCount; ++dir) {
         meshFaceSmart(mesh, x, y, z, static_cast<Direction>(dir), sides[dir].x, sides[dir].y);
     }
 }

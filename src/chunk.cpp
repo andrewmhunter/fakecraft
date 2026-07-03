@@ -96,7 +96,7 @@ void Chunk::setBlock(glm::ivec3 local, Block block) {
 
     glm::ivec3 worldPoint = localToWorld(coords, local);
 
-    for (int i = 0; i < DIRECTION_COUNT; ++i) {
+    for (int i = 0; i < directionCount; ++i) {
         world->markDirty(worldPoint + directionToPoint(static_cast<Direction>(i)));
     }
 }

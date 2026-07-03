@@ -2,82 +2,130 @@
 #define DIRECTION_HPP
 
 #include <glm/glm.hpp>
+#include "logger.hpp"
 
-enum Direction {
-    DIRECTION_SOUTH,
-    DIRECTION_EAST,
-    DIRECTION_NORTH,
-    DIRECTION_WEST,
-    DIRECTION_UP,
-    DIRECTION_DOWN,
-    DIRECTION_COUNT,
-};
+namespace Dir {
+    enum Direction {
+        south,
+        east,
+        north,
+        west,
+        up,
+        down,
+    };
+}
+
+using Direction = Dir::Direction;
+
+constexpr int directionCount = static_cast<int>(Direction::down) + 1;
 
 #define DIRECTION_CARDINAL_COUNT 4
 #define DIRECTION_FIRST 0
 
+
 static inline glm::ivec3 directionToPoint(Direction direction) {
-    glm::ivec3 points[DIRECTION_COUNT] = {};
-    points[DIRECTION_EAST]  = { 1,  0,  0};
-    points[DIRECTION_WEST]  = {-1,  0,  0};
-    points[DIRECTION_UP]    = { 0,  1,  0};
-    points[DIRECTION_DOWN]  = { 0, -1,  0};
-    points[DIRECTION_NORTH] = { 0,  0,  -1};
-    points[DIRECTION_SOUTH] = { 0,  0, 1};
-    return points[direction];
+    switch (direction) {
+    case Direction::east:
+        return { 1, 0, 0};
+    case Direction::west:
+        return {-1, 0, 0};
+    case Direction::up:
+        return {0, 1, 0};
+    case Direction::down:
+        return {0, -1, 0};
+    case Direction::north:
+        return {0, 0, -1};
+    case Direction::south:
+        return {0, 0, 1};
+    }
 }
 
 static inline glm::ivec2 directionToIvec2(Direction direction) {
-    glm::ivec2 points[DIRECTION_COUNT] = {};
-    points[DIRECTION_EAST]  = { 1,  0};
-    points[DIRECTION_WEST]  = {-1,  0};
-    points[DIRECTION_UP]    = { 0,  0};
-    points[DIRECTION_DOWN]  = { 0,  0};
-    points[DIRECTION_NORTH] = { 0, -1};
-    points[DIRECTION_SOUTH] = { 0,  1};
-    return points[direction];
+    switch (direction) {
+    case Direction::east:
+        return {1, 0};
+    case Direction::west:
+        return {-1, 0};
+    case Direction::up:
+        return {0, 0};
+    case Direction::down:
+        return {0, 0};
+    case Direction::north:
+        return {0, -1};
+    case Direction::south:
+        return {0, 1};
+    }
 }
 
 static inline glm::ivec3 directionToIvec3(Direction direction) {
-    glm::ivec3 points[DIRECTION_COUNT] = {};
-    points[DIRECTION_EAST]  = { 1,  0,  0};
-    points[DIRECTION_WEST]  = {-1,  0,  0};
-    points[DIRECTION_UP]    = { 0,  1,  0};
-    points[DIRECTION_DOWN]  = { 0, -1,  0};
-    points[DIRECTION_NORTH] = { 0,  0,  -1};
-    points[DIRECTION_SOUTH] = { 0,  0, 1};
-    return points[direction];
+    switch (direction) {
+    case Direction::east:
+        return {1, 0, 0};
+    case Direction::west:
+        return {-1, 0, 0};
+    case Direction::up:
+        return {0, 1, 0};
+    case Direction::down:
+        return {0, -1, 0};
+    case Direction::north:
+        return {0, 0, -1};
+    case Direction::south:
+        return {0, 0, 1};
+    }
 }
 
 static inline Direction invertDirection(Direction direction) {
-    Direction inverted[DIRECTION_COUNT] = {};
-    inverted[DIRECTION_UP]    = DIRECTION_DOWN;
-    inverted[DIRECTION_SOUTH] = DIRECTION_NORTH;
-    inverted[DIRECTION_EAST]  = DIRECTION_WEST;
-    inverted[DIRECTION_NORTH] = DIRECTION_SOUTH;
-    inverted[DIRECTION_WEST]  = DIRECTION_EAST;
-    inverted[DIRECTION_DOWN]  = DIRECTION_UP;
-    return inverted[direction];
-}
-
-static inline Direction directionCardinalRightAngle(Direction direction) {
-    Direction right[DIRECTION_COUNT] = {};
-    right[DIRECTION_SOUTH] = DIRECTION_WEST;
-    right[DIRECTION_EAST]  = DIRECTION_SOUTH;
-    right[DIRECTION_NORTH] = DIRECTION_EAST;
-    right[DIRECTION_WEST]  = DIRECTION_NORTH;
-    return right[direction];
+    switch (direction) {
+    case Direction::up:
+        return Direction::down;
+    case Direction::south:
+        return Direction::north;
+    case Direction::east:
+        return Direction::west;
+    case Direction::north:
+        return Direction::south;
+    case Direction::west:
+        return Direction::east;
+    case Direction::down:
+        return Direction::up;
+    }
 }
 
 static inline const char* directionName(Direction direction) {
-    const char* directionNames[DIRECTION_COUNT] = {};
-    directionNames[DIRECTION_UP]    = "up";
-    directionNames[DIRECTION_SOUTH] = "south";
-    directionNames[DIRECTION_EAST]  = "east";
-    directionNames[DIRECTION_NORTH] = "north";
-    directionNames[DIRECTION_WEST]  = "west";
-    directionNames[DIRECTION_DOWN]  = "down";
-    return directionNames[direction];
+    switch (direction) {
+    case Direction::up:
+        return "up";
+    case Direction::south:
+        return "south";
+    case Direction::east:
+        return "east";
+    case Direction::north:
+        return "north";
+    case Direction::west:
+        return "west";
+    case Direction::down:
+        return "down";
+    }
 }
+
+static inline Direction directionCardinalRightAngle(Direction direction) {
+    switch (direction) {
+    case Direction::south:
+        return Direction::west;
+    case Direction::east:
+        return Direction::south;
+    case Direction::north:
+        return Direction::east;
+    case Direction::west:
+        return Direction::north;
+    default:
+        Logger::error(std::format(
+            "Function should only be called with cardinal direction (called with direction {})",
+            directionName(direction)
+        ));
+        return Direction::north;
+    }
+}
+
 
 #endif

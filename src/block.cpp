@@ -6,7 +6,7 @@
 BlockModel blockModelDefault(int texCoordX, int texCoordY) {
     BlockModel model;
     glm::ivec3 coords = {texCoordX, texCoordY, 0};
-    for (int i = 0; i < DIRECTION_COUNT; ++i) {
+    for (int i = 0; i < directionCount; ++i) {
         model.sides[i] = coords;
     }
     return model;
@@ -26,13 +26,13 @@ BlockModel blockModelTable(
     glm::ivec3 sideA = {sideATexCoordX, sideATexCoordY, 0};
     glm::ivec3 sideB = {sideBTexCoordX, sideBTexCoordY, 0};
 
-    model.sides[DIRECTION_NORTH] = sideA;
-    model.sides[DIRECTION_SOUTH] = sideA;
-    model.sides[DIRECTION_EAST] = sideB;
-    model.sides[DIRECTION_WEST] = sideB;
+    model.sides[Direction::north] = sideA;
+    model.sides[Direction::south] = sideA;
+    model.sides[Direction::east] = sideB;
+    model.sides[Direction::west] = sideB;
 
-    model.sides[DIRECTION_UP] = (glm::ivec3){topTexCoordX, topTexCoordY, 0};
-    model.sides[DIRECTION_DOWN] = (glm::ivec3){bottomTexCoordX, bottomTexCoordY, 0};
+    model.sides[Direction::up] = (glm::ivec3){topTexCoordX, topTexCoordY, 0};
+    model.sides[Direction::down] = (glm::ivec3){bottomTexCoordX, bottomTexCoordY, 0};
 
     return model;
 }
