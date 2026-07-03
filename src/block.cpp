@@ -82,38 +82,38 @@ static void regBlock(Block block, const char* name, Solidness solid, Passability
 }
 
 void registerBlocks() {
-    regBlock(Block::air, "air", TRANSPARENT, PASSABLE, blockModelNone());
-    regBlock(Block::barrier, "barrier", SOLID, IMPASSABLE, blockModelNone());
+    regBlock(Block::air, "air", Solidness::transparent, Passability::passable, blockModelNone());
+    regBlock(Block::barrier, "barrier", Solidness::solid, Passability::impassable, blockModelNone());
 
-    regBlock(Block::stone, "stone", SOLID, IMPASSABLE, blockModelDefault(1, 0));
-    regBlock(Block::dirt, "dirt", SOLID, IMPASSABLE, blockModelDefault(2, 0));
-    regBlock(Block::planks, "planks", SOLID, IMPASSABLE, blockModelDefault(4, 0));
-    regBlock(Block::cobblestone, "cobblestone", SOLID, IMPASSABLE, blockModelDefault(0, 1));
-    regBlock(Block::bedrock, "bedrock", SOLID, IMPASSABLE, blockModelDefault(1, 1));
-    regBlock(Block::diamondOre, "diamond_ore", SOLID, IMPASSABLE, blockModelDefault(2, 3));
-    regBlock(Block::obsidian, "obsidian", SOLID, IMPASSABLE, blockModelDefault(5, 2));
-    regBlock(Block::grass, "grass", SOLID, IMPASSABLE, blockModelGrass(3, 0, 0, 0, 2, 0));
-    regBlock(Block::sand, "sand", SOLID, IMPASSABLE, blockModelDefault(2, 1));
-    regBlock(Block::glass, "glass", TRANSPARENT, IMPASSABLE, blockModelDefault(1, 3));
+    regBlock(Block::stone, "stone", Solidness::solid, Passability::impassable, blockModelDefault(1, 0));
+    regBlock(Block::dirt, "dirt", Solidness::solid, Passability::impassable, blockModelDefault(2, 0));
+    regBlock(Block::planks, "planks", Solidness::solid, Passability::impassable, blockModelDefault(4, 0));
+    regBlock(Block::cobblestone, "cobblestone", Solidness::solid, Passability::impassable, blockModelDefault(0, 1));
+    regBlock(Block::bedrock, "bedrock", Solidness::solid, Passability::impassable, blockModelDefault(1, 1));
+    regBlock(Block::diamondOre, "diamond_ore", Solidness::solid, Passability::impassable, blockModelDefault(2, 3));
+    regBlock(Block::obsidian, "obsidian", Solidness::solid, Passability::impassable, blockModelDefault(5, 2));
+    regBlock(Block::grass, "grass", Solidness::solid, Passability::impassable, blockModelGrass(3, 0, 0, 0, 2, 0));
+    regBlock(Block::sand, "sand", Solidness::solid, Passability::impassable, blockModelDefault(2, 1));
+    regBlock(Block::glass, "glass", Solidness::transparent, Passability::impassable, blockModelDefault(1, 3));
 
     if (Config::settings->graphics.fastLeaves) {
-        regBlock(Block::leaves, "leaves", SOLID, IMPASSABLE, blockModelDefault(5, 3));
+        regBlock(Block::leaves, "leaves", Solidness::solid, Passability::impassable, blockModelDefault(5, 3));
     } else {
-        regBlock(Block::leaves, "leaves", TRANSPARENT, IMPASSABLE, blockModelDefault(4, 3));
+        regBlock(Block::leaves, "leaves", Solidness::transparent, Passability::impassable, blockModelDefault(4, 3));
     }
 
-    regBlock(Block::log, "log", SOLID, IMPASSABLE, blockModelLog(4, 1, 5, 1));
-    regBlock(Block::craftingTable, "crafting_table", SOLID, IMPASSABLE, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
-    regBlock(Block::water, "water", TRANSLUCENT, PASSABLE, blockModelDefault(13, 12));
-    regBlock(Block::snow, "snow", SOLID, IMPASSABLE, blockModelDefault(2, 4));
-    regBlock(Block::ice, "ice", TRANSLUCENT, IMPASSABLE, blockModelDefault(3, 4));
-    regBlock(Block::cactus, "cactus", TRANSPARENT, IMPASSABLE, blockModelGrass(6, 4, 5, 4, 7, 4));
-    regBlock(Block::lava, "lava", TRANSPARENT, PASSABLE, blockModelDefault(13, 14));
-    regBlock(Block::snowyGrass, "snowy_grass", SOLID, IMPASSABLE, blockModelGrass(4, 4, 2, 4, 2, 0));
+    regBlock(Block::log, "log", Solidness::solid, Passability::impassable, blockModelLog(4, 1, 5, 1));
+    regBlock(Block::craftingTable, "crafting_table", Solidness::solid, Passability::impassable, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
+    regBlock(Block::water, "water", Solidness::translucent, Passability::passable, blockModelDefault(13, 12));
+    regBlock(Block::snow, "snow", Solidness::solid, Passability::impassable, blockModelDefault(2, 4));
+    regBlock(Block::ice, "ice", Solidness::translucent, Passability::impassable, blockModelDefault(3, 4));
+    regBlock(Block::cactus, "cactus", Solidness::transparent, Passability::impassable, blockModelGrass(6, 4, 5, 4, 7, 4));
+    regBlock(Block::lava, "lava", Solidness::transparent, Passability::passable, blockModelDefault(13, 14));
+    regBlock(Block::snowyGrass, "snowy_grass", Solidness::solid, Passability::impassable, blockModelGrass(4, 4, 2, 4, 2, 0));
 
-    regBlock(Block::cobweb, "cobweb", CROSS, PASSABLE, blockModelDefault(11, 0));
-    regBlock(Block::rose, "rose", CROSS, PASSABLE, blockModelDefault(12, 0));
-    regBlock(Block::dandelion, "dandelion", CROSS, PASSABLE, blockModelDefault(13, 0));
+    regBlock(Block::cobweb, "cobweb", Solidness::cross, Passability::passable, blockModelDefault(11, 0));
+    regBlock(Block::rose, "rose", Solidness::cross, Passability::passable, blockModelDefault(12, 0));
+    regBlock(Block::dandelion, "dandelion", Solidness::cross, Passability::passable, blockModelDefault(13, 0));
 }
 
 void unregisterBlocks() {

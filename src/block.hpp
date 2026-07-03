@@ -14,7 +14,6 @@
 // Block IDs
 enum class Block : char {
     barrier,
-
     air,
     stone,
     dirt,
@@ -47,29 +46,29 @@ constexpr int blockCount = static_cast<int>(Block::blockCount);
 
 
 
-typedef enum {
-    SOLID,
-    TRANSPARENT,
-    TRANSLUCENT,
-    CROSS,
-} Solidness;
+enum class Solidness {
+    solid,
+    transparent,
+    translucent,
+    cross,
+};
 
-typedef enum {
-    PASSABLE,
-    IMPASSABLE,
-} Passability;
+enum class Passability {
+    passable,
+    impassable,
+};
 
-typedef struct {
+struct BlockModel {
     glm::ivec3 sides[DIRECTION_COUNT];
-} BlockModel;
+};
 
-typedef struct {
+struct BlockProperties {
     const char* name;
     Solidness solidness;
     GPUMesh mesh;
     BlockModel model;
     Passability passability;
-} BlockProperties;
+};
 
 
 extern std::optional<BlockProperties> blocks[blockCount];
