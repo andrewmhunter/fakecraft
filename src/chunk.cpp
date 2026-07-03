@@ -69,7 +69,7 @@ void Chunk::unload() {
 }
 
 void Chunk::tryPlaceBlock(glm::ivec3 local, Block block) {
-    if (getBlock(local) != BLOCK_AIR) {
+    if (getBlock(local) != Block::air) {
         return;
     }
 
@@ -113,7 +113,7 @@ void Chunk::markDirty(glm::ivec3 local) {
 
 Block Chunk::getBlock(glm::ivec3 local) const {
     if (!blockInChunk(local)) {
-        return BLOCK_AIR;
+        return Block::air;
     }
     return blocks[local.x][local.y][local.z];
 }
@@ -151,7 +151,7 @@ bool Chunk::verify() const {
 
     ITERATE_CHUNK(x, y, z) {
         Block block = blocks[x][y][z];
-        if (block >= BLOCK_COUNT) {
+        if (static_cast<int>(block) >= blockCount) {
             Logger::error(std::format("Chunk verification failed. Chunk: {}, {}. Block: {}, {}, {}",
                     coords.x, coords.z, x, y, z));
             return false;

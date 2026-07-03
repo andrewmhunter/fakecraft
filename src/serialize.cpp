@@ -78,7 +78,7 @@ void saveChunk(const Chunk* chunk) {
         Block block = chunk->blocks[x][y][z];
         if (block != currentBlock || currentNumber == UINT8_MAX + 1) {
             fputc(currentNumber - 1, file);
-            fputc(currentBlock, file);
+            fputc(static_cast<unsigned char>(currentBlock), file);
             currentNumber = 0;
             currentBlock = block;
         }
@@ -88,7 +88,7 @@ void saveChunk(const Chunk* chunk) {
 
     if (currentNumber != 0) {
         fputc(currentNumber - 1, file);
-        fputc(currentBlock, file);
+        fputc(static_cast<unsigned char>(currentBlock), file);
     }
 
     Logger::assertion(savedCount == blocksSize);
@@ -116,7 +116,7 @@ bool loadChunk(Chunk* chunk) {
     Logger::trace(std::format("Loading chunk: {}, {}", chunk->coords.x, chunk->coords.z));
 
     int currentNumber = 0;
-    Block currentBlock = BLOCK_AIR;
+    Block currentBlock = Block::air;
 
     ITERATE_CHUNK_YXZ(x, y, z) {
         if (currentNumber <= 0) {

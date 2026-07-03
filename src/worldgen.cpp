@@ -22,19 +22,19 @@ int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
 void placeDungeon(World* world, glm::ivec3 worldPoint) {
     Logger::assertion(world);
 
-    world->placeBox(worldPoint, {10, 6, 10}, BLOCK_COBBLESTONE);
-    world->placeBox(worldPoint + 1, {8, 4, 8}, BLOCK_AIR);
+    world->placeBox(worldPoint, {10, 6, 10}, Block::cobblestone);
+    world->placeBox(worldPoint + 1, {8, 4, 8}, Block::air);
 }
 
 static void placeCactus(World* world, glm::ivec3 worldPoint) {
     int cactusHeight = randomRange(1, 4);
     worldPoint += glm::ivec3{0, 1, 0};
-    if (world->getBlock(worldPoint) != BLOCK_AIR) {
+    if (world->getBlock(worldPoint) != Block::air) {
         return;
     }
 
     for (int i = 0; i < cactusHeight; ++i) {
-        world->setBlock(worldPoint + glm::ivec3{0, i, 0}, BLOCK_CACTUS);
+        world->setBlock(worldPoint + glm::ivec3{0, i, 0}, Block::cactus);
     }
 }
 
@@ -44,12 +44,12 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
 
     Block surfaceBlock = world->getBlock(worldPoint);
 
-    if (surfaceBlock == BLOCK_SAND) {
+    if (surfaceBlock == Block::sand) {
         placeCactus(world, worldPoint);
         return;
     }
 
-    if (surfaceBlock != BLOCK_GRASS) {
+    if (surfaceBlock != Block::grass) {
         return;
     }
 
@@ -60,16 +60,16 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
         {1, 0, -1},
     };
 
-    world->setBlock(worldPoint, BLOCK_DIRT);
+    world->setBlock(worldPoint, Block::dirt);
     worldPoint += glm::ivec3{0, 1, 0};
 
     int height = randomRange(5, 7);
-    world->placeBox(worldPoint, {1, height, 1}, BLOCK_LOG);
+    world->placeBox(worldPoint, {1, height, 1}, Block::log);
 
-    //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), BLOCK_LEAVES);
+    //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), Block::leaves);
 
-    world->tryPlaceBox(worldPoint + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, BLOCK_LEAVES);
-    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, BLOCK_LEAVES);
+    world->tryPlaceBox(worldPoint + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, Block::leaves);
+    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, Block::leaves);
 
     for (int i = 0; i < 4; ++i) {
         glm::ivec3 scaledCorner = corners[i] * 2;
@@ -77,19 +77,19 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
             if (!randomChance(1, 2)) {
                 continue;
             }
-            world->tryPlaceBlock(worldPoint + scaledCorner + glm::ivec3{0, j, 0}, BLOCK_LEAVES);
+            world->tryPlaceBlock(worldPoint + scaledCorner + glm::ivec3{0, j, 0}, Block::leaves);
         }
     }
 
-    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, BLOCK_LEAVES);
-    world->tryPlaceBox(worldPoint + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, BLOCK_LEAVES);
+    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, Block::leaves);
+    world->tryPlaceBox(worldPoint + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, Block::leaves);
 
     for (int i = 0; i < 4; ++i) {
         if (!randomChance(1, 2)) {
             continue;
         }
 
-        world->tryPlaceBlock(worldPoint + corners[i] + glm::ivec3{0, height - 1, 0}, BLOCK_LEAVES);
+        world->tryPlaceBlock(worldPoint + corners[i] + glm::ivec3{0, height - 1, 0}, Block::leaves);
     }
 }
 
@@ -100,7 +100,7 @@ void generateTerrain(Chunk* chunk) {
     glm::ivec3 coords = chunk->coords;
 
     ITERATE_CHUNK(x, y, z) {
-        chunk->blocks[x][y][z] = BLOCK_AIR;
+        chunk->blocks[x][y][z] = Block::air;
         chunk->light[x][y][z] = (LightValues){0x0, 0xff};
     }
 
@@ -128,18 +128,18 @@ void generateTerrain(Chunk* chunk) {
 
             chunk->surfaceHeight[x][z] = surface;
 
-            chunk->blocks[x][0][z] = BLOCK_BEDROCK;
+            chunk->blocks[x][0][z] = Block::bedrock;
 
-            Block topLayerBlock = BLOCK_DIRT;
-            Block surfaceBlock = BLOCK_GRASS;
+            Block topLayerBlock = Block::dirt;
+            Block surfaceBlock = Block::grass;
 
             if (biome < 64.0) {
-                surfaceBlock = BLOCK_SNOWY_GRASS;
+                surfaceBlock = Block::snowyGrass;
             }
 
             if (surface < OCEAN_LEVEL + 3 || biome > 192.0) {
-                topLayerBlock = BLOCK_SAND;
-                surfaceBlock = BLOCK_SAND;
+                topLayerBlock = Block::sand;
+                surfaceBlock = Block::sand;
             }
 
             for (int y = 1; y <= surface; ++y) {
@@ -155,7 +155,7 @@ void generateTerrain(Chunk* chunk) {
 
                 Block block = topLayerBlock;
                 if (y < surface - DIRT_LAYER) {
-                    block = BLOCK_STONE;
+                    block = Block::stone;
                 }
 
                 if (y == surface) {
@@ -167,21 +167,21 @@ void generateTerrain(Chunk* chunk) {
             }
 
             for (int y = 11; y >= 0; --y) {
-                if (chunk->blocks[x][y][z] != BLOCK_AIR) {
+                if (chunk->blocks[x][y][z] != Block::air) {
                     continue;
                 }
-                chunk->blocks[x][y][z] = BLOCK_LAVA;
+                chunk->blocks[x][y][z] = Block::lava;
             }
 
             if (surface < OCEAN_LEVEL) {
                 for (int y = OCEAN_LEVEL; y > 0; --y) {
-                    if (chunk->blocks[x][y][z] != BLOCK_AIR) {
+                    if (chunk->blocks[x][y][z] != Block::air) {
                         break;
                     }
 
-                    Block waterBlock = BLOCK_WATER;
+                    Block waterBlock = Block::water;
                     if (y == OCEAN_LEVEL && biome < 64.f) {
-                        waterBlock = BLOCK_ICE;
+                        waterBlock = Block::ice;
                     }
                     chunk->blocks[x][y][z] = waterBlock;
                 }
@@ -227,7 +227,7 @@ void placeFeatures(Chunk* chunk) {
     Hash flowerSeed = featureSeed(chunkSeed, FEATURE_FLOWER_PATCH);
     int flowerCount = seededNumber(flowerSeed, FEATURE_NUMBER, -10, 10);
 
-    Block flowerType = seededNumber(flowerSeed, FEATURE_FLAG, 0, 2) ? BLOCK_ROSE : BLOCK_DANDELION;
+    Block flowerType = seededNumber(flowerSeed, FEATURE_FLAG, 0, 2) ? Block::rose : Block::dandelion;
     Hash flowerIndexSeed = featureSeed(flowerSeed, FEATURE_INDEX);
     for (int i = 0; i < flowerCount; ++i) {
         Hash flowerIndex = hashChar(flowerIndexSeed, i);
@@ -236,7 +236,7 @@ void placeFeatures(Chunk* chunk) {
         int z = seededNumber(flowerIndex, FEATURE_Z, 0, CHUNK_WIDTH);
         int y = chunk->surfaceHeight[x][z];
 
-        if (chunk->getBlock(glm::ivec3{x, y, z}) == BLOCK_GRASS) {
+        if (chunk->getBlock(glm::ivec3{x, y, z}) == Block::grass) {
             chunk->tryPlaceBlock(x, y + 1, z, flowerType);
         }
     }

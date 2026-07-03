@@ -60,7 +60,7 @@ WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 directio
     collision.collided = false;
 
     while (collision.length < maxLength) {
-        if (world->getBlock(collision.blockAt) != BLOCK_AIR) {
+        if (world->getBlock(collision.blockAt) != Block::air) {
             collision.collided = true;
             break;
         }
@@ -110,8 +110,8 @@ static constexpr bool overlapsAxis(BoundingBox boundingBox, glm::vec3 block, int
     return boundingBox.max[axis] > (block[axis] + offset) && boundingBox.min[axis] < (block[axis] + 1 - offset);
 }
 
-bool isPassable(Block block) {
-    return blocks[block]->passability == PASSABLE;
+static bool isPassable(Block block) {
+    return getBlock(block).passability == PASSABLE;
 }
 
 static float aabbResolveAxisBlock(const World* world, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {

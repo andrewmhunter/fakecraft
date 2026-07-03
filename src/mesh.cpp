@@ -50,7 +50,7 @@ void meshFaceSmart(
 }
 
 void meshAddCube(Mesh& mesh, int x, int y, int z, Block block) {
-    const glm::ivec3* sides = blocks[block]->model.sides;
+    const glm::ivec3* sides = getBlock(block).model.sides;
 
     for (int dir = 0; dir < DIRECTION_COUNT; ++dir) {
         meshFaceSmart(mesh, x, y, z, static_cast<Direction>(dir), sides[dir].x, sides[dir].y);

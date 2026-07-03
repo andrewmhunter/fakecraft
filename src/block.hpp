@@ -12,36 +12,40 @@
 // culled.
 
 // Block IDs
-typedef enum : char {
-    BLOCK_BARRIER,
+enum class Block : char {
+    barrier,
 
-    BLOCK_AIR,
-    BLOCK_STONE,
-    BLOCK_DIRT,
-    BLOCK_PLANKS,
-    BLOCK_COBBLESTONE,
-    BLOCK_BEDROCK,
-    BLOCK_DIAMOND_ORE,
-    BLOCK_OBSIDIAN,
-    BLOCK_GLASS,
-    BLOCK_GRASS,
-    BLOCK_SAND,
-    BLOCK_LEAVES,
-    BLOCK_LOG,
-    BLOCK_CRAFTING_TABLE,
-    BLOCK_WATER,
-    BLOCK_SNOW,
-    BLOCK_ICE,
-    BLOCK_CACTUS,
-    BLOCK_LAVA,
-    BLOCK_SNOWY_GRASS,
-    BLOCK_COBWEB,
-    BLOCK_ROSE,
-    BLOCK_DANDELION,
+    air,
+    stone,
+    dirt,
+    planks,
+    cobblestone,
+    bedrock,
+    diamondOre,
+    obsidian,
+    glass,
+    grass,
+    sand,
+    leaves,
+    log,
+    craftingTable,
+    water,
+    snow,
+    ice,
+    cactus,
+    lava,
+    snowyGrass,
+    cobweb,
+    rose,
+    dandelion,
 
-    // Must be last
-    BLOCK_COUNT,
-} Block;
+    // must be last
+    blockCount,
+};
+
+constexpr int blockCount = static_cast<int>(Block::blockCount);
+
+
 
 typedef enum {
     SOLID,
@@ -67,7 +71,12 @@ typedef struct {
     Passability passability;
 } BlockProperties;
 
-extern std::optional<BlockProperties> blocks[BLOCK_COUNT];
+
+extern std::optional<BlockProperties> blocks[blockCount];
+
+static inline const BlockProperties& getBlock(Block block) {
+    return *blocks[static_cast<int>(block)];
+}
 
 void registerBlocks();
 void unregisterBlocks();

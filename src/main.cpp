@@ -169,7 +169,7 @@ void runGame(GLFWwindow* window) {
 
     // TODO: Prerender all the block sprites somehow
 
-    int selectedBlock = BLOCK_PLANKS;
+    Block selectedBlock = Block::planks;
 
     registerBlocks();
 
@@ -263,12 +263,12 @@ void runGame(GLFWwindow* window) {
 
 
             if (mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-                world.setBlock(rayCast.blockAt, BLOCK_AIR);
+                world.setBlock(rayCast.blockAt, Block::air);
                 timerResetTime(&player->breakTimer, initialBreakTime);
             }
 
             if (mouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) && timerUpdate(&player->breakTimer, deltaTime)) {
-                world.setBlock(rayCast.blockAt, BLOCK_AIR);
+                world.setBlock(rayCast.blockAt, Block::air);
                 timerResetTime(&player->breakTimer, repeatedBreakTime);
             }
 
@@ -291,14 +291,14 @@ void runGame(GLFWwindow* window) {
         }
 
         if (getMouseScroll() < 0) {
-            selectedBlock -= 1;
+            selectedBlock = static_cast<Block>(static_cast<int>(selectedBlock) + 1);
         }
 
         if (getMouseScroll() > 0) {
-            selectedBlock += 1;
+            selectedBlock = static_cast<Block>(static_cast<int>(selectedBlock) - 1);
         }
 
-        selectedBlock = wrapInt(selectedBlock, 2, BLOCK_COUNT);
+        selectedBlock = static_cast<Block>(wrapInt(static_cast<int>(selectedBlock), 2, blockCount));
 
         world.update(deltaTime);
 
@@ -355,7 +355,7 @@ void runGame(GLFWwindow* window) {
             indicator = glm::rotate(indicator, glm::pi<float>() / 8.f, {1.f, 0.f, 0.f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 4.f, {0.f, 1.f, 0.f});
             terrainShader.setUniformMat4("model", indicator);
-            blocks[selectedBlock]->mesh.draw();
+            getBlock(selectedBlock).mesh.draw();
 
             glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-windowWidth / 2.f, windowHeight / 2.f, 0.f});
             terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView * cornerTransform);

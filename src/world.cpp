@@ -58,7 +58,7 @@ void World::update(float deltaTime) {
     }
 
     if (player) {
-        int maxChunkLoads = 5;
+        int maxChunkLoads = 2;
 
         glm::ivec3 chunkOffset{0};
         CircleIterator offsetIterator = circleIteratorInit(renderDistance);
@@ -177,9 +177,8 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
 
 Block World::getBlock(glm::ivec3 worldPoint) const {
     const Chunk* chunk = getChunk(worldToChunk(worldPoint));
-    if (chunk == NULL) {
-        return BLOCK_BARRIER;
-        //return BLOCK_AIR;
+    if (chunk == nullptr) {
+        return Block::air;
     }
     return chunk->getBlockRaw(worldToLocal(worldPoint));
 }

@@ -64,7 +64,7 @@ BlockModel blockModelNone() {
     return blockModelDefault(0, 14);
 }
 
-std::optional<BlockProperties> blocks[BLOCK_COUNT];
+std::optional<BlockProperties> blocks[blockCount];
 
 static void regBlock(Block block, const char* name, Solidness solid, Passability passability, BlockModel model) {
     Logger::assertion(name);
@@ -77,47 +77,47 @@ static void regBlock(Block block, const char* name, Solidness solid, Passability
         .passability = passability,
     };
 
-    blocks[block] = std::move(props);
-    blocks[block]->mesh = blockMesh(block);
+    blocks[static_cast<int>(block)] = std::move(props);
+    blocks[static_cast<int>(block)]->mesh = blockMesh(block);
 }
 
 void registerBlocks() {
-    regBlock(BLOCK_AIR, "air", TRANSPARENT, PASSABLE, blockModelNone());
-    regBlock(BLOCK_BARRIER, "barrier", SOLID, IMPASSABLE, blockModelNone());
+    regBlock(Block::air, "air", TRANSPARENT, PASSABLE, blockModelNone());
+    regBlock(Block::barrier, "barrier", SOLID, IMPASSABLE, blockModelNone());
 
-    regBlock(BLOCK_STONE, "stone", SOLID, IMPASSABLE, blockModelDefault(1, 0));
-    regBlock(BLOCK_DIRT, "dirt", SOLID, IMPASSABLE, blockModelDefault(2, 0));
-    regBlock(BLOCK_PLANKS, "planks", SOLID, IMPASSABLE, blockModelDefault(4, 0));
-    regBlock(BLOCK_COBBLESTONE, "cobblestone", SOLID, IMPASSABLE, blockModelDefault(0, 1));
-    regBlock(BLOCK_BEDROCK, "bedrock", SOLID, IMPASSABLE, blockModelDefault(1, 1));
-    regBlock(BLOCK_DIAMOND_ORE, "diamond_ore", SOLID, IMPASSABLE, blockModelDefault(2, 3));
-    regBlock(BLOCK_OBSIDIAN, "obsidian", SOLID, IMPASSABLE, blockModelDefault(5, 2));
-    regBlock(BLOCK_GRASS, "grass", SOLID, IMPASSABLE, blockModelGrass(3, 0, 0, 0, 2, 0));
-    regBlock(BLOCK_SAND, "sand", SOLID, IMPASSABLE, blockModelDefault(2, 1));
-    regBlock(BLOCK_GLASS, "glass", TRANSPARENT, IMPASSABLE, blockModelDefault(1, 3));
+    regBlock(Block::stone, "stone", SOLID, IMPASSABLE, blockModelDefault(1, 0));
+    regBlock(Block::dirt, "dirt", SOLID, IMPASSABLE, blockModelDefault(2, 0));
+    regBlock(Block::planks, "planks", SOLID, IMPASSABLE, blockModelDefault(4, 0));
+    regBlock(Block::cobblestone, "cobblestone", SOLID, IMPASSABLE, blockModelDefault(0, 1));
+    regBlock(Block::bedrock, "bedrock", SOLID, IMPASSABLE, blockModelDefault(1, 1));
+    regBlock(Block::diamondOre, "diamond_ore", SOLID, IMPASSABLE, blockModelDefault(2, 3));
+    regBlock(Block::obsidian, "obsidian", SOLID, IMPASSABLE, blockModelDefault(5, 2));
+    regBlock(Block::grass, "grass", SOLID, IMPASSABLE, blockModelGrass(3, 0, 0, 0, 2, 0));
+    regBlock(Block::sand, "sand", SOLID, IMPASSABLE, blockModelDefault(2, 1));
+    regBlock(Block::glass, "glass", TRANSPARENT, IMPASSABLE, blockModelDefault(1, 3));
 
     if (Config::settings->graphics.fastLeaves) {
-        regBlock(BLOCK_LEAVES, "leaves", SOLID, IMPASSABLE, blockModelDefault(5, 3));
+        regBlock(Block::leaves, "leaves", SOLID, IMPASSABLE, blockModelDefault(5, 3));
     } else {
-        regBlock(BLOCK_LEAVES, "leaves", TRANSPARENT, IMPASSABLE, blockModelDefault(4, 3));
+        regBlock(Block::leaves, "leaves", TRANSPARENT, IMPASSABLE, blockModelDefault(4, 3));
     }
 
-    regBlock(BLOCK_LOG, "log", SOLID, IMPASSABLE, blockModelLog(4, 1, 5, 1));
-    regBlock(BLOCK_CRAFTING_TABLE, "crafting_table", SOLID, IMPASSABLE, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
-    regBlock(BLOCK_WATER, "water", TRANSLUCENT, PASSABLE, blockModelDefault(13, 12));
-    regBlock(BLOCK_SNOW, "snow", SOLID, IMPASSABLE, blockModelDefault(2, 4));
-    regBlock(BLOCK_ICE, "ice", TRANSLUCENT, IMPASSABLE, blockModelDefault(3, 4));
-    regBlock(BLOCK_CACTUS, "cactus", TRANSPARENT, IMPASSABLE, blockModelGrass(6, 4, 5, 4, 7, 4));
-    regBlock(BLOCK_LAVA, "lava", TRANSPARENT, PASSABLE, blockModelDefault(13, 14));
-    regBlock(BLOCK_SNOWY_GRASS, "snowy_grass", SOLID, IMPASSABLE, blockModelGrass(4, 4, 2, 4, 2, 0));
+    regBlock(Block::log, "log", SOLID, IMPASSABLE, blockModelLog(4, 1, 5, 1));
+    regBlock(Block::craftingTable, "crafting_table", SOLID, IMPASSABLE, blockModelTable(11, 3, 12, 3, 11, 2, 4, 0));
+    regBlock(Block::water, "water", TRANSLUCENT, PASSABLE, blockModelDefault(13, 12));
+    regBlock(Block::snow, "snow", SOLID, IMPASSABLE, blockModelDefault(2, 4));
+    regBlock(Block::ice, "ice", TRANSLUCENT, IMPASSABLE, blockModelDefault(3, 4));
+    regBlock(Block::cactus, "cactus", TRANSPARENT, IMPASSABLE, blockModelGrass(6, 4, 5, 4, 7, 4));
+    regBlock(Block::lava, "lava", TRANSPARENT, PASSABLE, blockModelDefault(13, 14));
+    regBlock(Block::snowyGrass, "snowy_grass", SOLID, IMPASSABLE, blockModelGrass(4, 4, 2, 4, 2, 0));
 
-    regBlock(BLOCK_COBWEB, "cobweb", CROSS, PASSABLE, blockModelDefault(11, 0));
-    regBlock(BLOCK_ROSE, "rose", CROSS, PASSABLE, blockModelDefault(12, 0));
-    regBlock(BLOCK_DANDELION, "dandelion", CROSS, PASSABLE, blockModelDefault(13, 0));
+    regBlock(Block::cobweb, "cobweb", CROSS, PASSABLE, blockModelDefault(11, 0));
+    regBlock(Block::rose, "rose", CROSS, PASSABLE, blockModelDefault(12, 0));
+    regBlock(Block::dandelion, "dandelion", CROSS, PASSABLE, blockModelDefault(13, 0));
 }
 
 void unregisterBlocks() {
-    for (int i = 0; i < BLOCK_COUNT; ++i) {
+    for (int i = 0; i < blockCount; ++i) {
         blocks[i] = std::nullopt;
     }
 }
