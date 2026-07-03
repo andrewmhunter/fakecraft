@@ -29,6 +29,7 @@ public:
     struct {
         bool saveChunks;
         bool loadChunks;
+        float blockReach;
     } game;
 
     struct {

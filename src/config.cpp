@@ -13,6 +13,7 @@ Config::Config(std::filesystem::path filePath) {
 
     game.saveChunks = ini.getBool("game", "save_chunks", true);
     game.loadChunks = ini.getBool("game", "load_chunks", true);
+    game.blockReach = ini.getFloat("game", "block_reach", 8.f);
 
     world.superflat = ini.getBool("world", "superflat", false);
     world.generateCaves = ini.getBool("world", "generate_caves", false);

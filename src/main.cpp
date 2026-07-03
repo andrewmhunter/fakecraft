@@ -242,7 +242,7 @@ void runGame(GLFWwindow* window) {
 
         glm::vec3 target = camPosition + lookVec;
 
-        WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, 8.f);
+        WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, Config::settings->game.blockReach);
         glm::vec3 cubePos = glm::vec3{rayCast.blockAt} + 0.5f;
 
         glm::mat4 view = glm::lookAt(camPosition, target, up);
