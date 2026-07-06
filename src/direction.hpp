@@ -2,6 +2,8 @@
 #define DIRECTION_HPP
 
 #include <glm/glm.hpp>
+#include <iterator>
+#include <utility>
 #include "logger.hpp"
 
 namespace Dir {
@@ -38,6 +40,7 @@ static inline glm::ivec3 directionToPoint(Direction direction) {
     case Direction::south:
         return {0, 0, 1};
     }
+    Logger::unreachable();
 }
 
 static inline glm::ivec2 directionToIvec2(Direction direction) {
@@ -55,6 +58,7 @@ static inline glm::ivec2 directionToIvec2(Direction direction) {
     case Direction::south:
         return {0, 1};
     }
+    Logger::unreachable();
 }
 
 static inline glm::ivec3 directionToIvec3(Direction direction) {
@@ -72,6 +76,7 @@ static inline glm::ivec3 directionToIvec3(Direction direction) {
     case Direction::south:
         return {0, 0, 1};
     }
+    Logger::unreachable();
 }
 
 static inline Direction invertDirection(Direction direction) {
@@ -89,6 +94,7 @@ static inline Direction invertDirection(Direction direction) {
     case Direction::down:
         return Direction::up;
     }
+    Logger::unreachable();
 }
 
 static inline const char* directionName(Direction direction) {
@@ -106,6 +112,7 @@ static inline const char* directionName(Direction direction) {
     case Direction::down:
         return "down";
     }
+    Logger::unreachable();
 }
 
 static inline Direction directionCardinalRightAngle(Direction direction) {
@@ -125,6 +132,7 @@ static inline Direction directionCardinalRightAngle(Direction direction) {
         ));
         return Direction::north;
     }
+    Logger::unreachable();
 }
 
 

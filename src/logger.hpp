@@ -123,6 +123,11 @@ public:
     static inline void debug_assertion(bool assertion, std::source_location location = std::source_location::current()) {
         Logger::debug_assertion(assertion, "Assertion failed", location);
     }
+
+    [[noreturn]]
+    static inline void unreachable() {
+        Logger::fatal("Unreachable");
+    }
 };
 
 #endif
