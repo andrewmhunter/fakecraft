@@ -283,7 +283,7 @@ void runGame(GLFWwindow* window) {
         }
 
         if (keyPressed(GLFW_KEY_H)) {
-            Entity& mob = world.spawnEntity<Entity>(player->position, glm::vec3{0.6f, 1.8f, 0.6f});// spawnEntity(&world, ENTITY_MOB, player->position, 0.6f, 1.8f);
+            Entity& mob = world.spawnEntity<Human>(player->position);
             mob.velocity = player->velocity * 2.f;
         }
 

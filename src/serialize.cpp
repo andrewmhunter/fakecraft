@@ -192,7 +192,7 @@ bool loadWorld(World* world) {
 
     int ch = 0;
     while ((ch = fgetc(file)) == 1) {
-        Entity& entity = world->spawnEntity<Entity>(glm::vec3{0.f}, glm::vec3{0.6, 1.8, 0.6f});
+        Entity& entity = world->spawnEntity<Human>(glm::vec3{0.f});
         loadEntity(&entity, file);
     }
 

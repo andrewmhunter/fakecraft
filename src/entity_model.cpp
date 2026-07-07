@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
+#include "util.hpp"
 
 Mesh EntityModelPart::generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
     std::span<const TextureCoords<int>, directionCount> texCoords
@@ -82,9 +83,18 @@ HumanModel::HumanModel()
     }
 {}
 
-void HumanModel::draw(ShaderProgram& shader, glm::vec3 position) const {
+void HumanModel::draw(ShaderProgram& shader, glm::vec3 position, float yaw, float pitch, float bodyYaw) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::translate(baseTransform, position);
+
+    glm::mat4 headTransform = baseTransform;
+    headTransform = glm::rotate(baseTransform, yaw, glm::vec3{0.f, 1.f, 0.f});
+    headTransform = glm::translate(headTransform, {0._px, 24._px, 0._px});
+    headTransform = glm::rotate(headTransform, pitch, glm::vec3{1.f, 0.f, 0.f});
+    head.draw(shader, headTransform);
+
+
+    baseTransform = glm::rotate(baseTransform, bodyYaw, glm::vec3{0.f, 1.f, 0.f});
 
     glm::mat4 leg0Transform = glm::translate(baseTransform, {2._px, 12._px, 0._px});
     leg.draw(shader, leg0Transform);
@@ -102,6 +112,4 @@ void HumanModel::draw(ShaderProgram& shader, glm::vec3 position) const {
     arm1Transform = glm::translate(arm1Transform, {-4._px, 24._px, 0._px});
     armRight.draw(shader, arm1Transform);
 
-    glm::mat4 headTransform = glm::translate(baseTransform, {0._px, 24._px, 0._px});
-    head.draw(shader, headTransform);
 }

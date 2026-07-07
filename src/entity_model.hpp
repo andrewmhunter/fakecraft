@@ -2,7 +2,6 @@
 #define ENTITY_MODEL_HPP
 
 #include "graphics.hpp"
-#include "util.hpp"
 #include <glm/fwd.hpp>
 #include <span>
 
@@ -41,7 +40,7 @@ private:
 public:
     HumanModel();
 
-    void draw(ShaderProgram& shader, glm::vec3 position) const;
+    void draw(ShaderProgram& shader, glm::vec3 position, float yaw, float pitch, float bodyYaw) const;
 };
 
 #endif

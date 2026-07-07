@@ -91,5 +91,9 @@ constexpr long double operator ""_px(long double value) {
     return value / 16.;
 }
 
+constexpr long double operator ""_px(unsigned long long value) {
+    return value / 16.;
+}
+
 #endif
 

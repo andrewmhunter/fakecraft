@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 
 #include "entity.hpp"
 #include "collision.hpp"
@@ -13,9 +14,7 @@ Entity::Entity(World* world, glm::vec3 position, glm::vec3 boundingBox)
     : world{world},
     type{EntityType::player},
     position{position},
-    boundingBox{boundingBox},
-    pitch{0.f},
-    yaw{0.f}
+    boundingBox{boundingBox}
 {
 }
 
@@ -23,7 +22,6 @@ Entity::~Entity() {
 
 }
 
-//#define UPDATE_POSITION_FIRST
 
 void Entity::updatePosition(float deltaTime) {
     glm::vec3 avgVelocity = (velocity + velocityOld) * deltaTime * 0.5f;
@@ -53,13 +51,11 @@ void Entity::updatePosition(float deltaTime) {
     velocityOld = velocity;
 }
 
+constexpr float allowedNeckRotation = glm::radians(60.f);
+
 void Entity::update(float deltaTime) {
     // Minecraft entity physics: https://minecraft.wiki/w/Entity#Motion
     // https://gamedev.stackexchange.com/questions/169558/how-can-i-fix-my-velocity-damping-to-work-with-any-delta-frame-time
-
-#ifdef UPDATE_POSITION_FIRST
-    updatePosition(this, deltaTime);
-#endif
 
     float horizontalDrag = 0.546f;
     //float horizontalDrag = 0.91f;
@@ -81,23 +77,50 @@ void Entity::update(float deltaTime) {
     velocity.y = std::lerp(velocity.y, 0.f, verticalDrag);//* deltaTime * 20;
     velocity.z = std::lerp(velocity.z, 0.f, horizontalDrag);
 
-#ifndef UPDATE_POSITION_FIRST
     updatePosition(deltaTime);
-#endif
+
+
+    float yawDifference = yaw - bodyYaw;
+    if (yawDifference < -glm::pi<float>()) {
+        yawDifference += 2 * glm::pi<float>();
+    } else if (yawDifference > glm::pi<float>()) {
+        yawDifference -= 2 * glm::pi<float>();
+    }
+
+    if (yawDifference > allowedNeckRotation) {
+        bodyYaw = yaw - allowedNeckRotation;
+    } else if (yawDifference < -allowedNeckRotation) {
+        bodyYaw = yaw + allowedNeckRotation;
+    }
 }
 
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);
 
 void Entity::draw(ShaderProgram& shader) {
-    ResourceManager::instance().entityModel.human.draw(shader, position);
-    //drawPlayerModel(shader, position);
+    (void)shader;
+}
+
+Human::Human(World* world, glm::vec3 position)
+: Entity{world, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+{}
+
+void Human::update(float deltaTime) {
+    Entity::update(deltaTime);
+    
+    glm::vec3 lookVector = world->player->position - position;
+    yaw = glm::atan(lookVector.x, lookVector.z);
+    pitch = glm::atan(-lookVector.y, glm::length(glm::vec2{lookVector.x, lookVector.z}));
+}
+
+void Human::draw(ShaderProgram& shader) {
+    Entity::draw(shader);
+    ResourceManager::instance().entityModel.human.draw(shader, position, yaw, pitch, bodyYaw);
 }
 
 
 Player::Player(World* world, glm::vec3 position)
     : Entity{world, position, glm::vec3{0.6f, 1.8f, 0.6f}}
-{
-}
+{}
 
 void Player::update(float deltaTime) {
     Entity::update(deltaTime);
@@ -170,44 +193,5 @@ void Player::update(float deltaTime) {
 }
 
 void Player::draw(ShaderProgram& shader) {
-    (void)shader;
-    //Entity::draw(shader);
-}
-
-
-void drawPlayerModel(ShaderProgram& shader, glm::vec3 position) {
-    float unit = 1.f / 16.f;
-    float bodyHeight = 12.f * unit;
-    float limbWidth = 4.f * unit;
-    float bodyWidth = 8.f * unit;
-
-    glm::vec3 bodyPosition = {0.f, bodyHeight + bodyHeight / 2.f, 0.f};
-    bodyPosition = bodyPosition + position;
-
-    shader.setUniformVec4("color", color::red);
-    drawCube(shader, bodyPosition, {bodyWidth, bodyHeight, limbWidth});
-
-    float headSize = 8.f * unit;
-    glm::vec3 headPosition = {0.f, 2.f * bodyHeight + headSize / 2.f, 0.f};
-    headPosition = headPosition + position;
-    shader.setUniformVec4("color", color::blue);
-    drawCube(shader, headPosition, {headSize, headSize, headSize});
-
-    glm::vec3 legPosition = {limbWidth / 2.f, bodyHeight / 2.f, 0.f};
-    glm::vec3 leftLegPosition = legPosition + position;
-    shader.setUniformVec4("color", color::green);
-    drawCube(shader, leftLegPosition, {limbWidth, bodyHeight, limbWidth});
-    legPosition.x *= -1;
-    glm::vec3 rightLegPosition = legPosition + position;
-    shader.setUniformVec4("color", color::magenta);
-    drawCube(shader, rightLegPosition, {limbWidth, bodyHeight, limbWidth});
-
-    glm::vec3 armPosition = {limbWidth / 2.f + bodyWidth / 2.f, bodyHeight + bodyHeight / 2.f, 0.f};
-    glm::vec3 leftArmPosition = armPosition + position;
-    shader.setUniformVec4("color", color::green);
-    drawCube(shader, leftArmPosition, {limbWidth, bodyHeight, limbWidth});
-    armPosition.x *= -1;
-    glm::vec3 rightArmPosition = armPosition + position;
-    shader.setUniformVec4("color", color::magenta);
-    drawCube(shader, rightArmPosition, {limbWidth, bodyHeight, limbWidth});
+    Entity::draw(shader);
 }

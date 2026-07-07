@@ -23,8 +23,9 @@ public:
     glm::vec3 velocity{0.f};
     glm::vec3 velocityOld{0.f};
     glm::vec3 boundingBox;
-    float pitch;
-    float yaw;
+    float pitch{0.f};
+    float yaw{0.f};
+    float bodyYaw{0.f};
     bool onGround{false};
     bool noClip{false};
     bool flying{false};
@@ -38,6 +39,10 @@ public:
 
 class Human : public Entity {
 public:
+    explicit Human(World* world, glm::vec3 position);
+
+    virtual void update(float deltaTime) override;
+    virtual void draw(ShaderProgram& shader) override;
 };
 
 class Player final : public Entity {
