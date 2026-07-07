@@ -2,6 +2,7 @@
 #include "config.hpp"
 #include "graphics.hpp"
 #include "logger.hpp"
+#include "resource_manager.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 
@@ -42,7 +43,7 @@ Font::Font(const Image& fontImage) : texture{fontImage} {
     }
 }
 
-
+TextBatch::TextBatch() : font{ResourceManager::instance().font} {}
 TextBatch::TextBatch(const Font& font) : font{font} {}
 
 void TextBatch::drawString(glm::ivec2 position, std::string string) {

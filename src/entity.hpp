@@ -29,7 +29,7 @@ public:
     bool noClip{false};
     bool flying{false};
     
-    Entity(World* world, glm::vec3 position, glm::vec3 boundingBox);
+    explicit Entity(World* world, glm::vec3 position, glm::vec3 boundingBox);
     virtual ~Entity();
     
     virtual void update(float deltaTime);
@@ -44,7 +44,7 @@ class Player final : public Entity {
 public:
     Timer breakTimer{timerInit(0.25)};
 
-    Player(World* world, glm::vec3 position);
+    explicit Player(World* world, glm::vec3 position);
 
     virtual void update(float deltaTime) override;
     virtual void draw(ShaderProgram& shader) override;

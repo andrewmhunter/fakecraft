@@ -87,5 +87,9 @@ void trimLeft(std::string& input);
 void trimRight(std::string& input);
 void trim(std::string& input);
 
+constexpr long double operator ""_px(long double value) {
+    return value / 16.;
+}
+
 #endif
 

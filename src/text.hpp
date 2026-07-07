@@ -26,6 +26,7 @@ private:
     glm::ivec2 offset{0};
 
 public:
+    TextBatch();
     TextBatch(const Font& font);
 
     void drawString(int scale, glm::ivec2 position, glm::vec4 color, std::string string);

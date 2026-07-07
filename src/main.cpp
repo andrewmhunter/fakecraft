@@ -12,6 +12,7 @@
 
 #include "block.hpp"
 #include "chunk.hpp"
+#include "resource_manager.hpp"
 #include "world.hpp"
 #include "util.hpp"
 #include "collision.hpp"
@@ -112,7 +113,7 @@ void toggleFullscreen(GLFWwindow* window) {
     isFullscreen = !isFullscreen;
 }
 
-void saveScreenshot(void) {
+void saveScreenshot() {
     // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
 
     std::time_t currentTime;
@@ -138,7 +139,6 @@ void saveScreenshot(void) {
         Logger::error(std::format("Failed to save screenshot {}", fileName));
     }
     delete[] image;
-
 }
 
 void runGame(GLFWwindow* window) {
@@ -157,13 +157,10 @@ void runGame(GLFWwindow* window) {
     // Hide the cursor and lock it to the middle of the screen
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+    ResourceManager::loadResources();
+
     makeSaveDirectories();
 
-    ShaderProgram terrainShader = ShaderProgram::loadFiles("assets/terrain.vs.glsl", "assets/terrain.fs.glsl");
-    ShaderProgram simpleShader = ShaderProgram::loadFiles("assets/simple.vs.glsl", "assets/simple.fs.glsl");
-
-    Texture terrainTexture{"assets/resources/alphaTerrain.png"};
-    Font font{"assets/resources/font/default.png"};
 
     glm::vec3 up{0.f, 1.f, 0.f};
 
@@ -304,13 +301,15 @@ void runGame(GLFWwindow* window) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
+        ShaderProgram& simpleShader = ResourceManager::instance().shader.simpleShader;
+
         terrainShader.setUniformMat4("projectionView", cameraProjection * view);
         terrainShader.setUniformVec3("camPos", camPosition);
         simpleShader.setUniformMat4("projectionView", cameraProjection * view);
+        ResourceManager::instance().shader.entityShader.setUniformMat4("projectionView", cameraProjection * view);
 
-        terrainTexture.bind();
-
-        world.draw(terrainShader, simpleShader);
+        world.draw();
 
         glm::vec4 inversionColor = color::fromRGB(0xc8c8c8);
 
@@ -360,6 +359,8 @@ void runGame(GLFWwindow* window) {
             glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-windowWidth / 2.f, windowHeight / 2.f, 0.f});
             terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView * cornerTransform);
             terrainShader.setUniformMat4("model", glm::mat4{1.f});
+
+            Font& font = ResourceManager::instance().font;
             font.texture.bind();
 
             TextBatch text{font};
@@ -392,6 +393,7 @@ void runGame(GLFWwindow* window) {
 
     unloadMeshes();
     unregisterBlocks();
+    ResourceManager::unloadResources();
 }
 
 

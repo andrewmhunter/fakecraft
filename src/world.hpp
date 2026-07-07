@@ -27,7 +27,7 @@ public:
     ~World();
 
     void update(float deltaTime);
-    void draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) const;
+    void draw() const;
     Block getBlock(glm::ivec3 worldPoint) const;
     void setBlock(glm::ivec3 worldPoint, Block block);
 
@@ -47,12 +47,6 @@ public:
         return entityRef;
     }
 };
-
-extern int shaderModelUniform;
-extern int shaderSkylight;
-extern int shaderFogColor;
-extern int shaderFogDistance;
-extern int shaderFogDropoff;
 
 typedef struct {
     int distance;

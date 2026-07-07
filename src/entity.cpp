@@ -6,8 +6,8 @@
 #include "entity.hpp"
 #include "collision.hpp"
 #include "graphics.hpp"
-#include "logger.hpp"
 #include "input.hpp"
+#include "resource_manager.hpp"
 
 Entity::Entity(World* world, glm::vec3 position, glm::vec3 boundingBox)
     : world{world},
@@ -89,11 +89,8 @@ void Entity::update(float deltaTime) {
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);
 
 void Entity::draw(ShaderProgram& shader) {
-    drawPlayerModel(shader, position);
-    /*if (type != ENTITY_PLAYER) {
-
-        //DrawBoundingBox(genBoundingBox(entity->position, entity->boundingBox), WHITE);
-    }*/
+    ResourceManager::instance().entityModel.human.draw(shader, position);
+    //drawPlayerModel(shader, position);
 }
 
 
@@ -177,79 +174,6 @@ void Player::draw(ShaderProgram& shader) {
     //Entity::draw(shader);
 }
 
-class EntityModelState {
-public:
-    float modelYaw;
-    float headYaw;
-    float headPitch;
-
-    float leftArmPitch;
-    float rightArmPitch;
-    float leftLegPitch;
-    float rightLegPitch;
-
-    EntityModelState(
-        float modelYaw,
-        float headYaw,
-        float headPitch,
-        float leftArmPitch,
-        float rightArmPitch,
-        float leftLegPitch,
-        float rightLegPitch
-    );
-};
-
-EntityModelState::EntityModelState(
-    float modelYaw,
-    float headYaw,
-    float headPitch,
-    float leftArmPitch,
-    float rightArmPitch,
-    float leftLegPitch,
-    float rightLegPitch
-) :
-    modelYaw{modelYaw},
-    headYaw{headYaw},
-    headPitch{headPitch},
-    leftArmPitch{leftArmPitch},
-    rightArmPitch{rightArmPitch},
-    leftLegPitch{leftLegPitch},
-    rightLegPitch{rightLegPitch}
-{}
-
-class EntityModelPart {
-public:
-    glm::vec3 size;
-    glm::vec3 origin;
-    glm::vec3 attatchPoint;
-
-    EntityModelPart(glm::vec3 size, glm::vec3 origin, glm::vec3 attatchPoint);
-    glm::mat4 applyTransform(glm::mat4 transform, float yaw) const;
-};
-
-EntityModelPart::EntityModelPart(
-    glm::vec3 size,
-    glm::vec3 origin,
-    glm::vec3 attatchPoint
-) :
-    size{size},
-    origin{origin},
-    attatchPoint{attatchPoint}
-{}
-
-glm::mat4 EntityModelPart::applyTransform(glm::mat4 transform, float yaw) const {
-    transform = glm::translate(transform, attatchPoint);
-    transform = glm::rotate(transform, yaw, {1.f, 0.f, 0.f});
-    transform = glm::scale(transform, size);
-    transform = glm::translate(transform, -origin);
-    return transform;
-}
-
-
-class EntityModel {
-public:
-    void draw(ShaderProgram& shader, EntityModelState state);
-};
 
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position) {
     float unit = 1.f / 16.f;

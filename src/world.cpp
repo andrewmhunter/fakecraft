@@ -4,6 +4,7 @@
 #include "world.hpp"
 #include "entity.hpp"
 #include "graphics.hpp"
+#include "resource_manager.hpp"
 #include "util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
@@ -124,13 +125,14 @@ void World::update(float deltaTime) {
     }
 }
 
-void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) const {
+void World::draw() const {
+    ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
     terrainShader.setUniformFloat("skyLight", skyLight);
     terrainShader.setUniformVec4("fogColor", skyColor);
 
     //float fogDropoff = 4000.f;
     //float fogDistance = 5000.f;
-    
+
     float fogDropoff = (renderDistance - 1) * 16;
     fogDropoff *= fogDropoff;
     float fogDistance = fogDropoff * 4.f / 5.f;
@@ -140,6 +142,7 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
     terrainShader.setUniformFloat("fogDropoff", fogDropoff);
 
     terrainShader.use();
+    ResourceManager::instance().texture.terrain.bind();
 
     glm::ivec3 chunkOffset{0};
     CircleIterator offsetIterator = circleIteratorInit(renderDistance + 1);
@@ -152,13 +155,16 @@ void World::draw(ShaderProgram& terrainShader, ShaderProgram& entityShader) cons
         }
         chunk->draw(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
-    
+
+    ShaderProgram& entityShader = ResourceManager::instance().shader.entityShader;
     entityShader.use();
+    ResourceManager::instance().texture.human.bind();
     for (auto& entity : entities) {
         entity->draw(entityShader);
     }
 
     terrainShader.use();
+    ResourceManager::instance().texture.terrain.bind();
 
     glDisable(GL_CULL_FACE);
     chunkOffset = glm::ivec3{0};
@@ -251,15 +257,6 @@ void World::placeBox(glm::ivec3 start, glm::ivec3 size, Block block) {
         }
     }
 }
-
-
-int shaderModelUniform = 0;
-int shaderSkylight = 0;
-int shaderFogColor = 0;
-int shaderFogDistance = 0;
-int shaderFogDropoff = 0;
-
-
 
 CircleIterator circleIteratorInit(int distance) {
     return (CircleIterator) {

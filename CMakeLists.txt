@@ -38,6 +38,8 @@ target_sources(fakecraft PRIVATE
     src/text.cpp
     src/ini_parser.cpp
     src/config.cpp
+    src/entity_model.cpp
+    src/resource_manager.cpp
 
     external/glad.c
     external/stb_implementation.c
