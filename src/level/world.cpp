@@ -2,14 +2,14 @@
 #include <glm/fwd.hpp>
 #include <memory>
 #include "world.hpp"
-#include "entity.hpp"
-#include "graphics.hpp"
-#include "resource_manager.hpp"
-#include "util.hpp"
+#include "entities/entity.hpp"
+#include "graphics/graphics.hpp"
+#include "engine/resource_manager.hpp"
+#include "util/util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
-#include "serialize.hpp"
-#include "logger.hpp"
+#include "engine/serialize.hpp"
+#include "engine/logger.hpp"
 
 static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
     return (int)floorf(sqrtf(squaref(from.x - to.x) + squaref(from.z - to.z)));

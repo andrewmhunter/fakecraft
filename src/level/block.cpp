@@ -1,7 +1,7 @@
-#include "mesh.hpp"
+#include "graphics/mesh.hpp"
 #include "block.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "engine/config.hpp"
+#include "engine/logger.hpp"
 
 BlockModel blockModelDefault(int texCoordX, int texCoordY) {
     BlockModel model;

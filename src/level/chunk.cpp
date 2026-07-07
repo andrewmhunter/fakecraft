@@ -1,13 +1,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "logger.hpp"
+#include "engine/logger.hpp"
 #include "chunk.hpp"
 #include "world.hpp"
 #include "chunk.hpp"
 #include "worldgen.hpp"
-#include "serialize.hpp"
-#include "logger.hpp"
-#include "graphics.hpp"
+#include "engine/serialize.hpp"
+#include "engine/logger.hpp"
+#include "graphics/graphics.hpp"
 
 
 Chunk::Chunk(World* world, glm::ivec3 coords)

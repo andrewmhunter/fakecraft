@@ -1,8 +1,8 @@
 #include "text.hpp"
-#include "config.hpp"
-#include "graphics.hpp"
-#include "logger.hpp"
-#include "resource_manager.hpp"
+#include "engine/config.hpp"
+#include "graphics/graphics.hpp"
+#include "engine/logger.hpp"
+#include "engine/resource_manager.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 

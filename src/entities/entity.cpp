@@ -4,11 +4,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 
-#include "entity.hpp"
-#include "collision.hpp"
-#include "graphics.hpp"
-#include "input.hpp"
-#include "resource_manager.hpp"
+#include "entities/entity.hpp"
+#include "level/collision.hpp"
+#include "graphics/graphics.hpp"
+#include "engine/input.hpp"
+#include "engine/resource_manager.hpp"
 
 Entity::Entity(World* world, glm::vec3 position, glm::vec3 boundingBox)
     : world{world},

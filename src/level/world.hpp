@@ -7,10 +7,10 @@
 #include <glm/glm.hpp>
 #include <glm/vector_relational.hpp>
 #include "chunk.hpp"
-#include "config.hpp"
-#include "entity.hpp"
-#include "graphics.hpp"
-#include "point.hpp"
+#include "engine/config.hpp"
+#include "entities/entity.hpp"
+#include "graphics/graphics.hpp"
+#include "util/point.hpp"
 
 class World {
 public:

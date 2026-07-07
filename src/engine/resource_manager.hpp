@@ -1,10 +1,10 @@
 #ifndef RESOURCE_MANAGER_HPP
 #define RESOURCE_MANAGER_HPP
 
-#include "entity_model.hpp"
-#include "graphics.hpp"
+#include "entities/entity_model.hpp"
+#include "graphics/graphics.hpp"
 #include "logger.hpp"
-#include "text.hpp"
+#include "graphics/text.hpp"
 #include <memory>
 
 class ResourceManager {

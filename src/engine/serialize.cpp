@@ -3,11 +3,11 @@
 #include <filesystem>
 #include "serialize.hpp"
 #include "config.hpp"
-#include "world.hpp"
-#include "chunk.hpp"
-#include "entity.hpp"
+#include "level/world.hpp"
+#include "level/chunk.hpp"
+#include "entities/entity.hpp"
 #include "logger.hpp"
-#include "fileio.hpp"
+#include "util/fileio.hpp"
 
 void saveFloat(float number, FILE* file) {
     Logger::assertion(fwrite(&number, sizeof(number), 1, file) == 1);

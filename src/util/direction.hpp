@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <iterator>
 #include <utility>
-#include "logger.hpp"
+#include "engine/logger.hpp"
 
 namespace Dir {
     enum Direction {

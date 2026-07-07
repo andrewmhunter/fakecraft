@@ -1,7 +1,7 @@
 #ifndef ENTITY_MODEL_HPP
 #define ENTITY_MODEL_HPP
 
-#include "graphics.hpp"
+#include "graphics/graphics.hpp"
 #include <glm/fwd.hpp>
 #include <span>
 

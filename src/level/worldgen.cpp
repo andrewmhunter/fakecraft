@@ -2,9 +2,9 @@
 #include "block.hpp"
 #include "chunk.hpp"
 #include "world.hpp"
-#include "hash.hpp"
+#include "util/hash.hpp"
 #include "worldgen.hpp"
-#include "logger.hpp"
+#include "engine/logger.hpp"
 
 #define DIRT_LAYER 2
 #define SURFACE_OFFSET 65

@@ -2,7 +2,7 @@
 #define WORLDGEN_HPP
 
 #include "chunk.hpp"
-#include "hash.hpp"
+#include "util/hash.hpp"
 
 typedef enum: char {
     FEATURE_NUMBER,

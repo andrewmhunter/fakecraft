@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 #include <optional>
-#include "direction.hpp"
-#include "graphics.hpp"
+#include "util/direction.hpp"
+#include "graphics/graphics.hpp"
 
 // Barrier must be 0 so the chunk mesher
 // detects blocks outside the loaded chunks as

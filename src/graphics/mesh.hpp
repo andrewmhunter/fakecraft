@@ -1,8 +1,9 @@
 #ifndef MESH_HPP
 #define MESH_HPP
 
-#include "block.hpp"
-#include "graphics.hpp"
+#include "level/block.hpp"
+#include "graphics/graphics.hpp"
+#include "util/direction.hpp"
 
 
 void meshFace(Mesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,

@@ -18,28 +18,28 @@ endif()
 
 target_sources(fakecraft PRIVATE
     src/main.cpp
-    src/mesh.cpp
-    src/block.cpp
-    src/chunk.cpp
-    src/world.cpp
-	src/util.cpp
-    src/worldgen.cpp
-    src/chunk_mesh.cpp
-    src/entity.cpp
-    src/collision.cpp
-	src/serialize.cpp
-    src/logger.cpp
-    src/hash.cpp
-    src/point.cpp
-    src/fileio.cpp
-    src/timer.cpp
-    src/graphics.cpp
-	src/input.cpp
-    src/text.cpp
-    src/ini_parser.cpp
-    src/config.cpp
-    src/entity_model.cpp
-    src/resource_manager.cpp
+    src/graphics/mesh.cpp
+    src/level/block.cpp
+    src/level/chunk.cpp
+    src/level/world.cpp
+	src/util/util.cpp
+    src/level/worldgen.cpp
+    src/level/chunk_mesh.cpp
+    src/entities/entity.cpp
+    src/level/collision.cpp
+	src/engine/serialize.cpp
+    src/engine/logger.cpp
+    src/util/hash.cpp
+    src/util/point.cpp
+    src/util/fileio.cpp
+    src/util/timer.cpp
+    src/graphics/graphics.cpp
+	src/engine/input.cpp
+    src/graphics/text.cpp
+    src/engine/ini_parser.cpp
+    src/engine/config.cpp
+    src/entities/entity_model.cpp
+    src/engine/resource_manager.cpp
 
     external/glad.c
     external/stb_implementation.c
@@ -51,5 +51,6 @@ target_link_libraries(fakecraft PRIVATE
 )
 
 target_include_directories(fakecraft PRIVATE
+    src/
     external/
 )

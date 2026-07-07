@@ -10,18 +10,18 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/fwd.hpp>
 
-#include "block.hpp"
-#include "chunk.hpp"
-#include "resource_manager.hpp"
-#include "world.hpp"
-#include "util.hpp"
-#include "collision.hpp"
-#include "entity.hpp"
-#include "serialize.hpp"
-#include "logger.hpp"
-#include "graphics.hpp"
-#include "input.hpp"
-#include "text.hpp"
+#include "level/block.hpp"
+#include "level/chunk.hpp"
+#include "engine/resource_manager.hpp"
+#include "level/world.hpp"
+#include "util/util.hpp"
+#include "level/collision.hpp"
+#include "entities/entity.hpp"
+#include "engine/serialize.hpp"
+#include "engine/logger.hpp"
+#include "graphics/graphics.hpp"
+#include "engine/input.hpp"
+#include "graphics/text.hpp"
 
 
 void drawThickWireCube(ShaderProgram& shader, glm::vec3 position, float lineWidth) {

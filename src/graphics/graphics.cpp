@@ -11,7 +11,7 @@
 #include <utility>
 #include <array>
 #include <stb_image.h>
-#include "logger.hpp"
+#include "engine/logger.hpp"
 
 
 OpenGLObject::OpenGLObject(OpenGLObjectLifetimeFunction allocFunction, OpenGLObjectLifetimeFunction freeFunction) : freeFunction{freeFunction} {

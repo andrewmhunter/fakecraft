@@ -4,7 +4,7 @@
 #include <format>
 #include <array>
 #include <glm/glm.hpp>
-#include "graphics.hpp"
+#include "graphics/graphics.hpp"
 
 class Font {
 private:

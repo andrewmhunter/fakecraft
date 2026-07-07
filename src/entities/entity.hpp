@@ -2,8 +2,8 @@
 #define ENTITY_HPP
 
 #include <glm/glm.hpp>
-#include "timer.hpp"
-#include "graphics.hpp"
+#include "util/timer.hpp"
+#include "graphics/graphics.hpp"
 
 class World;
 

@@ -2,9 +2,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "block.hpp"
 #include "chunk.hpp"
-#include "mesh.hpp"
+#include "graphics/mesh.hpp"
 #include "chunk_mesh.hpp"
-#include "logger.hpp"
+#include "engine/logger.hpp"
 
 // This relies on initialization of global variables to all 0s.
 const Chunk dummyChunk{};

@@ -3,11 +3,11 @@
 
 #include <glm/glm.hpp>
 #include "block.hpp"
-#include "config.hpp"
-#include "util.hpp"
-#include "point.hpp"
-#include "direction.hpp"
-#include "graphics.hpp"
+#include "engine/config.hpp"
+#include "util/util.hpp"
+#include "util/point.hpp"
+#include "util/direction.hpp"
+#include "graphics/graphics.hpp"
 
 constexpr glm::ivec3 chunkSize{CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH};
 //#define CHUNK_SIZE {CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH}

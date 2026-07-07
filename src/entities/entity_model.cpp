@@ -1,10 +1,10 @@
 #include "entity_model.hpp"
-#include "direction.hpp"
-#include "graphics.hpp"
+#include "util/direction.hpp"
+#include "graphics/graphics.hpp"
 #include <cstddef>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
-#include "util.hpp"
+#include "util/util.hpp"
 
 Mesh EntityModelPart::generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
     std::span<const TextureCoords<int>, directionCount> texCoords

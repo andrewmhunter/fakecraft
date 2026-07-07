@@ -1,5 +1,5 @@
-#include "block.hpp"
-#include "mesh.hpp"
+#include "level/block.hpp"
+#include "graphics/mesh.hpp"
 
 void meshFace(
         Mesh& mesh,
