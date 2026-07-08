@@ -2,6 +2,7 @@
 #define FAKECRAFT_LOGGER_HPP
 
 #include <exception>
+#include <filesystem>
 #include <format>
 #include <source_location>
 #include <string_view>
@@ -44,7 +45,9 @@ private:
             return;
         }
 
-        std::println("[{}\x1b[0m] {}:{}: {}", levelText, location.file_name(), location.line(), message);
+        std::filesystem::path filePath{location.file_name()};
+
+        std::println("[{}\x1b[0m] {}:{}: {}", levelText, filePath.filename().c_str(), location.line(), message);
     }
 
 public:
