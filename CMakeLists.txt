@@ -17,29 +17,35 @@ else()
 endif()
 
 target_sources(fakecraft PRIVATE
-    src/main.cpp
-    src/graphics/mesh.cpp
     src/level/block.cpp
     src/level/chunk.cpp
     src/level/world.cpp
-	src/util/util.cpp
     src/level/worldgen.cpp
-    src/level/chunk_mesh.cpp
-    src/entities/entity.cpp
     src/level/collision.cpp
-	src/engine/serialize.cpp
+    src/level/chunk_mesh.cpp
+
+    src/engine/config.cpp
     src/engine/logger.cpp
+	src/engine/input.cpp
+    src/engine/resource_manager.cpp
+    
+    src/graphics/mesh.cpp
+    src/graphics/graphics.cpp
+    src/graphics/text.cpp
+    
     src/util/hash.cpp
     src/util/point.cpp
     src/util/fileio.cpp
+	src/util/util.cpp
     src/util/timer.cpp
-    src/graphics/graphics.cpp
-	src/engine/input.cpp
-    src/graphics/text.cpp
-    src/engine/ini_parser.cpp
-    src/engine/config.cpp
+    
+    src/entities/entity.cpp
     src/entities/entity_model.cpp
-    src/engine/resource_manager.cpp
+    
+    src/serialization/ini_parser.cpp
+	src/serialization/serialize.cpp
+    
+    src/main.cpp
 
     external/glad.c
     external/stb_implementation.c

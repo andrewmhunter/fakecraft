@@ -5,7 +5,7 @@
 #include "world.hpp"
 #include "chunk.hpp"
 #include "worldgen.hpp"
-#include "engine/serialize.hpp"
+#include "serialization/serialize.hpp"
 #include "engine/logger.hpp"
 #include "graphics/graphics.hpp"
 

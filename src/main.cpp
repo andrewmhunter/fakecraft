@@ -17,7 +17,7 @@
 #include "util/util.hpp"
 #include "level/collision.hpp"
 #include "entities/entity.hpp"
-#include "engine/serialize.hpp"
+#include "serialization/serialize.hpp"
 #include "engine/logger.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/input.hpp"

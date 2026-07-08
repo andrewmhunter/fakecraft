@@ -8,7 +8,7 @@
 #include "util/util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
-#include "engine/serialize.hpp"
+#include "serialization/serialize.hpp"
 #include "engine/logger.hpp"
 
 static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {

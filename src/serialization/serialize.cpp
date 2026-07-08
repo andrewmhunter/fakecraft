@@ -2,11 +2,11 @@
 #include <stdint.h>
 #include <filesystem>
 #include "serialize.hpp"
-#include "config.hpp"
+#include "engine/config.hpp"
 #include "level/world.hpp"
 #include "level/chunk.hpp"
 #include "entities/entity.hpp"
-#include "logger.hpp"
+#include "engine/logger.hpp"
 #include "util/fileio.hpp"
 
 void saveFloat(float number, FILE* file) {

@@ -1,5 +1,5 @@
 #include "config.hpp"
-#include "ini_parser.hpp"
+#include "serialization/ini_parser.hpp"
 
 Config::Config(std::filesystem::path filePath) {
     IniFile ini{filePath};
