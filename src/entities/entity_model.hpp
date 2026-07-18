@@ -26,7 +26,13 @@ public:
 };
 
 class HumanModelState {
+public:
+    float yaw;
+    float bodyYaw;
+    float pitch;
+    float limbRotation;
 
+    explicit HumanModelState(float yaw, float bodyYaw, float pitch, float limbRotation);
 };
 
 class HumanModel {
@@ -38,9 +44,9 @@ private:
     EntityModelPart leg;
 
 public:
-    HumanModel();
+    explicit HumanModel();
 
-    void draw(ShaderProgram& shader, glm::vec3 position, float yaw, float pitch, float bodyYaw) const;
+    void draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const;
 };
 
 #endif

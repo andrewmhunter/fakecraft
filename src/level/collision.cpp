@@ -1,11 +1,29 @@
 #include "collision.hpp"
 #include "engine/logger.hpp"
+#include "util/util.hpp"
+#include "util/point.hpp"
+#include "level/block.hpp"
+#include "level/world.hpp"
 #include <glm/common.hpp>
 #include <glm/fwd.hpp>
 #include <sys/cdefs.h>
 #include <cmath>
 
 constexpr float collisionEpsilon = 0.002;
+
+
+BoundingBox::BoundingBox(glm::vec3 min, glm::vec3 max)
+    : min{min}, max{max}
+{}
+
+BoundingBox genBoundingBox(glm::vec3 position, glm::vec3 bounds) {
+    glm::vec3 sides{bounds.x / 2, 0.f, bounds.z / 2.f};
+    glm::vec3 min = position - sides;
+    sides.y = bounds.y;
+    glm::vec3 max = position + sides;
+    return BoundingBox{min, max};
+}
+
 
 WalkCollision::WalkCollision(glm::ivec3 startBlock, glm::vec3 startPosition)
     : blockAt{startBlock},
@@ -89,18 +107,6 @@ WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 directio
     collision.collisionAt = start + collision.distance;
     collision.collisionBefore = start + collision.distanceBefore;
     return collision;
-}
-
-BoundingBox::BoundingBox(glm::vec3 min, glm::vec3 max)
-    : min{min}, max{max}
-{}
-
-BoundingBox genBoundingBox(glm::vec3 position, glm::vec3 bounds) {
-    glm::vec3 sides{bounds.x / 2, 0.f, bounds.z / 2.f};
-    glm::vec3 min = position - sides;
-    sides.y = bounds.y;
-    glm::vec3 max = position + sides;
-    return BoundingBox{min, max};
 }
 
 

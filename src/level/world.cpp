@@ -5,6 +5,7 @@
 #include "entities/entity.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/resource_manager.hpp"
+#include "level/octree.hpp"
 #include "util/util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
@@ -17,7 +18,8 @@ static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
 
 
 World::World()
-    : seed{Config::settings->world.setSeed.value_or(randomInt(10000))},
+    : currentEntityID{0},
+    seed{Config::settings->world.setSeed.value_or(randomInt(10000))},
     renderDistance{Config::settings->graphics.renderDistance}
 {
     glm::vec3 playerPosition{
@@ -54,8 +56,19 @@ void World::update(float deltaTime) {
     skyLight += lightDirection * deltaTime * 0.1;
     skyLight = 1.f;
 
+    
+    
+    collisionWorld = CollisionWorld{};
     for (auto& entity : entities) {
-        entity->update(deltaTime);
+        collisionWorld.insertEntity(entity.first, entity.second->getBoundingBox());
+    }
+
+    for (auto& entity : entities) {
+        auto collisions = collisionWorld.getCollisions(entity.second->getBoundingBox(), entity.first);
+        entity.second->update(deltaTime);
+        for (EntityID other : collisions) {
+            entity.second->collide(deltaTime, other);
+        }
     }
 
     if (player) {
@@ -160,7 +173,7 @@ void World::draw() const {
     entityShader.use();
     ResourceManager::instance().texture.human.bind();
     for (auto& entity : entities) {
-        entity->draw(entityShader);
+        entity.second->draw(entityShader);
     }
 
     terrainShader.use();

@@ -7,15 +7,19 @@
 #include <glm/glm.hpp>
 #include <glm/vector_relational.hpp>
 #include "chunk.hpp"
-#include "engine/config.hpp"
 #include "entities/entity.hpp"
 #include "graphics/graphics.hpp"
+#include "level/octree.hpp"
 #include "util/point.hpp"
 
 class World {
+private:
+    EntityID currentEntityID;
+    CollisionWorld collisionWorld{};
+
 public:
     std::map<glm::ivec3, std::unique_ptr<Chunk>, CompareIvec3FO> chunks{};
-    std::vector<std::unique_ptr<Entity>> entities{};
+    std::map<EntityID, std::unique_ptr<Entity>> entities{};
     int seed;
     bool showChunkBorders = false;
     int renderDistance;
@@ -41,9 +45,10 @@ public:
 
     template<typename T, typename... Args>
     T& spawnEntity(Args... args) {
-        std::unique_ptr<T> entity = std::make_unique<T>(this, args...);
+        EntityID id = currentEntityID++;
+        std::unique_ptr<T> entity = std::make_unique<T>(this, id, args...);
         T& entityRef = *entity.get();
-        entities.push_back(std::move(entity));
+        entities[id] = std::move(entity);
         return entityRef;
     }
 };

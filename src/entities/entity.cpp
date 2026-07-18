@@ -1,26 +1,44 @@
 #include <cmath>
 
+#include <cstdint>
+#include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 
 #include "entities/entity.hpp"
+#include "entities/entity_model.hpp"
 #include "level/collision.hpp"
+#include "level/world.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/input.hpp"
 #include "engine/resource_manager.hpp"
 
-Entity::Entity(World* world, glm::vec3 position, glm::vec3 boundingBox)
-    : world{world},
+EntityID::EntityID(std::uint64_t id)
+    : id{id}
+{}
+
+EntityID& EntityID::operator++() {
+    ++id;
+    return *this;
+}
+
+EntityID EntityID::operator++(int) {
+    EntityID old = *this;
+    ++*this;
+    return old;
+}
+
+
+Entity::Entity(World* world, EntityID id, glm::vec3 position, glm::vec3 boundingBox)
+    : id{id},
+    world{world},
     type{EntityType::player},
     position{position},
-    boundingBox{boundingBox}
-{
-}
+    size{boundingBox}
+{}
 
-Entity::~Entity() {
-
-}
+Entity::~Entity() {}
 
 
 void Entity::updatePosition(float deltaTime) {
@@ -28,7 +46,7 @@ void Entity::updatePosition(float deltaTime) {
     glm::vec3 baseVelocity = avgVelocity;
 
     if (!noClip) {
-        avgVelocity = aabbResolveCollisions(world, position, boundingBox, avgVelocity);
+        avgVelocity = aabbResolveCollisions(world, position, size, avgVelocity);
     }
 
     position = position + avgVelocity;
@@ -94,32 +112,59 @@ void Entity::update(float deltaTime) {
     }
 }
 
+constexpr float force = 0.2f;
+
+void Entity::collide(float deltaTime, EntityID otherID) {
+    const Entity& other = *world->entities[otherID];
+
+    glm::vec3 pushForce = position - other.position;
+    pushForce.y = 0.f;
+    velocity += pushForce * force * deltaTime;
+}
+
+BoundingBox Entity::getBoundingBox() const {
+    glm::vec3 sides{size.x / 2, 0.f, size.z / 2.f};
+    glm::vec3 min = position - sides;
+    sides.y = size.y;
+    glm::vec3 max = position + sides;
+    return BoundingBox{min, max};
+}
+
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);
 
 void Entity::draw(ShaderProgram& shader) {
     (void)shader;
 }
 
-Human::Human(World* world, glm::vec3 position)
-: Entity{world, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+Human::Human(World* world, EntityID id, glm::vec3 position)
+: Entity{world, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
 {}
 
 void Human::update(float deltaTime) {
     Entity::update(deltaTime);
-    
-    glm::vec3 lookVector = world->player->position - position;
-    yaw = glm::atan(lookVector.x, lookVector.z);
-    pitch = glm::atan(-lookVector.y, glm::length(glm::vec2{lookVector.x, lookVector.z}));
+
+    armRotation += deltaTime;
+
+    if (glm::distance(position, world->player->position) < 15.f) {
+        glm::vec3 lookVector = world->player->position - position;
+        yaw = glm::atan(lookVector.x, lookVector.z);
+        pitch = glm::atan(-lookVector.y, glm::length(glm::vec2{lookVector.x, lookVector.z}));
+
+        velocity += glm::normalize(lookVector) * deltaTime * 0.1f;
+        if (onGround) {
+            velocity.y += 0.5f;
+        }
+    }
 }
 
 void Human::draw(ShaderProgram& shader) {
     Entity::draw(shader);
-    ResourceManager::instance().entityModel.human.draw(shader, position, yaw, pitch, bodyYaw);
+    ResourceManager::instance().entityModel.human.draw(shader, position, HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)});
 }
 
 
-Player::Player(World* world, glm::vec3 position)
-    : Entity{world, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+Player::Player(World* world, EntityID id, glm::vec3 position)
+    : Entity{world, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
 {}
 
 void Player::update(float deltaTime) {

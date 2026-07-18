@@ -23,6 +23,7 @@ target_sources(fakecraft PRIVATE
     src/level/worldgen.cpp
     src/level/collision.cpp
     src/level/chunk_mesh.cpp
+    src/level/octree.cpp
 
     src/engine/config.cpp
     src/engine/logger.cpp
