@@ -163,7 +163,7 @@ void saveWorld(const World* world) {
     saveEntity(world->player, file);
 
     for (const auto& entityPtr : world->entities) {
-        const Entity* entity = entityPtr.get();
+        const Entity* entity = entityPtr.second.get();
         if (dynamic_cast<const Player*>(entity) != nullptr) {
             continue;
         }
