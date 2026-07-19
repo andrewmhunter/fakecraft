@@ -51,6 +51,7 @@ enum class Solidness {
     transparent,
     translucent,
     cross,
+    cactus,
 };
 
 enum class Passability {

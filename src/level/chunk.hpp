@@ -100,9 +100,6 @@ public:
     glm::ivec3 coords;
     std::optional<GPUMesh> mesh;
     std::optional<GPUMesh> translucentMesh;
-#ifdef USE_IGNORED
-    uint16_t ignored[CHUNK_HEIGHT];
-#endif
     bool dirty;
     Chunk* adjacentChunks[DIRECTION_CARDINAL_COUNT];
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];

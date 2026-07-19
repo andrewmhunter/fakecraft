@@ -107,7 +107,7 @@ void registerBlocks() {
     regBlock(Block::water, "water", Solidness::translucent, Passability::passable, blockModelDefault(13, 12));
     regBlock(Block::snow, "snow", Solidness::solid, Passability::impassable, blockModelDefault(2, 4));
     regBlock(Block::ice, "ice", Solidness::translucent, Passability::impassable, blockModelDefault(3, 4));
-    regBlock(Block::cactus, "cactus", Solidness::transparent, Passability::impassable, blockModelGrass(6, 4, 5, 4, 7, 4));
+    regBlock(Block::cactus, "cactus", Solidness::cactus, Passability::impassable, blockModelGrass(6, 4, 5, 4, 7, 4));
     regBlock(Block::lava, "lava", Solidness::transparent, Passability::passable, blockModelDefault(13, 14));
     regBlock(Block::snowyGrass, "snowy_grass", Solidness::solid, Passability::impassable, blockModelGrass(4, 4, 2, 4, 2, 0));
 

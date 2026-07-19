@@ -14,6 +14,6 @@ void meshAddCube(Mesh& mesh, int x, int y, int z, Block block);
 GPUMesh blockMesh(Block block);
 
 void meshCross(Mesh& mesh, int x, int y, int z, int textureX, int textureY);
+void meshCactus(Mesh& mesh, int x, int y, int z, int textureX, int textureY);
 
 #endif
-

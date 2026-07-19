@@ -1,5 +1,9 @@
+#include "graphics/graphics.hpp"
 #include "level/block.hpp"
 #include "graphics/mesh.hpp"
+#include "util/direction.hpp"
+#include "util/util.hpp"
+#include <glm/fwd.hpp>
 
 void meshFace(
         Mesh& mesh,
@@ -43,7 +47,7 @@ void meshFaceSmart(
     const glm::vec3* offsets = vertexOffsets[side];
     glm::vec3 normal{directionToPoint(side)};
 
-    glm::vec4 color = {128, 128, 0, 255};
+    glm::vec4 color = {128.f, 128.f, 0.f, 255.f};
     color /= 255;
 
     meshFace(mesh, offsets[0], offsets[1], offsets[2], offsets[3], textureX, textureY, normal, color);
@@ -77,7 +81,7 @@ void meshCross(Mesh& mesh, int x, int y, int z, int textureX, int textureY) {
     //Vector3 normal = pointToVector3(directionToPoint(side));
     glm::vec3 normal0 = {0.f, 1.f, 0.f};
     glm::vec3 normal1 = {1.f, 0.f, 0.f};
-    glm::vec4 color = {128, 128, 0, 255};
+    glm::vec4 color = {128.f, 128.f, 0.f, 255.f};
     color /= 255.f;
 
     meshFace(mesh, ltb, lbb, rbf, rtf, textureX, textureY, normal0, color);
@@ -86,3 +90,44 @@ void meshCross(Mesh& mesh, int x, int y, int z, int textureX, int textureY) {
     meshFace(mesh, rtb, rbb, lbf, ltf, textureX, textureY, normal0, color);
 }
 
+static void meshFaceOffset(
+        Mesh& mesh,
+        glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,
+        int textureX, int textureY,
+        glm::vec3 normal,
+        glm::vec4 color,
+        glm::vec3 offset
+) {
+    meshFace(mesh, a + offset, b + offset, c + offset, d + offset, textureX, textureY, normal, color);
+}
+
+void meshCactus(Mesh& mesh, int x, int y, int z, int textureX, int textureY) {
+    glm::vec3 lbb = {x + 0.f, y + 0.f, z + 0.f};
+    glm::vec3 lbf = {x + 0.f, y + 0.f, z + 1.f};
+    glm::vec3 ltb = {x + 0.f, y + 1.f, z + 0.f};
+    glm::vec3 ltf = {x + 0.f, y + 1.f, z + 1.f};
+    glm::vec3 rbb = {x + 1.f, y + 0.f, z + 0.f};
+    glm::vec3 rbf = {x + 1.f, y + 0.f, z + 1.f};
+    glm::vec3 rtb = {x + 1.f, y + 1.f, z + 0.f};
+    glm::vec3 rtf = {x + 1.f, y + 1.f, z + 1.f};
+
+    glm::vec4 color = {128.f, 128.f, 0.f, 255.f};
+    color /= 255;
+
+    glm::vec3 southOffset = glm::vec3{directionToPoint(Direction::north)} * static_cast<float>(1._px);
+    glm::vec3 eastOffset = glm::vec3{directionToPoint(Direction::west)} * static_cast<float>(1._px);
+    glm::vec3 northOffset = glm::vec3{directionToPoint(Direction::south)} * static_cast<float>(1._px);
+    glm::vec3 westOffset = glm::vec3{directionToPoint(Direction::east)} * static_cast<float>(1._px);
+
+    meshFaceOffset(mesh, ltf, lbf, rbf, rtf, textureX, textureY, directionToPoint(Direction::south), color, southOffset);
+    meshFaceOffset(mesh, rtf, rbf, lbf, ltf, textureX, textureY, directionToPoint(Direction::south), color, southOffset);
+
+    meshFaceOffset(mesh, rtf, rbf, rbb, rtb, textureX, textureY, directionToPoint(Direction::east), color, eastOffset);
+    meshFaceOffset(mesh, rtb, rbb, rbf, rtf, textureX, textureY, directionToPoint(Direction::east), color, eastOffset);
+
+    meshFaceOffset(mesh, rtb, rbb, lbb, ltb, textureX, textureY, directionToPoint(Direction::north), color, northOffset);
+    meshFaceOffset(mesh, ltb, lbb, rbb, rtb, textureX, textureY, directionToPoint(Direction::north), color, northOffset);
+
+    meshFaceOffset(mesh, ltb, lbb, lbf, ltf, textureX, textureY, directionToPoint(Direction::west), color, westOffset);
+    meshFaceOffset(mesh, ltf, lbf, lbb, ltb, textureX, textureY, directionToPoint(Direction::west), color, westOffset);
+}

@@ -66,23 +66,7 @@ void chunkGenerateMesh(Chunk* chunk) {
 #endif
 
     for (int y = 0; y < CHUNK_HEIGHT; ++y) {
-
-#ifdef USE_IGNORED
-        if (!chunk->ignored[y]) {
-            continue;
-        }
-#endif
-
         for (int x = 0; x < CHUNK_WIDTH; ++x) {
-
-#ifdef USE_IGNORED
-            if (!(chunk->ignored[y] & 1 << x)) {
-                continue;
-            }
-
-            bool hasFaces = false;
-#endif
-
             for (int z = 0; z < CHUNK_WIDTH; ++z) {
                 glm::ivec3 point = {x, y, z};
                 Block block = chunk->blocks[x][y][z];
@@ -96,57 +80,40 @@ void chunkGenerateMesh(Chunk* chunk) {
 
                 const glm::ivec3* sides = properties.model.sides;
 
-#ifdef USE_IGNORED
-#define SET_HAS_FACES() hasFaces = true
-#else
-#define SET_HAS_FACES()
-#endif
-
                 if (properties.solidness == Solidness::cross) {
                     meshCross(mesh, x, y, z, properties.model.sides[0].x, properties.model.sides[0].y);
-                    SET_HAS_FACES();
                     continue;
-                }
+                } else if (properties.solidness == Solidness::cactus) {
+                    meshCactus(mesh, x, y, z, properties.model.sides[0].x, properties.model.sides[0].y);
+                } else {
+                    for (int dir = 0; dir < DIRECTION_CARDINAL_COUNT; ++dir) {
+                        const Chunk* adjacentChunk = adjacentChunks[x][z][dir];
+                        glm::ivec3 adjacentLocalPoint = worldToLocal(point + directionToPoint(static_cast<Direction>(dir)));
+                        Block adjacentBlock = adjacentChunk->getBlockRaw(adjacentLocalPoint); 
+                        if (getBlock(adjacentBlock).solidness == Solidness::solid || ((properties.solidness == Solidness::transparent || properties.solidness == Solidness::translucent) && block == adjacentBlock)) {
+                            continue;
+                        }
 
-                for (int dir = 0; dir < DIRECTION_CARDINAL_COUNT; ++dir) {
-                    const Chunk* adjacentChunk = adjacentChunks[x][z][dir];
-                    glm::ivec3 adjacentLocalPoint = worldToLocal(point + directionToPoint(static_cast<Direction>(dir)));
-                    Block adjacentBlock = adjacentChunk->getBlockRaw(adjacentLocalPoint); 
-                    if (getBlock(adjacentBlock).solidness == Solidness::solid || ((properties.solidness == Solidness::transparent || properties.solidness == Solidness::translucent) && block == adjacentBlock)) {
-                        continue;
+                        meshFaceSmart(mesh, x, y, z, static_cast<Direction>(dir),
+                                sides[dir].x, sides[dir].y);
                     }
-
-                    SET_HAS_FACES();
-
-                    meshFaceSmart(mesh, x, y, z, static_cast<Direction>(dir),
-                            sides[dir].x, sides[dir].y);
                 }
+
+                
 
                 Block adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, -1, 0});
                 if (y != 0 && (getBlock(adjacentBlock).solidness != Solidness::solid && (properties.solidness == Solidness::solid || block != adjacentBlock))) {
                     meshFaceSmart(mesh, x, y, z, Direction::down,
                             sides[Direction::down].x, sides[Direction::down].y);
-
-                    SET_HAS_FACES();
                 }
 
                 adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, 1, 0});
                 if ((y == CHUNK_HEIGHT - 1 || getBlock(adjacentBlock).solidness != Solidness::solid) && (properties.solidness == Solidness::solid || block != adjacentBlock)) {
                     meshFaceSmart(mesh, x, y, z, Direction::up,
                             sides[Direction::up].x, sides[Direction::up].y);
-
-                    SET_HAS_FACES();
                 }
 
             }
-
-#undef SET_HAS_FACES
-
-#ifdef USE_IGNORED
-            if (!hasFaces) {
-                chunk->ignored[y] &= ~(1 << x);
-            }
-#endif
         }
     }
 
