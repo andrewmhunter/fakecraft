@@ -7,13 +7,29 @@
 #include <glm/fwd.hpp>
 #include <memory>
 #include <print>
+#include <stdexcept>
 #include <type_traits>
 #include <variant>
 
 namespace ser {
 
-constexpr Variants::TypeContainers dataTagGetType(DataTag tag) {
+Error::Error(const std::string& what)
+    : std::runtime_error{what}
+{}
 
+ParseError::ParseError(const std::string& what)
+    : Error{what}
+{}
+
+WriteError::WriteError(const std::string& what)
+    : Error{what}
+{}
+
+DecodeError::DecodeError(const std::string& what)
+    : Error{what}
+{}
+
+constexpr Variants::TypeContainers dataTagGetType(DataTag tag) {
     std::variant<std::monostate, std::unique_ptr<int>> v;
     v = std::make_unique<int>(32);
 
@@ -55,7 +71,7 @@ constexpr Variants::TypeContainers dataTagGetType(DataTag tag) {
         case DataTag::list:
             return TypeContainer<List>{};
     }
-    Logger::fatal(std::format("Invalid data tag {}", static_cast<int>(tag)));
+    throw ParseError{std::format("Invalid data tag {}", static_cast<int>(tag))};
 }
 
 
@@ -201,11 +217,11 @@ void Serializer<glm::ivec3>::write(Writer& writer, const glm::ivec3& value) {
 
 
 std::string Serializer<std::string>::read(Reader& reader) {
-    return reader.readString();
+    return reader.readString<LengthType>();
 }
 
 void Serializer<std::string>::write(Writer& writer, const std::string& value) {
-    writer.writeString(value);
+    writer.writeString<LengthType>(value);
 }
 
 
@@ -269,16 +285,14 @@ void Dynamic::write(Writer& writer, bool skipTag) const {
 Reader::Reader(std::istream& stream) : stream{stream} {}
 
 u8 Reader::readByte() {
-    return stream.get();
-}
-
-std::string Reader::readString() {
-    u32 size = readInt<u32>();
-    std::string string{};
-    for (u32 i = 0; i < size; ++i) {
-        string.push_back(readByte());
+    int ch = stream.get();
+    if (ch == std::ios::traits_type::eof()) {
+        throw ParseError{"Reached end of file"};
     }
-    return string;
+    if (stream.fail()) {
+        throw ParseError{"Failed to read byte due to IO error"};
+    }
+    return ch;
 }
 
 float Reader::readF32() {
@@ -306,6 +320,9 @@ Writer::Writer(std::ostream& stream) : stream{stream} {}
 
 void Writer::writeByte(u8 byte) {
     stream.put(byte);
+    if (stream.fail()) {
+        throw WriteError{"Failed to write byte due to IO error"};
+    }
 }
 
 void Writer::writeTag(DataTag tag) {
@@ -326,20 +343,13 @@ void Writer::writeF64(double value) {
     writeInt(into);
 }
 
-void Writer::writeString(std::string_view value) {
-    writeInt<u32>(value.size());
-    for (char ch : value) {
-        writeByte(ch);
-    }
-}
-
 
 Object::Object(Reader& reader)
     : Object{Operation::deserialize}
 {
     u32 count = reader.readInt<u32>();
     for (u32 i = 0; i < count; ++i) {
-        std::string key = reader.readString();
+        std::string key = reader.readString<KeyLengthType>();
         fields.emplace(key, reader);
     }
 }
@@ -351,9 +361,13 @@ Object::Object(Operation operation)
 void Object::write(Writer& writer) const {
     writer.writeInt<u32>(fields.size());
     for (auto& field : fields) {
-        writer.writeString(field.first);
+        writer.writeString<KeyLengthType>(field.first);
         field.second.write(writer);
     }
+}
+
+bool Object::hasField(const std::string& key) const {
+    return fields.contains(key);
 }
 
 
@@ -412,55 +426,6 @@ Dynamic deserialize(std::filesystem::path path) {
     Reader reader{file};
     Dynamic dynamic{reader};
     return dynamic;
-}
-
-
-struct Foo {
-    i32 foo;
-    std::string bar;
-    float f;
-    std::vector<i32> ints;
-
-    void serde(Object& object) {
-        object.field("foo", foo);
-        object.field("bar", bar);
-        object.field("f", f);
-        object.field<List>("ints").vector(ints);
-        //object.field("ints", ints);
-    }
-
-    void serialize(Object& object) {
-        serde(object);
-        //List list{ints};
-        //object.field("intsa", list);
-    }
-
-    void deserialize(Object& object) {
-        serde(object);
-        //List list = object.getField<List>("intsa");
-        //ints = list.getValue<i32>();
-    }
-
-    
-};
-
-void deserializationTest() {
-    Foo s{123450, "hello glorb", 12.678, {12, 43, 789}};
-
-    Object a{};
-    s.serialize(a);
-    Dynamic da{a};
-    serialize("foo.bin", da);
-
-    Dynamic db = deserialize("foo.bin");
-    Object b;
-    db.value(b);
-
-    Foo t{};
-    t.deserialize(b);
-
-    std::println("{} {} {}", t.foo, t.bar, t.f);
-    std::println("{} {} {}", t.ints[0], t.ints[1], t.ints[2]);
 }
 
 }
