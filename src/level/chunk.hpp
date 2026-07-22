@@ -1,9 +1,11 @@
 #ifndef CHUNK_HPP
 #define CHUNK_HPP
 
+#include <filesystem>
 #include <glm/glm.hpp>
 #include "block.hpp"
 #include "engine/config.hpp"
+#include "serialization/serialize.hpp"
 #include "util/util.hpp"
 #include "util/point.hpp"
 #include "util/direction.hpp"
@@ -94,6 +96,8 @@ class World;
 class Chunk {
 private:
     void drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const;
+    void serializeDeserialize(ser::Object& object);
+    std::filesystem::path getFileName() const;
 
 public:
     World* world;
@@ -131,6 +135,10 @@ public:
     void drawTranslucent(ShaderProgram& shader) const;
     bool verify() const;
     void computeLightValues();
+
+    void serialize();
+    bool deserialize();
+    
 
     static bool blockInChunk(glm::ivec3 local);
 };

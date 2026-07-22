@@ -1,15 +1,18 @@
+#include <filesystem>
 #include <future>
 #include <glm/fwd.hpp>
 #include <memory>
 #include "world.hpp"
+#include "engine/config.hpp"
 #include "entities/entity.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/resource_manager.hpp"
 #include "level/octree.hpp"
+#include "serialization/serialize.hpp"
+#include "util/types.hpp"
 #include "util/util.hpp"
 #include "chunk.hpp"
 #include "chunk_mesh.hpp"
-#include "serialization/serialize.hpp"
 #include "engine/logger.hpp"
 
 static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
@@ -30,7 +33,7 @@ World::World()
 
     player = &spawnEntity<Player>(playerPosition);
 
-    if (loadWorld(this)) {
+    if (deserialize()) {
         return;
     }
 
@@ -38,9 +41,11 @@ World::World()
 }
 
 World::~World() {
-    saveWorld(this);
+    serialize();
     chunks.clear();
 }
+
+#define ASYNC_GENERATION 0
 
 void World::update(float deltaTime) {
     static int lightDirection = 1;
@@ -77,7 +82,9 @@ void World::update(float deltaTime) {
         glm::ivec3 chunkOffset{0};
         CircleIterator offsetIterator = circleIteratorInit(renderDistance);
 
+#if ASYNC_GENERATION
         std::vector<std::future<void>> asyncGenerators{};
+#endif
 
         do {
             glm::ivec3 chunkCoord = chunkOffset + worldToChunkV(player->position);
@@ -101,14 +108,20 @@ void World::update(float deltaTime) {
             std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(this, chunkCoord);
             chunks[chunkCoord] = std::move(newChunk);
 
+#if ASYNC_GENERATION
             asyncGenerators.push_back(std::async([this, chunkCoord](){
                 this->chunks[chunkCoord]->generateOrLoad();
             }));
+#else
+            this->chunks[chunkCoord]->generateOrLoad();
+#endif
         } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
+#if ASYNC_GENERATION
         for (auto& handle : asyncGenerators) {
             handle.get();
         }
+#endif
     }
 
     std::vector<Chunk*> toUnload{};
@@ -330,4 +343,67 @@ bool iterateCircleIterator(CircleIterator* state, glm::ivec3* pointOut) {
     *pointOut = point;
 
     return true;
+}
+
+Entity& World::spawnEntity(EntityType type, glm::vec3 position) {
+    EntityID id = currentEntityID++;
+    return spawnEntity(type, id, position);
+}
+
+Entity& World::spawnEntity(EntityType type, EntityID id, glm::vec3 position) {
+    std::unique_ptr<Entity> entity = entityFactory(this, type, id, position);
+    Entity& entityRef = *entity.get();
+    entities[id] = std::move(entity);
+    return entityRef;
+}
+
+constexpr std::string_view worldFileName = "save/world.bin";
+
+void World::serialize() {
+    ser::Object object{};
+    serializeDeserialize(object);
+
+    ser::Object playerObject{};
+    player->serialize(playerObject);
+    object.setField("player", playerObject);
+
+    std::vector<ser::Object> ents{};
+    for (auto& [id, entity] : entities) {
+        if (entity->type == EntityType::player) {
+            continue;
+        }
+
+        ser::Object entityObject{};
+        entity->serialize(entityObject);
+        ents.push_back(entityObject);
+    }
+    object.setField("entities", ser::List{ents});
+
+    ser::serialize(worldFileName, ser::Dynamic{object});
+}
+
+bool World::deserialize() {
+    if (!std::filesystem::is_regular_file(worldFileName)) {
+        return false;
+    }
+
+    ser::Object object = ser::deserialize(worldFileName).get<ser::Object>();
+    serializeDeserialize(object);
+
+    player->deserialize(object.getField<ser::Object>("player"));
+
+    std::vector<ser::Object>& ents = object.getField<ser::List>("entities").getVector<ser::Object>();
+    for (ser::Object& entityObject : ents) {
+        EntityType type = static_cast<EntityType>(entityObject.getField<i32>("type"));
+        EntityID id{entityObject.getField<u64>("id")};
+        Entity& entity = spawnEntity(type, id, glm::vec3{});
+        entity.deserialize(entityObject);
+    }
+
+    return true;
+}
+
+void World::serializeDeserialize(ser::Object& object) {
+    object.field("seed", seed);
+    object.field("currentEntityID", currentEntityID.id);
 }

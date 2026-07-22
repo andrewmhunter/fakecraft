@@ -1,216 +1,466 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <filesystem>
 #include "serialize.hpp"
-#include "engine/config.hpp"
-#include "level/world.hpp"
-#include "level/chunk.hpp"
-#include "entities/entity.hpp"
 #include "engine/logger.hpp"
-#include "util/fileio.hpp"
+#include "util/types.hpp"
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <glm/fwd.hpp>
+#include <memory>
+#include <print>
+#include <type_traits>
+#include <variant>
 
-void saveFloat(float number, FILE* file) {
-    Logger::assertion(fwrite(&number, sizeof(number), 1, file) == 1);
+namespace ser {
+
+constexpr Variants::TypeContainers dataTagGetType(DataTag tag) {
+
+    std::variant<std::monostate, std::unique_ptr<int>> v;
+    v = std::make_unique<int>(32);
+
+    switch (tag) {
+        /*case DataTag::dynamic:
+            return TypeContainer<Dynamic>{};*/
+        case DataTag::nil:
+            return TypeContainer<std::monostate>{};
+        case DataTag::boolean:
+            return TypeContainer<bool>{};
+        case DataTag::i8:
+            return TypeContainer<i8>{};
+        case DataTag::u8:
+            return TypeContainer<u8>{};
+        case DataTag::i16:
+            return TypeContainer<i16>{};
+        case DataTag::u16:
+            return TypeContainer<u16>{};
+        case DataTag::i32:
+            return TypeContainer<i32>{};
+        case DataTag::u32:
+            return TypeContainer<u32>{};
+        case DataTag::i64:
+            return TypeContainer<i64>{};
+        case DataTag::u64:
+            return TypeContainer<u64>{};
+        case DataTag::f32:
+            return TypeContainer<float>{};
+        case DataTag::f64:
+            return TypeContainer<double>{};
+        case DataTag::vec3:
+            return TypeContainer<glm::vec3>{};
+        case DataTag::ivec3:
+            return TypeContainer<glm::ivec3>{};
+        case DataTag::string:
+            return TypeContainer<std::string>{};
+        case DataTag::object:
+            return TypeContainer<Object>{};
+        case DataTag::list:
+            return TypeContainer<List>{};
+    }
+    Logger::fatal(std::format("Invalid data tag {}", static_cast<int>(tag)));
 }
 
-float loadFloat(FILE* file) {
-    float number = 0.f;
-    Logger::assertion(fread(&number, sizeof(number), 1, file) == 1);
-    return number;
+
+std::monostate Serializer<std::monostate>::read(Reader& reader) {
+    (void)reader;
+    return std::monostate{};
 }
 
-void saveI32(int32_t number, FILE* file) {
-    Logger::assertion(fwrite(&number, sizeof(number), 1, file) == 1);
-}
-
-int32_t loadI32(FILE* file) {
-    int32_t number = 0;
-    Logger::assertion(fread(&number, sizeof(number), 1, file) == 1);
-    return number;
-}
-
-void saveVector3(glm::vec3 vector, FILE* file) {
-    saveFloat(vector.x, file);
-    saveFloat(vector.y, file);
-    saveFloat(vector.z, file);
-}
-
-glm::vec3 loadVector3(FILE* file) {
-    glm::vec3 vector = {0.f, 0.f, 0.f};
-    vector.x = loadFloat(file);
-    vector.y = loadFloat(file);
-    vector.z = loadFloat(file);
-    return vector;
+void Serializer<std::monostate>::write(Writer& writer, const std::monostate& value) {
+    // Ignore unused parameter warnings
+    (void)writer;
+    (void)value;
 }
 
 
-static void getChunkFileName(const Chunk* chunk, char* buffer, size_t maxSize) {
-    int count = snprintf(buffer, maxSize, "save/level/c%d.%d.bin", chunk->coords.x, chunk->coords.z);
-    if (count >= (int)maxSize) {
-        Logger::error("Buffer not large enough for chunk filename");
+bool Serializer<bool>::read(Reader& reader) {
+    return reader.readByte();
+}
+
+void Serializer<bool>::write(Writer& writer, const bool& value) {
+    writer.writeByte(value);
+}
+
+
+i8 Serializer<i8>::read(Reader& reader) {
+    return reader.readByte();
+}
+
+void Serializer<i8>::write(Writer& writer, const i8& value) {
+    writer.writeByte(value);
+}
+
+
+u8 Serializer<u8>::read(Reader& reader) {
+    return reader.readByte();
+}
+
+void Serializer<u8>::write(Writer& writer, const u8& value) {
+    writer.writeByte(value);
+}
+
+
+i16 Serializer<i16>::read(Reader& reader) {
+    return reader.readInt<i16>();
+}
+
+void Serializer<i16>::write(Writer& writer, const i16& value) {
+    writer.writeInt<i16>(value);
+}
+
+
+u16 Serializer<u16>::read(Reader& reader) {
+    return reader.readInt<u16>();
+}
+
+void Serializer<u16>::write(Writer& writer, const u16& value) {
+    writer.writeInt<u16>(value);
+}
+
+
+i32 Serializer<i32>::read(Reader& reader) {
+    return reader.readInt<i32>();
+}
+
+void Serializer<i32>::write(Writer& writer, const i32& value) {
+    writer.writeInt(value);
+}
+
+
+u32 Serializer<u32>::read(Reader& reader) {
+    return reader.readInt<u32>();
+}
+
+void Serializer<u32>::write(Writer& writer, const u32& value) {
+    writer.writeInt(value);
+}
+
+
+i64 Serializer<i64>::read(Reader& reader) {
+    return reader.readInt<i64>();
+}
+
+void Serializer<i64>::write(Writer& writer, const i64& value) {
+    writer.writeInt(value);
+}
+
+
+u64 Serializer<u64>::read(Reader& reader) {
+    return reader.readInt<u64>();
+}
+
+void Serializer<u64>::write(Writer& writer, const u64& value) {
+    writer.writeInt(value);
+}
+
+
+float Serializer<float>::read(Reader& reader) {
+    return reader.readF32();
+}
+
+void Serializer<float>::write(Writer& writer, const float& value) {
+    writer.writeF32(value);
+}
+
+
+double Serializer<double>::read(Reader& reader) {
+    return reader.readF64();
+}
+
+void Serializer<double>::write(Writer& writer, const double& value) {
+    writer.writeF64(value);
+}
+
+
+glm::vec3 Serializer<glm::vec3>::read(Reader& reader) {
+    glm::vec3 value{};
+    value.x = reader.readF32();
+    value.y = reader.readF32();
+    value.z = reader.readF32();
+    return value;
+}
+
+void Serializer<glm::vec3>::write(Writer& writer, const glm::vec3& value) {
+    writer.writeF32(value.x);
+    writer.writeF32(value.y);
+    writer.writeF32(value.z);
+}
+
+
+glm::ivec3 Serializer<glm::ivec3>::read(Reader& reader) {
+    glm::vec3 value{};
+    value.x = reader.readInt<i32>();
+    value.y = reader.readInt<i32>();
+    value.z = reader.readInt<i32>();
+    return value;
+}
+
+void Serializer<glm::ivec3>::write(Writer& writer, const glm::ivec3& value) {
+    writer.writeInt<i32>(value.x);
+    writer.writeInt<i32>(value.y);
+    writer.writeInt<i32>(value.z);
+}
+
+
+std::string Serializer<std::string>::read(Reader& reader) {
+    return reader.readString();
+}
+
+void Serializer<std::string>::write(Writer& writer, const std::string& value) {
+    writer.writeString(value);
+}
+
+
+Object Serializer<Object>::read(Reader& reader) {
+    return Object{reader};
+}
+
+void Serializer<Object>::write(Writer& writer, const Object& value) {
+    value.write(writer);
+}
+
+
+List Serializer<List>::read(Reader& reader) {
+    return List{reader};
+}
+
+void Serializer<List>::write(Writer& writer, const List& value) {
+    value.write(writer);
+}
+
+
+
+Dynamic::Dynamic(Reader reader)
+    : Dynamic{Operation::deserialize}
+{
+    DataTag tag = reader.readTag();
+
+    Variants::TypeContainers typeContainer = dataTagGetType(tag);
+    variant = std::visit([&reader](auto&& typeContainer) {
+        using Type = std::remove_cvref_t<decltype(typeContainer)>::Type;
+        return Variants::Variant{Serializer<Type>::read(reader)};
+    }, typeContainer);
+}
+
+Dynamic::Dynamic(Operation operation)
+    : Dynamic{std::monostate{}, operation}
+{}
+
+Dynamic::Dynamic(Variants::Variant value, Operation operation)
+    : variant{value}, operation{operation}
+{}
+
+DataTag Dynamic::getDataTag() const {
+    return std::visit([](auto&& arg) {
+        return Serializer<std::remove_cvref_t<decltype(arg)>>::tag;
+    }, variant);
+}
+
+void Dynamic::write(Writer& writer, bool skipTag) const {
+    if (!skipTag) {
+        writer.writeTag(getDataTag());
+    }
+
+    std::visit([&writer](auto&& value) {
+        Serializer<std::remove_cvref_t<decltype(value)>>::write(writer, value);
+    }, variant);
+}
+
+
+
+Reader::Reader(std::istream& stream) : stream{stream} {}
+
+u8 Reader::readByte() {
+    return stream.get();
+}
+
+std::string Reader::readString() {
+    u32 size = readInt<u32>();
+    std::string string{};
+    for (u32 i = 0; i < size; ++i) {
+        string.push_back(readByte());
+    }
+    return string;
+}
+
+float Reader::readF32() {
+    float value = 0.f;
+    u32 from = readInt<u32>();
+    static_assert(sizeof(value) == sizeof(from));
+    std::memcpy(&value, &from, sizeof(value));
+    return value;
+}
+
+double Reader::readF64() {
+    double value = 0.f;
+    u64 from = readInt<u64>();
+    static_assert(sizeof(value) == sizeof(from));
+    std::memcpy(&value, &from, sizeof(value));
+    return value;   
+}
+
+DataTag Reader::readTag() {
+    return static_cast<DataTag>(readByte());
+}
+
+
+Writer::Writer(std::ostream& stream) : stream{stream} {}
+
+void Writer::writeByte(u8 byte) {
+    stream.put(byte);
+}
+
+void Writer::writeTag(DataTag tag) {
+    writeByte(static_cast<u8>(tag));
+}
+
+void Writer::writeF32(float value) {
+    u32 into = 0;
+    static_assert(sizeof(value) == sizeof(into));
+    std::memcpy(&into, &value, sizeof(value));
+    writeInt(into);
+}
+
+void Writer::writeF64(double value) {
+    u64 into = 0;
+    static_assert(sizeof(value) == sizeof(into));
+    std::memcpy(&into, &value, sizeof(value));
+    writeInt(into);
+}
+
+void Writer::writeString(std::string_view value) {
+    writeInt<u32>(value.size());
+    for (char ch : value) {
+        writeByte(ch);
     }
 }
 
-void makeSaveDirectories(void) {
-    std::filesystem::create_directories("save/level");
+
+Object::Object(Reader& reader)
+    : Object{Operation::deserialize}
+{
+    u32 count = reader.readInt<u32>();
+    for (u32 i = 0; i < count; ++i) {
+        std::string key = reader.readString();
+        fields.emplace(key, reader);
+    }
 }
 
-void saveChunk(const Chunk* chunk) {
-    if (!Config::settings->game.saveChunks) {
-        return;
+Object::Object(Operation operation)
+    : operation{operation}
+{}
+
+void Object::write(Writer& writer) const {
+    writer.writeInt<u32>(fields.size());
+    for (auto& field : fields) {
+        writer.writeString(field.first);
+        field.second.write(writer);
     }
+}
 
-    Logger::assertion(chunk);
 
-    Logger::trace(std::format("Saving chunk: {}, {}", chunk->coords.x, chunk->coords.z));
+List::List(Reader& reader)
+    : List{Operation::deserialize}
+{
+    u32 len = reader.readInt<u32>();
+    DataTag tag = reader.readTag();
 
-    char fileName[FILENAME_MAX];
-    getChunkFileName(chunk, fileName, sizeof(fileName));
-    FILE* file = openFileRequired(fileName, "wb");
-
-    size_t blocksSize = sizeof(chunk->blocks);
-    size_t savedCount = 0;
-
-    int currentNumber = 0;
-    Block currentBlock = chunk->blocks[0][0][0];
-
-    ITERATE_CHUNK_YXZ(x, y, z) {
-        Block block = chunk->blocks[x][y][z];
-        if (block != currentBlock || currentNumber == UINT8_MAX + 1) {
-            fputc(currentNumber - 1, file);
-            fputc(static_cast<unsigned char>(currentBlock), file);
-            currentNumber = 0;
-            currentBlock = block;
+    Variants::TypeContainers typeContainer = dataTagGetType(tag);
+    elements = std::visit([&reader, len](auto&& typeContainer) {
+        using Type = std::remove_cvref_t<decltype(typeContainer)>::Type;
+        std::vector<Type> vector;
+        for (u32 i = 0; i < len; ++i) {
+            Type value = Serializer<Type>::read(reader);
+            vector.push_back(value);
         }
-        currentNumber++;
-        savedCount++;
-    }
-
-    if (currentNumber != 0) {
-        fputc(currentNumber - 1, file);
-        fputc(static_cast<unsigned char>(currentBlock), file);
-    }
-
-    Logger::assertion(savedCount == blocksSize);
-
-    fclose(file);
+        return Variants::Lists{vector};
+    }, typeContainer);
 }
 
-bool loadChunk(Chunk* chunk) {
-    if (!Config::settings->game.loadChunks) {
-        return false;
-    }
+List::List(Operation operation)
+    : operation{operation}
+{}
 
-    Logger::assertion(chunk);
+List::List(Variants::Lists elements, Operation operation)
+    : elements{elements}, operation{operation}
+{}
 
-    char fileName[FILENAME_MAX];
-    getChunkFileName(chunk, fileName, sizeof(fileName));
+u32 List::length() const {
+    return std::visit([](auto&& arg) { return arg.size(); }, elements);
+}
 
-    FILE* file = NULL;
-    if (!openFile(&file, fileName, "rb", LogLevel::none)) {
-        return false;
-    }
+void List::write(Writer& writer) const {
+    writer.writeInt<u32>(length());
 
-    //size_t blocksSize = sizeof(chunk->blocks);
-
-    Logger::trace(std::format("Loading chunk: {}, {}", chunk->coords.x, chunk->coords.z));
-
-    int currentNumber = 0;
-    Block currentBlock = Block::air;
-
-    ITERATE_CHUNK_YXZ(x, y, z) {
-        if (currentNumber <= 0) {
-            currentNumber = fgetc(file) + 1;
-            int blockId = fgetc(file);
-
-            if (currentNumber == EOF || blockId == EOF) {
-                Logger::error(std::format("Chunk {}, {} is courupted", chunk->coords.x, chunk->coords.z));
-                return false;
-            }
-
-            currentBlock = static_cast<Block>(blockId);
+    std::visit([&writer](auto&& elements) {
+        using Type = std::remove_cvref_t<decltype(elements)>::value_type;
+        writer.writeTag(Serializer<Type>::tag);
+        for (const auto& element : elements) {
+            Serializer<Type>::write(writer, element);
         }
-
-        chunk->blocks[x][y][z] = currentBlock;
-        currentNumber--;
-    }
-
-    /*if (count != blocksSize) {
-        Logger::error("Chunk %d, %d is courupted", chunk->coords.x, chunk->coords.z);
-        return false;
-    }*/
-
-    fclose(file);
-
-    for (int x = 0; x < CHUNK_WIDTH; ++x) {
-        for (int z = 0; z < CHUNK_WIDTH; ++z) {
-            chunk->surfaceHeight[x][z] = 65;
-        }
-    }
-
-    chunk->dirty = true;
-    return chunk->verify();
-}
-
-void saveWorld(const World* world) {
-    Logger::assertion(world);
-
-    Logger::info("Saving world to file");
-
-    FILE* file = openFileRequired("save/world.bin", "wb");
-
-    saveI32(world->seed, file);
-    saveEntity(world->player, file);
-
-    for (const auto& entityPtr : world->entities) {
-        const Entity* entity = entityPtr.second.get();
-        if (dynamic_cast<const Player*>(entity) != nullptr) {
-            continue;
-        }
-
-        fputc(1, file);
-        saveEntity(entity, file);
-    }
-
-    fputc(0, file);
-
-    fclose(file);
-}
-
-bool loadWorld(World* world) {
-    Logger::assertion(world);
-
-    FILE* file = NULL;
-    if (!openFile(&file, "save/world.bin", "rb", LogLevel::warning)) {
-        return false;
-    }
-
-    Logger::info("Loading world from file");
-
-    world->seed = loadI32(file);
-    loadEntity(world->player, file);
-
-    int ch = 0;
-    while ((ch = fgetc(file)) == 1) {
-        Entity& entity = world->spawnEntity<Human>(glm::vec3{0.f});
-        loadEntity(&entity, file);
-    }
-
-    fclose(file);
-    return true;
+    }, elements);
 }
 
 
-void saveEntity(const Entity* entity, FILE* file) {
-    saveVector3(entity->position, file);
-    saveVector3(entity->velocity, file);
-    saveFloat(entity->yaw, file);
-    saveFloat(entity->pitch, file);
+void serialize(std::filesystem::path path, const Dynamic& dynamic) {
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream file{path};
+    Writer writer{file};
+    dynamic.write(writer);
 }
 
-void loadEntity(Entity* entity, FILE* file) {
-    entity->position = loadVector3(file);
-    entity->velocity = loadVector3(file);
-    entity->yaw = loadFloat(file);
-    entity->pitch = loadFloat(file);
+Dynamic deserialize(std::filesystem::path path) {
+    std::ifstream file{path};
+    Reader reader{file};
+    Dynamic dynamic{reader};
+    return dynamic;
+}
+
+
+struct Foo {
+    i32 foo;
+    std::string bar;
+    float f;
+    std::vector<i32> ints;
+
+    void serde(Object& object) {
+        object.field("foo", foo);
+        object.field("bar", bar);
+        object.field("f", f);
+        object.field<List>("ints").vector(ints);
+        //object.field("ints", ints);
+    }
+
+    void serialize(Object& object) {
+        serde(object);
+        //List list{ints};
+        //object.field("intsa", list);
+    }
+
+    void deserialize(Object& object) {
+        serde(object);
+        //List list = object.getField<List>("intsa");
+        //ints = list.getValue<i32>();
+    }
+
+    
+};
+
+void deserializationTest() {
+    Foo s{123450, "hello glorb", 12.678, {12, 43, 789}};
+
+    Object a{};
+    s.serialize(a);
+    Dynamic da{a};
+    serialize("foo.bin", da);
+
+    Dynamic db = deserialize("foo.bin");
+    Object b;
+    db.value(b);
+
+    Foo t{};
+    t.deserialize(b);
+
+    std::println("{} {} {}", t.foo, t.bar, t.f);
+    std::println("{} {} {}", t.ints[0], t.ints[1], t.ints[2]);
+}
+
 }

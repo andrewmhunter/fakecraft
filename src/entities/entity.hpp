@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 #include "level/collision.hpp"
+#include "serialization/serialize.hpp"
 #include "util/timer.hpp"
 #include "graphics/graphics.hpp"
 
@@ -30,6 +31,7 @@ enum class EntityType {
 class Entity {
 private:
     void updatePosition(float deltaTime);
+    virtual void serializeDeserialize(ser::Object& object);
 
 public:
     const EntityID id;
@@ -46,7 +48,7 @@ public:
     bool noClip{false};
     bool flying{false};
     
-    explicit Entity(World* world, EntityID id, glm::vec3 position, glm::vec3 size);
+    explicit Entity(World* world, EntityType type, EntityID id, glm::vec3 position, glm::vec3 size);
     virtual ~Entity();
     
     virtual void update(float deltaTime);
@@ -54,6 +56,9 @@ public:
     virtual void collide(float deltaTime, EntityID otherID);
 
     virtual BoundingBox getBoundingBox() const;
+
+    virtual void serialize(ser::Object& object);
+    virtual void deserialize(ser::Object& object);
 };
 
 class Human : public Entity {
@@ -75,5 +80,8 @@ public:
     virtual void update(float deltaTime) override;
     virtual void draw(ShaderProgram& shader) override;
 };
+
+
+std::unique_ptr<Entity> entityFactory(World* world, EntityType type, EntityID id, glm::vec3 position);
 
 #endif

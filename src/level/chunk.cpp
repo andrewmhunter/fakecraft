@@ -1,11 +1,13 @@
+#include <filesystem>
+#include <format>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "engine/logger.hpp"
 #include "chunk.hpp"
+#include "serialization/serialize.hpp"
 #include "world.hpp"
 #include "chunk.hpp"
 #include "worldgen.hpp"
-#include "serialization/serialize.hpp"
 #include "engine/logger.hpp"
 #include "graphics/graphics.hpp"
 
@@ -25,10 +27,6 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
             adjacent->dirty = true;
         }
     }
-
-#ifdef USE_IGNORED
-    memset(ignored, 0xff, sizeof(ignored));
-#endif
 }
 
 Chunk::~Chunk() {
@@ -40,7 +38,7 @@ Chunk::~Chunk() {
 Chunk::Chunk() {}
 
 void Chunk::generateOrLoad() {
-    if (loadChunk(this)) {
+    if (deserialize()) {
         Logger::trace(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
         return;
     }
@@ -64,7 +62,7 @@ void Chunk::unload() {
         adjacentChunks[i] = nullptr;
     }
 
-    saveChunk(this);
+    serialize();
     Logger::trace(std::format("Chunk {}, {} saved", coords.x, coords.z));
 }
 
@@ -168,6 +166,85 @@ void Chunk::computeLightValues() {
             }
         }
     }
+}
+
+std::filesystem::path Chunk::getFileName() const {
+    return std::format("save/level/c{}_{}.bin", coords.x, coords.z);
+}
+
+void Chunk::serialize() {
+    if (!Config::settings->game.saveChunks) {
+        return;
+    }
+
+    ser::Object object{};
+
+    serializeDeserialize(object);
+
+    std::vector<u8> savedBlocks{};
+
+    int currentNumber = 0;
+    Block currentBlock = blocks[0][0][0];
+
+    ITERATE_CHUNK_YXZ(x, y, z) {
+        Block block = blocks[x][y][z];
+        if (block != currentBlock || currentNumber == UINT8_MAX + 1) {
+            savedBlocks.push_back((currentNumber - 1));
+            savedBlocks.push_back(static_cast<u8>(currentBlock));
+            currentNumber = 0;
+            currentBlock = block;
+        }
+        currentNumber++;
+    }
+
+    if (currentNumber != 0) {
+        savedBlocks.push_back((currentNumber - 1));
+        savedBlocks.push_back(static_cast<u8>(currentBlock));
+    }
+    
+    object.setField("blocks", ser::List{savedBlocks});
+
+    ser::serialize(getFileName(), ser::Dynamic{object});
+}
+
+bool Chunk::deserialize() {
+    if (!Config::settings->game.loadChunks) {
+        return false;
+    }
+
+    std::string fileName = getFileName();
+    if (!std::filesystem::is_regular_file(fileName)) {
+        return false;
+    }
+
+    ser::Object object = ser::deserialize(fileName).get<ser::Object>();
+
+    serializeDeserialize(object);
+
+    std::vector<u8>& loadedBlocks = object.getField<ser::List>("blocks").getVector<u8>();
+
+    int index = 0;
+    int currentNumber = 0;
+    Block currentBlock = Block::air;
+
+    ITERATE_CHUNK_YXZ(x, y, z) {
+        if (currentNumber <= 0) {
+            currentNumber = loadedBlocks.at(index++) + 1;
+            int blockId = loadedBlocks.at(index++);
+
+            currentBlock = static_cast<Block>(blockId);
+        }
+
+        blocks[x][y][z] = currentBlock;
+        currentNumber--;
+    }
+
+    dirty = true;
+    return true;
+}
+
+void Chunk::serializeDeserialize(ser::Object& object) {
+    (void)object;
 }
 
 

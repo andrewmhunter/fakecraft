@@ -44,7 +44,7 @@ target_sources(fakecraft PRIVATE
     src/entities/entity_model.cpp
     
     src/serialization/ini_parser.cpp
-	src/serialization/serialize.cpp
+    src/serialization/serialize.cpp
     
     src/main.cpp
 

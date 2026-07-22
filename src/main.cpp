@@ -17,7 +17,6 @@
 #include "util/util.hpp"
 #include "level/collision.hpp"
 #include "entities/entity.hpp"
-#include "serialization/serialize.hpp"
 #include "engine/logger.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/input.hpp"
@@ -158,9 +157,6 @@ void runGame(GLFWwindow* window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     ResourceManager::loadResources();
-
-    makeSaveDirectories();
-
 
     glm::vec3 up{0.f, 1.f, 0.f};
 

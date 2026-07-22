@@ -16,7 +16,9 @@
 
 // To work with the preprocessor we have to use integer literals instead
 // of the TraceLogLevel which they are equal to
+#ifndef MIN_LOG_LEVEL
 #define MIN_LOG_LEVEL 0
+#endif
 
 enum class LogLevel {
     all,
@@ -128,8 +130,13 @@ public:
     }
 
     [[noreturn]]
-    static inline void unreachable() {
-        Logger::fatal("Unreachable");
+    static inline void unreachable(std::source_location location = std::source_location::current()) {
+        Logger::fatal("Unreachable", location);
+    }
+
+    [[noreturn]]
+    static inline void unimplemented(std::source_location location = std::source_location::current()) {
+        Logger::fatal("Unimplemented", location);
     }
 };
 

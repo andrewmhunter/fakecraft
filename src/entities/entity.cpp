@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
+#include <memory>
 
 #include "entities/entity.hpp"
 #include "entities/entity_model.hpp"
@@ -30,10 +31,10 @@ EntityID EntityID::operator++(int) {
 }
 
 
-Entity::Entity(World* world, EntityID id, glm::vec3 position, glm::vec3 boundingBox)
+Entity::Entity(World* world, EntityType type, EntityID id, glm::vec3 position, glm::vec3 boundingBox)
     : id{id},
     world{world},
-    type{EntityType::player},
+    type{type},
     position{position},
     size{boundingBox}
 {}
@@ -136,8 +137,29 @@ void Entity::draw(ShaderProgram& shader) {
     (void)shader;
 }
 
+
+void Entity::serialize(ser::Object& object) {
+    object.setField("type", static_cast<i32>(type));
+    object.setField("id", id.id);
+    serializeDeserialize(object);
+}
+
+void Entity::deserialize(ser::Object& object) {
+    serializeDeserialize(object);
+}
+
+void Entity::serializeDeserialize(ser::Object& object) {
+    object.field("position", position);
+    object.field("velocity", velocity);
+    object.field("yaw", yaw);
+    object.field("bodyYaw", bodyYaw);
+    object.field("pitch", pitch);
+    object.field("flying", flying);
+}
+
+
 Human::Human(World* world, EntityID id, glm::vec3 position)
-: Entity{world, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+: Entity{world, EntityType::mob, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
 {}
 
 void Human::update(float deltaTime) {
@@ -164,7 +186,7 @@ void Human::draw(ShaderProgram& shader) {
 
 
 Player::Player(World* world, EntityID id, glm::vec3 position)
-    : Entity{world, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+    : Entity{world, EntityType::player, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
 {}
 
 void Player::update(float deltaTime) {
@@ -239,4 +261,14 @@ void Player::update(float deltaTime) {
 
 void Player::draw(ShaderProgram& shader) {
     Entity::draw(shader);
+}
+
+std::unique_ptr<Entity> entityFactory(World* world, EntityType type, EntityID id, glm::vec3 position) {
+    switch (type) {
+        case EntityType::mob:
+            return std::make_unique<Human>(world, id, position);
+        case EntityType::player:
+            return std::make_unique<Player>(world, id, position);
+    }
+    Logger::unreachable();
 }

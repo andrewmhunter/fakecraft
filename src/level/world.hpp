@@ -10,6 +10,7 @@
 #include "entities/entity.hpp"
 #include "graphics/graphics.hpp"
 #include "level/octree.hpp"
+#include "serialization/serialize.hpp"
 #include "util/point.hpp"
 
 class World {
@@ -51,6 +52,13 @@ public:
         entities[id] = std::move(entity);
         return entityRef;
     }
+
+    Entity& spawnEntity(EntityType type, glm::vec3 position);
+    Entity& spawnEntity(EntityType type, EntityID id, glm::vec3 position);
+
+    void serialize();
+    bool deserialize();
+    void serializeDeserialize(ser::Object& object);
 };
 
 typedef struct {
