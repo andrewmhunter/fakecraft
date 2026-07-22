@@ -45,7 +45,7 @@ World::~World() {
     chunks.clear();
 }
 
-#define ASYNC_GENERATION 0
+#define ASYNC_GENERATION 1
 
 void World::update(float deltaTime) {
     static int lightDirection = 1;
@@ -357,7 +357,9 @@ Entity& World::spawnEntity(EntityType type, EntityID id, glm::vec3 position) {
     return entityRef;
 }
 
-constexpr std::string_view worldFileName = "save/world.bin";
+static std::filesystem::path worldFileName() {
+    return std::format("{}/world.bin", Config::settings->world.saveFile);
+} 
 
 void World::serialize() {
     ser::Object object{};
@@ -379,15 +381,16 @@ void World::serialize() {
     }
     object.setField("entities", ser::List{ents});
 
-    ser::serialize(worldFileName, ser::Dynamic{object});
+    ser::serialize(worldFileName(), ser::Dynamic{object});
 }
 
 bool World::deserialize() {
-    if (!std::filesystem::is_regular_file(worldFileName)) {
+    std::filesystem::path fileName = worldFileName();
+    if (!std::filesystem::is_regular_file(fileName)) {
         return false;
     }
 
-    ser::Object object = ser::deserialize(worldFileName).get<ser::Object>();
+    ser::Object object = ser::deserialize(fileName).get<ser::Object>();
     serializeDeserialize(object);
 
     player->deserialize(object.getField<ser::Object>("player"));

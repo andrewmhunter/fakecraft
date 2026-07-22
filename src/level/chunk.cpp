@@ -169,7 +169,7 @@ void Chunk::computeLightValues() {
 }
 
 std::filesystem::path Chunk::getFileName() const {
-    return std::format("save/level/c{}_{}.bin", coords.x, coords.z);
+    return std::format("{}/level/c{}_{}.bin", Config::settings->world.saveFile, coords.x, coords.z);
 }
 
 void Chunk::serialize() {

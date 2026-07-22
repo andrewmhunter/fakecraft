@@ -33,6 +33,7 @@ public:
     } game;
 
     struct {
+        std::string saveFile;
         bool superflat;
         bool generateCaves;
         bool generateFeatures;
