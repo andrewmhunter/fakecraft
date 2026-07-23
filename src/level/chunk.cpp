@@ -204,7 +204,11 @@ void Chunk::serialize() {
     
     object.setField("blocks", ser::List{savedBlocks});
 
-    ser::serialize(getFileName(), ser::Dynamic{object});
+    try {
+        ser::serialize(getFileName(), ser::Dynamic{object});
+    } catch (ser::Error& ex) {
+        Logger::error(std::format("While serializing '{}': {}", getFileName().c_str(), ex.what()));
+    }
 }
 
 bool Chunk::deserialize() {
@@ -217,29 +221,36 @@ bool Chunk::deserialize() {
         return false;
     }
 
-    ser::Object object = ser::deserialize(fileName).get<ser::Object>();
+    try {
+        ser::Object object = ser::deserialize(fileName).get<ser::Object>();
 
-    serializeDeserialize(object);
+        serializeDeserialize(object);
 
-    std::vector<u8>& loadedBlocks = object.getField<ser::List>("blocks").getVector<u8>();
+        std::vector<u8>& loadedBlocks = object.getField<ser::List>("blocks").getVector<u8>();
 
-    int index = 0;
-    int currentNumber = 0;
-    Block currentBlock = Block::air;
+        int index = 0;
+        int currentNumber = 0;
+        Block currentBlock = Block::air;
 
-    ITERATE_CHUNK_YXZ(x, y, z) {
-        if (currentNumber <= 0) {
-            currentNumber = loadedBlocks.at(index++) + 1;
-            int blockId = loadedBlocks.at(index++);
+        ITERATE_CHUNK_YXZ(x, y, z) {
+            if (currentNumber <= 0) {
+                currentNumber = loadedBlocks.at(index++) + 1;
+                int blockId = loadedBlocks.at(index++);
 
-            currentBlock = static_cast<Block>(blockId);
+                currentBlock = static_cast<Block>(blockId);
+            }
+
+            blocks[x][y][z] = currentBlock;
+            currentNumber--;
         }
 
-        blocks[x][y][z] = currentBlock;
-        currentNumber--;
+        dirty = true;
+
+    } catch (ser::Error& ex) {
+        Logger::error(std::format("While deserializing '{}': {}", fileName, ex.what()));
+        return false;
     }
 
-    dirty = true;
     return true;
 }
 

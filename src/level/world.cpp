@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <format>
 #include <future>
 #include <glm/fwd.hpp>
 #include <memory>
@@ -381,7 +382,11 @@ void World::serialize() {
     }
     object.setField("entities", ser::List{ents});
 
-    ser::serialize(worldFileName(), ser::Dynamic{object});
+    try {
+        ser::serialize(worldFileName(), ser::Dynamic{object});
+    } catch (ser::Error& ex) {
+        Logger::error(std::format("While serializing '{}': ", worldFileName().c_str(), ex.what()));
+    }
 }
 
 bool World::deserialize() {
@@ -390,17 +395,26 @@ bool World::deserialize() {
         return false;
     }
 
-    ser::Object object = ser::deserialize(fileName).get<ser::Object>();
-    serializeDeserialize(object);
-
-    player->deserialize(object.getField<ser::Object>("player"));
-
-    std::vector<ser::Object>& ents = object.getField<ser::List>("entities").getVector<ser::Object>();
-    for (ser::Object& entityObject : ents) {
-        EntityType type = static_cast<EntityType>(entityObject.getField<i32>("type"));
-        EntityID id{entityObject.getField<u64>("id")};
-        Entity& entity = spawnEntity(type, id, glm::vec3{});
-        entity.deserialize(entityObject);
+    try {
+        ser::Object object = ser::deserialize(fileName).get<ser::Object>();
+        serializeDeserialize(object);
+    
+        player->deserialize(object.getField<ser::Object>("player"));
+    
+        std::vector<ser::Object>& ents = object.getField<ser::List>("entities").getVector<ser::Object>();
+        for (ser::Object& entityObject : ents) {
+            EntityType type = static_cast<EntityType>(entityObject.getField<i32>("type"));
+            EntityID id{entityObject.getField<u64>("id")};
+            Entity& entity = spawnEntity(type, id, glm::vec3{});
+            try {
+                entity.deserialize(entityObject);
+            } catch (ser::DecodeError& ex) {
+                Logger::error(std::format("While deserializing entity (id {}) in '{}': {}", id.id, worldFileName().c_str(), ex.what()));
+            }
+        }
+    } catch (ser::Error& ex) {
+        Logger::error(std::format("While deserializing '{}': {}", worldFileName().c_str(), ex.what()));
+        return false;
     }
 
     return true;
