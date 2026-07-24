@@ -1,7 +1,5 @@
 #include <cmath>
-
 #include <cstdint>
-#include <format>
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 #include <glm/glm.hpp>
@@ -16,6 +14,8 @@
 #include "graphics/graphics.hpp"
 #include "engine/input.hpp"
 #include "engine/resource_manager.hpp"
+
+#include <GLFW/glfw3.h>
 
 EntityID::EntityID(std::uint64_t id)
     : id{id}
@@ -52,10 +52,10 @@ void Entity::updatePosition(float deltaTime) {
     if (!noClip) {
         collisionBlockCount = glm::ivec3{0};
         avgVelocity = aabbResolveCollisions(world, position, size, avgVelocity);
-        Logger::info(std::format("Collision blocks: {}", collisionBlockCount));
+        //Logger::info(std::format("Collision blocks: {}", collisionBlockCount));
     }
 
-    position = position + avgVelocity;
+    position += avgVelocity;
 
     if (avgVelocity.x != baseVelocity.x) {
         velocity.x = 0.f;

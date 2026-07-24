@@ -19,7 +19,7 @@ private:
     CollisionWorld collisionWorld{};
 
 public:
-    std::map<glm::ivec3, std::unique_ptr<Chunk>, CompareIvec3FO> chunks{};
+    std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>, HashIvec3XZOnly> chunks{};
     std::map<EntityID, std::unique_ptr<Entity>> entities{};
     int seed;
     bool showChunkBorders = false;

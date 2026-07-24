@@ -2,8 +2,6 @@
 #define DIRECTION_HPP
 
 #include <glm/glm.hpp>
-#include <iterator>
-#include <utility>
 #include "engine/logger.hpp"
 
 namespace Dir {

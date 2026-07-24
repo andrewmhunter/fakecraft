@@ -7,4 +7,5 @@ save/
 screenshots/
 compile_commands.json
 fakecraft
-
+callgrind.out.*
+cachegrind.out.*

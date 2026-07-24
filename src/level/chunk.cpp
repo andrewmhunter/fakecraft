@@ -3,10 +3,12 @@
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "engine/config.hpp"
 #include "engine/logger.hpp"
 #include "chunk.hpp"
 #include "level/collision.hpp"
 #include "serialization/serialize.hpp"
+#include "util/direction.hpp"
 #include "world.hpp"
 #include "chunk.hpp"
 #include "worldgen.hpp"
@@ -17,16 +19,24 @@
 Chunk::Chunk(World* world, glm::ivec3 coords)
     : world{world},
     coords{coords},
+    adjacentChunks{coords, this},
     loaded{true}
 {
     Logger::assertion(world);
 
-    for (int i = 0; i < DIRECTION_CARDINAL_COUNT; i += 1) {
-        Chunk* adjacent = world->getChunk(coords + directionToPoint(static_cast<Direction>(i)));
-        adjacentChunks[i] = adjacent;
-        if (adjacent != NULL) {
-            adjacent->adjacentChunks[invertDirection(static_cast<Direction>(i))] = this;
-            adjacent->dirty = true;
+    for (int x = -1; x <= 1; ++x) {
+        for (int z = -1; z <= 1; ++z) {
+            if (x == 0 && z == 0) {
+                continue;
+            }
+
+            glm::ivec3 localChunkPosition{x, 0, z};
+            Chunk* adjacent = world->getChunk(coords + localChunkPosition);
+            adjacentChunks.setChunk(localChunkPosition, adjacent);
+            if (adjacent != nullptr) {
+                adjacent->adjacentChunks.setChunk(-localChunkPosition, this);
+                adjacent->dirty = true;
+            }
         }
     }
 }
@@ -54,14 +64,19 @@ void Chunk::generateOrLoad() {
 void Chunk::unload() {
     loaded = false;
 
-    for (int i = 0; i < DIRECTION_CARDINAL_COUNT; ++i) {
-        Chunk* adjacent = adjacentChunks[i];
+    for (int x = -1; x <= 1; ++x) {
+        for (int z = -1; z <= 1; ++z) {
+            if (x == 0 && z == 0) {
+                continue;
+            }
 
-        if (adjacent != nullptr) {
-            adjacent->adjacentChunks[invertDirection(static_cast<Direction>(i))] = NULL;
+            glm::ivec3 localChunkPosition{x, 0, z};
+            Chunk* adjacent = adjacentChunks.getChunkLocal(localChunkPosition);
+            adjacentChunks.setChunk(localChunkPosition, nullptr);
+            if (adjacent != nullptr) {
+                adjacent->adjacentChunks.setChunk(-localChunkPosition, nullptr);
+            }
         }
-
-        adjacentChunks[i] = nullptr;
     }
 
     serialize();
@@ -269,4 +284,63 @@ bool Chunk::blockInChunk(glm::ivec3 local) {
     return local.x >= 0 && local.x < CHUNK_WIDTH
         && local.y >= 0 && local.y < CHUNK_HEIGHT
         && local.z >= 0 && local.z < CHUNK_WIDTH;
+}
+
+
+// ChunkCache
+
+
+ChunkCache::ChunkCache(glm::ivec3 centerPosition, Chunk* centerChunk)
+    : centerPosition{centerPosition}
+{
+    chunks[getIndexLocal(glm::ivec3{0})] = centerChunk;
+}
+
+void ChunkCache::setChunk(glm::ivec3 localChunkPosition, Chunk* chunk) {
+    chunks[getIndexLocal(localChunkPosition)] = chunk;
+}
+
+bool ChunkCache::inCacheGlobal(glm::ivec3 globalChunkPosition) const {
+    return inCacheLocal(getLocalGlobal(globalChunkPosition));
+}
+
+const Chunk* ChunkCache::getChunkLocal(glm::ivec3 localChunkPosition) const {
+    if (!inCacheLocal(localChunkPosition)) {
+        return nullptr;
+    }
+    return chunks[getIndexLocal(localChunkPosition)];
+}
+
+Chunk* ChunkCache::getChunkLocal(glm::ivec3 localChunkPosition) {
+    if (!inCacheLocal(localChunkPosition)) {
+        return nullptr;
+    }
+    return chunks[getIndexLocal(localChunkPosition)];
+}
+
+const Chunk* ChunkCache::getChunkGlobal(glm::ivec3 globalChunkPosition) const {
+    return getChunkLocal(getLocalGlobal(globalChunkPosition));
+}
+
+Chunk* ChunkCache::getChunkGlobal(glm::ivec3 globalChunkPosition) {
+    return getChunkLocal(getLocalGlobal(globalChunkPosition));
+}
+
+const Chunk* ChunkCache::getChunkDirection(Direction direction) const {
+    return getChunkLocal(directionToPoint(direction));
+}
+
+Chunk* ChunkCache::getChunkDirection(Direction direction) {
+    return getChunkLocal(directionToPoint(direction));
+}
+
+Block ChunkCache::getBlockRawGlobal(glm::ivec3 globalBlockPosition) const {
+    if (globalBlockPosition.y >= CHUNK_HEIGHT || globalBlockPosition.y < 0) {
+        return Block::air;
+    }
+    const Chunk* chunk = getChunkGlobal(worldToChunk(globalBlockPosition));
+    if (chunk == nullptr) {
+        return Block::barrier;
+    }
+    return chunk->getBlockRaw(worldToLocal(globalBlockPosition));
 }

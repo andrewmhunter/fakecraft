@@ -32,11 +32,11 @@ void chunkGenerateMesh(Chunk* chunk) {
         }
     }
 
-    const Chunk* northChunk = chunk->adjacentChunks[Direction::north];
+    const Chunk* northChunk = chunk->adjacentChunks.getChunkDirection(Direction::north);
     if (northChunk == NULL) {
         northChunk = &dummyChunk;
     }
-    const Chunk* southChunk = chunk->adjacentChunks[Direction::south];
+    const Chunk* southChunk = chunk->adjacentChunks.getChunkDirection(Direction::south);
     if (southChunk == NULL) {
         southChunk = &dummyChunk;
     }
@@ -45,11 +45,11 @@ void chunkGenerateMesh(Chunk* chunk) {
         adjacentChunks[x][0][Direction::north] = northChunk;
     }
 
-    const Chunk* eastChunk = chunk->adjacentChunks[Direction::east];
+    const Chunk* eastChunk = chunk->adjacentChunks.getChunkDirection(Direction::east);
     if (eastChunk == NULL) {
         eastChunk = &dummyChunk;
     }
-    const Chunk* westChunk = chunk->adjacentChunks[Direction::west];
+    const Chunk* westChunk = chunk->adjacentChunks.getChunkDirection(Direction::west);
     if (westChunk == NULL) {
         westChunk = &dummyChunk;
     }

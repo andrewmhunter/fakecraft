@@ -1,5 +1,6 @@
 #include "collision.hpp"
 #include "engine/logger.hpp"
+#include "level/chunk.hpp"
 #include "util/util.hpp"
 #include "util/point.hpp"
 #include "level/block.hpp"
@@ -10,7 +11,6 @@
 #include <cmath>
 
 constexpr float collisionEpsilon = 0.002;
-constexpr float equalityEpsilon = 0.000001;
 
 
 Plane::Plane(glm::vec3 normal, float distance)
@@ -140,13 +140,13 @@ static bool isPassable(Block block) {
     return getBlock(block).passability == Passability::passable;
 }
 
-static float aabbResolveAxisBlock(const World* world, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {
+static float aabbResolveAxisBlock(const ChunkCache& chunks, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {
     const int axis1 = (axis + 1) % 3;
     const int axis2 = (axis + 2) % 3;
 
     // If the block can be walked through we don't
     // care if the bounding box is colliding
-    if (isPassable(world->getBlock(blockPosition))) {
+    if (isPassable(chunks.getBlockRawGlobal(blockPosition))) {
         return velocity[axis];
     }
 
@@ -188,18 +188,25 @@ static inline constexpr float absMinf(float a, float b) {
     return b;
 }
 
-static void aabbResolveAxis(const World* world, BoundingBox& boundingBox, glm::vec3& velocity, int axis) {
+glm::ivec3 collisionBlockCount{0};
+
+static void aabbResolveAxis(const ChunkCache& chunks, BoundingBox& boundingBox, glm::vec3& velocity, int axis) {
+    if (velocity[axis] == 0.f) {
+        return;
+    }
+
     // One is added or subtracted to the positions to round them up using truncate
-    glm::vec3 blockOffset{1 + collisionEpsilon};
+    glm::vec3 blockOffset{1};
     glm::ivec3 mins = glm::ivec3{glm::trunc(glm::min(boundingBox.min + velocity, boundingBox.min) - blockOffset)};
     glm::ivec3 maxes = glm::ivec3{glm::trunc(glm::max(boundingBox.max + velocity, boundingBox.max) + blockOffset)};
 
     for (int x = mins.x; x <= maxes.x; ++x) {
         for (int y = mins.y; y <= maxes.y; ++y) {
             for (int z = mins.z; z <= maxes.z; ++z) {
+                collisionBlockCount[axis]++;
                 // glm::ivec3 blockPosition = vector3ToPoint(position) + glm::ivec3{x, y, z};
                 glm::ivec3 blockPosition{x, y, z};
-                float resolved = aabbResolveAxisBlock(world, boundingBox, velocity, blockPosition, axis);
+                float resolved = aabbResolveAxisBlock(chunks, boundingBox, velocity, blockPosition, axis);
                 velocity[axis] = absMinf(velocity[axis], resolved);
             }
         }
@@ -212,9 +219,16 @@ static void aabbResolveAxis(const World* world, BoundingBox& boundingBox, glm::v
 glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, glm::vec3 bounds, glm::vec3 velocity) {
     BoundingBox boundingBox = genBoundingBox(position, bounds);
 
-    for (int axis = 0; axis < 3; ++axis) {
-        aabbResolveAxis(world, boundingBox, velocity, axis);
+    const Chunk* chunk = world->getChunk(worldToChunkV(position));
+    if (chunk == nullptr) {
+        return glm::vec3{0.f};
     }
+
+    const ChunkCache& chunks = chunk->adjacentChunks;
+
+    aabbResolveAxis(chunks, boundingBox, velocity, 0);
+    aabbResolveAxis(chunks, boundingBox, velocity, 1);
+    aabbResolveAxis(chunks, boundingBox, velocity, 2);
 
     return velocity;
 }

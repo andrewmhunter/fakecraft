@@ -1,7 +1,9 @@
 #ifndef CHUNK_HPP
 #define CHUNK_HPP
 
+#include <cstddef>
 #include <filesystem>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include "block.hpp"
 #include "engine/config.hpp"
@@ -32,7 +34,7 @@ constexpr glm::ivec3 chunkSize{CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH};
 
 // Positions
 
-static inline glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
+constexpr glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
     return glm::ivec3{
         floorDiv(worldPoint.x, CHUNK_WIDTH),
         floorDiv(worldPoint.y, CHUNK_HEIGHT),
@@ -40,14 +42,13 @@ static inline glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
     };
 }
 
-static inline glm::ivec3 worldToChunkV(glm::vec3 worldVector) {
+constexpr glm::ivec3 worldToChunkV(glm::vec3 worldVector) {
     glm::ivec3 chunkPosition = vector3ToPoint(worldVector / glm::vec3{chunkSize});
     chunkPosition.y = 0;
     return chunkPosition;
-    //return worldToChunk(vector3ToPoint(worldPoint));
 }
 
-static inline glm::ivec3 worldToLocal(glm::ivec3 worldPoint) {
+constexpr glm::ivec3 worldToLocal(glm::ivec3 worldPoint) {
     return glm::ivec3{
         positiveModulo(worldPoint.x, CHUNK_WIDTH),
         positiveModulo(worldPoint.y, CHUNK_HEIGHT),
@@ -55,11 +56,11 @@ static inline glm::ivec3 worldToLocal(glm::ivec3 worldPoint) {
     };
 }
 
-static inline glm::ivec3 localToWorld(glm::ivec3 chunkCoord, glm::ivec3 local) {
+constexpr glm::ivec3 localToWorld(glm::ivec3 chunkCoord, glm::ivec3 local) {
     return chunkCoord * chunkSize + local;
 }
 
-static inline glm::vec3 worldToLocalV(glm::vec3 worldVector) {
+constexpr glm::vec3 worldToLocalV(glm::vec3 worldVector) {
     glm::vec3 v = worldVector
         - glm::vec3{worldToChunkV(worldVector) * chunkSize};
 
@@ -75,9 +76,50 @@ static inline glm::vec3 worldToLocalV(glm::vec3 worldVector) {
     return v;
 }
 
-static inline glm::vec3 localToWorldV(glm::ivec3 chunkCoord, glm::vec3 local) {
+constexpr glm::vec3 localToWorldV(glm::ivec3 chunkCoord, glm::vec3 local) {
     return glm::vec3{chunkCoord * chunkSize} + local;
 }
+
+
+class Chunk;
+
+class ChunkCache {
+private:
+    glm::ivec3 centerPosition;
+    std::array<Chunk*, 9> chunks{nullptr};
+
+
+    constexpr std::size_t getIndexLocal(glm::ivec3 localChunkPosition) const {
+        return (localChunkPosition.x + 1) + (localChunkPosition.z + 1) * 3;
+    }
+
+    constexpr glm::ivec3 getLocalGlobal(glm::ivec3 globalChunkPosition) const {
+        return globalChunkPosition - centerPosition;
+    }
+
+    constexpr bool inCacheLocal(glm::ivec3 localChunkPosition) const {
+        std::size_t index = getIndexLocal(localChunkPosition);
+        return index >= 0 && index < chunks.size();
+    }
+
+    bool inCacheGlobal(glm::ivec3 globalChunkPosition) const;
+
+
+public:
+    explicit ChunkCache(glm::ivec3 centerPosition, Chunk* centerChunk);
+    void setChunk(glm::ivec3 localChunkPosition, Chunk* chunk);
+
+    const Chunk* getChunkLocal(glm::ivec3 localChunkPosition) const;
+    Chunk* getChunkLocal(glm::ivec3 localChunkPosition);
+
+    const Chunk* getChunkGlobal(glm::ivec3 globalChunkPosition) const;
+    Chunk* getChunkGlobal(glm::ivec3 globalChunkPosition);
+
+    const Chunk* getChunkDirection(Direction direction) const;
+    Chunk* getChunkDirection(Direction direction);
+    
+    Block getBlockRawGlobal(glm::ivec3 globalBlockPosition) const;
+};
 
 
 // Chunk
@@ -93,6 +135,7 @@ struct BlockInstance {
 };
 
 class World;
+class ChunkCache;
 
 class Chunk {
 private:
@@ -106,7 +149,7 @@ public:
     std::optional<GPUMesh> mesh;
     std::optional<GPUMesh> translucentMesh;
     bool dirty;
-    Chunk* adjacentChunks[DIRECTION_CARDINAL_COUNT];
+    ChunkCache adjacentChunks{glm::ivec3{0}, this};
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     LightValues light[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
@@ -144,6 +187,7 @@ public:
 
     static bool blockInChunk(glm::ivec3 local);
 };
+
 
 #endif
 

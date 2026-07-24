@@ -1,6 +1,7 @@
 #ifndef POINT_HPP
 #define POINT_HPP
 
+#include <functional>
 #include <glm/common.hpp>
 #include <glm/glm.hpp>
 
@@ -32,31 +33,23 @@ constexpr auto operator<=>(const glm::vec<2, T>& left, const glm::vec<2, T>& rig
     return left.y <=> right.y;
 }
 
+class CompareIvec3XZOnlyFO {
+public:
+    bool operator()(const glm::ivec3& left, const glm::ivec3& right) const;
+};
+
 class CompareIvec2FO {
 public:
     bool operator()(const glm::ivec2& left, const glm::ivec2& right) const;
 };
 
-/*template<typename T, glm::qualifier Q>
-std::strong_ordering operator<=>(const glm::vec<3, T, Q>& left, const glm::vec<3, T, Q>& right) {
-    if (left.x != right.x) {
-        return left.x <=> right.x;
+struct HashIvec3XZOnly {
+    constexpr std::size_t operator()(const glm::ivec3& vector) const {
+        std::size_t h1 = std::hash<int>{}(vector.x);
+        std::size_t h2 = std::hash<int>{}(vector.z);
+        return h1 ^ (h2 << 1);
     }
-    if (left.y != right.y) {
-        return left.y <=> right.y;
-    }
-    return left.z <=> right.z;
-}*/
+};
 
-/*template<typename T, glm::qualifier Q>
-bool operator<(const glm::vec<3, T, Q>& left, const glm::vec<3, T, Q>& right) {
-    if (left.x != right.x) {
-        return left.x < right.x;
-    }
-    if (left.y != right.y) {
-        return left.y < right.y;
-    }
-    return left.z < right.z;
-}*/
 
 #endif
