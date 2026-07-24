@@ -37,7 +37,6 @@ target_sources(fakecraft PRIVATE
     
     src/util/hash.cpp
     src/util/point.cpp
-    src/util/fileio.cpp
 	src/util/util.cpp
     src/util/timer.cpp
     
