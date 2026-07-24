@@ -51,7 +51,7 @@ World::~World() {
     chunks.clear();
 }
 
-#define ASYNC_GENERATION 0
+#define ASYNC_GENERATION 1
 
 void World::update(float deltaTime) {
     static int lightDirection = 1;
@@ -113,13 +113,14 @@ void World::update(float deltaTime) {
             
             std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(this, chunkCoord);
             chunks[chunkCoord] = std::move(newChunk);
+            auto& thisChunk = *chunks[chunkCoord];
 
 #if ASYNC_GENERATION
-            asyncGenerators.push_back(std::async([this, chunkCoord](){
-                this->chunks[chunkCoord]->generateOrLoad();
+            asyncGenerators.push_back(std::async([&thisChunk](){
+                thisChunk.generateOrLoad();
             }));
 #else
-            this->chunks[chunkCoord]->generateOrLoad();
+            thisChunk.generateOrLoad();
 #endif
         } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
