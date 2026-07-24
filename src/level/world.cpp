@@ -1,13 +1,18 @@
+#include <cmath>
 #include <filesystem>
 #include <format>
 #include <future>
 #include <glm/fwd.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include "world.hpp"
+#include "engine/camera.hpp"
 #include "engine/config.hpp"
 #include "entities/entity.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/resource_manager.hpp"
+#include "level/collision.hpp"
 #include "level/octree.hpp"
 #include "serialization/serialize.hpp"
 #include "util/types.hpp"
@@ -46,7 +51,7 @@ World::~World() {
     chunks.clear();
 }
 
-#define ASYNC_GENERATION 1
+#define ASYNC_GENERATION 0
 
 void World::update(float deltaTime) {
     static int lightDirection = 1;
@@ -171,6 +176,9 @@ void World::draw() const {
     terrainShader.use();
     ResourceManager::instance().texture.terrain.bind();
 
+    Frustrum frustrum = Camera::globalCamera.getFrustrum();
+    int chunksCulled = 0;
+
     glm::ivec3 chunkOffset{0};
     CircleIterator offsetIterator = circleIteratorInit(renderDistance + 1);
     do {
@@ -180,15 +188,31 @@ void World::draw() const {
         if (chunk == NULL) {
             continue;
         }
+
+        if (!frustrum.isInFrustrum(chunk->getCullBoundingBox())) {
+            chunksCulled++;
+            continue;
+        }
+
         chunk->draw(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
+    
     ShaderProgram& entityShader = ResourceManager::instance().shader.entityShader;
     entityShader.use();
     ResourceManager::instance().texture.human.bind();
+
+    int entitiesCulled = 0;
+
     for (auto& entity : entities) {
+        if (!frustrum.isInFrustrum(entity.second->getCullBoundingBox())) {
+            entitiesCulled++;
+            continue;
+        }
         entity.second->draw(entityShader);
     }
+
+    //Logger::info(std::format("Chunks culled: {}, Entities culed: {}", chunksCulled, entitiesCulled));
 
     terrainShader.use();
     ResourceManager::instance().texture.terrain.bind();
@@ -203,6 +227,11 @@ void World::draw() const {
         if (chunk == NULL) {
             continue;
         }
+
+        if (!frustrum.isInFrustrum(chunk->getCullBoundingBox())) {
+            continue;
+        }
+
         chunk->drawTranslucent(terrainShader);
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
     glEnable(GL_CULL_FACE);

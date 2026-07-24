@@ -10,6 +10,26 @@
 #include <cmath>
 
 constexpr float collisionEpsilon = 0.002;
+constexpr float equalityEpsilon = 0.000001;
+
+
+Plane::Plane(glm::vec3 normal, float distance)
+    : normal{normal}, distance{distance}
+{}
+
+Plane::Plane(glm::vec3 point, glm::vec3 normal)
+    : normal{normal}, distance{normal.x * point.x + normal.y * point.y + normal.z * point.z}
+{}
+
+
+// https://learnopengl.com/Guest-Articles/2021/Scene/Frustum-Culling
+float Plane::getSignedDistance(glm::vec3 point) const {
+    return glm::dot(normal, point) - distance;
+}
+
+Frustrum::Frustrum(Plane top, Plane bottom, Plane left, Plane right, Plane near)
+    : top{top}, bottom{bottom}, left{left}, right{right}, near{near}
+{}
 
 
 BoundingBox::BoundingBox(glm::vec3 min, glm::vec3 max)

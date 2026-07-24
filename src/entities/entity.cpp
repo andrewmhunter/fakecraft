@@ -1,6 +1,8 @@
 #include <cmath>
 
 #include <cstdint>
+#include <format>
+#include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -41,13 +43,16 @@ Entity::Entity(World* world, EntityType type, EntityID id, glm::vec3 position, g
 
 Entity::~Entity() {}
 
+extern glm::ivec3 collisionBlockCount;
 
 void Entity::updatePosition(float deltaTime) {
     glm::vec3 avgVelocity = (velocity + velocityOld) * deltaTime * 0.5f;
     glm::vec3 baseVelocity = avgVelocity;
 
     if (!noClip) {
+        collisionBlockCount = glm::ivec3{0};
         avgVelocity = aabbResolveCollisions(world, position, size, avgVelocity);
+        Logger::info(std::format("Collision blocks: {}", collisionBlockCount));
     }
 
     position = position + avgVelocity;
@@ -129,6 +134,13 @@ BoundingBox Entity::getBoundingBox() const {
     sides.y = size.y;
     glm::vec3 max = position + sides;
     return BoundingBox{min, max};
+}
+
+BoundingBox Entity::getCullBoundingBox() const {
+    BoundingBox boundingBox = getBoundingBox();
+    boundingBox.min -= glm::vec3{1.f};
+    boundingBox.max += glm::vec3{1.f};
+    return boundingBox;
 }
 
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);

@@ -10,6 +10,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/fwd.hpp>
 
+#include "engine/camera.hpp"
 #include "level/block.hpp"
 #include "level/chunk.hpp"
 #include "engine/resource_manager.hpp"
@@ -56,33 +57,12 @@ void errorCallbackGlfw(int error, const char* description) {
     Logger::error(std::format("GLFW Error {}: {}", error, description));
 }
 
-
-
-int windowWidth = 800;
-int windowHeight = 600;
-
-glm::mat4 cameraProjection{};
-glm::mat4 guiCameraProjection{};
-
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     (void)window;
 
-    windowWidth = width;
-    windowHeight = height;
+    Camera::globalCamera.windowSize = glm::vec2{width, height};
 
-    cameraProjection = glm::perspective(
-        glm::radians(Config::settings->graphics.fov),
-        static_cast<float>(windowWidth) / static_cast<float>(windowHeight),
-        0.1f,
-        10000.f
-    );
-
-    guiCameraProjection = glm::ortho(
-        -windowWidth / 2.f, windowWidth / 2.f,
-        -windowHeight / 2.f, windowHeight / 2.f
-    );
-
-    glViewport(0, 0, windowWidth, windowHeight);
+    glViewport(0, 0, width, height);
 }
 
 void toggleFullscreen(GLFWwindow* window) {
@@ -123,6 +103,9 @@ void saveScreenshot() {
     std::strftime(fileName, sizeof(fileName) - 1, "screenshots/screenshot%FT%T.png", local);
     fileName[sizeof(fileName) - 1] = '\0';
 
+    int windowWidth = Camera::globalCamera.windowSize.x;
+    int windowHeight = Camera::globalCamera.windowSize.y;
+
     char* image = new char[3 * windowWidth * windowHeight];
     glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, image);
     // glReadPixels starts from the bottom left corner, stbt_write_png starts at the top left
@@ -141,9 +124,11 @@ void saveScreenshot() {
 }
 
 void runGame(GLFWwindow* window) {
+    Camera::globalCamera.fov = Config::settings->graphics.fov;
+
     initMeshes();
 
-    framebufferSizeCallback(window, windowWidth, windowHeight);
+    framebufferSizeCallback(window, Camera::globalCamera.windowSize.x, Camera::globalCamera.windowSize.y);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -238,7 +223,8 @@ void runGame(GLFWwindow* window) {
         WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, Config::settings->game.blockReach);
         glm::vec3 cubePos = glm::vec3{rayCast.blockAt} + 0.5f;
 
-        glm::mat4 view = glm::lookAt(camPosition, target, up);
+        Camera::globalCamera.position = camPosition;
+        Camera::globalCamera.lookDirection = lookVec;
 
         float initialBreakTime = 0.3f * 20.f;
         float repeatedBreakTime = 0.15f * 20.f;
@@ -283,6 +269,14 @@ void runGame(GLFWwindow* window) {
             mob.velocity = player->velocity * 2.f;
         }
 
+        if (keyPressed(GLFW_KEY_L)) {
+            for (int i = 0; i < 10; ++i) {
+                Entity& mob = world.spawnEntity<Human>(player->position);
+                mob.velocity = player->velocity * 2.f;
+            }
+        }
+
+
         if (getMouseScroll() < 0) {
             selectedBlock = static_cast<Block>(static_cast<int>(selectedBlock) + 1);
         }
@@ -300,10 +294,10 @@ void runGame(GLFWwindow* window) {
         ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
         ShaderProgram& simpleShader = ResourceManager::instance().shader.simpleShader;
 
-        terrainShader.setUniformMat4("projectionView", cameraProjection * view);
+        terrainShader.setUniformMat4("projectionView", Camera::globalCamera.getProjectionViewMatrix());
         terrainShader.setUniformVec3("camPos", camPosition);
-        simpleShader.setUniformMat4("projectionView", cameraProjection * view);
-        ResourceManager::instance().shader.entityShader.setUniformMat4("projectionView", cameraProjection * view);
+        simpleShader.setUniformMat4("projectionView", Camera::globalCamera.getProjectionViewMatrix());
+        ResourceManager::instance().shader.entityShader.setUniformMat4("projectionView", Camera::globalCamera.getProjectionViewMatrix());
 
         world.draw();
 
@@ -334,26 +328,24 @@ void runGame(GLFWwindow* window) {
         if (showGui) {
             glDisable(GL_DEPTH_TEST);
 
-            int screenMiddleX = windowWidth / 2;
-            int screenMiddleY = windowHeight / 2;
+            glm::ivec2 screenMiddle = Camera::globalCamera.windowSize / 2;
 
-            glm::mat4 guiView{1.f};
             terrainShader.use();
-            terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView);
-            simpleShader.setUniformMat4("projectionView", guiCameraProjection * guiView);
+            terrainShader.setUniformMat4("projectionView", Camera::globalCamera.getGUIProjection());
+            simpleShader.setUniformMat4("projectionView", Camera::globalCamera.getGUIProjection());
 
             float iconScale = 48.f;
             float cornerOffset = 75.f;
             glm::mat4 indicator{1.f};
-            indicator = glm::translate(indicator, {screenMiddleX - cornerOffset, screenMiddleY - cornerOffset, 0});
+            indicator = glm::translate(indicator, {screenMiddle.x - cornerOffset, screenMiddle.y - cornerOffset, 0});
             indicator = glm::scale(indicator, {iconScale, iconScale, 0.1f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 8.f, {1.f, 0.f, 0.f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 4.f, {0.f, 1.f, 0.f});
             terrainShader.setUniformMat4("model", indicator);
             getBlock(selectedBlock).mesh.draw();
 
-            glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-windowWidth / 2.f, windowHeight / 2.f, 0.f});
-            terrainShader.setUniformMat4("projectionView", guiCameraProjection * guiView * cornerTransform);
+            glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-screenMiddle.x, screenMiddle.y, 0.f});
+            terrainShader.setUniformMat4("projectionView", Camera::globalCamera.getGUIProjection() * cornerTransform);
             terrainShader.setUniformMat4("model", glm::mat4{1.f});
 
             Font& font = ResourceManager::instance().font;
@@ -403,7 +395,7 @@ int main() {
     glfwSetErrorCallback(errorCallbackGlfw);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 
-    GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Fakecraft", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(Camera::globalCamera.windowSize.x, Camera::globalCamera.windowSize.y, "Fakecraft", nullptr, nullptr);
     if (window == nullptr) {
         Logger::fatal("Failed to create GLFW window");
     }

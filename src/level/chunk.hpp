@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include "block.hpp"
 #include "engine/config.hpp"
+#include "level/collision.hpp"
 #include "serialization/serialize.hpp"
 #include "util/util.hpp"
 #include "util/point.hpp"
@@ -139,6 +140,7 @@ public:
     void serialize();
     bool deserialize();
     
+    BoundingBox getCullBoundingBox() const;
 
     static bool blockInChunk(glm::ivec3 local);
 };

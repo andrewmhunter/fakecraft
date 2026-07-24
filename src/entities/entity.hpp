@@ -56,6 +56,7 @@ public:
     virtual void collide(float deltaTime, EntityID otherID);
 
     virtual BoundingBox getBoundingBox() const;
+    BoundingBox getCullBoundingBox() const;
 
     virtual void serialize(ser::Object& object);
     virtual void deserialize(ser::Object& object);

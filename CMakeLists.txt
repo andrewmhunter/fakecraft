@@ -29,6 +29,7 @@ target_sources(fakecraft PRIVATE
     src/engine/logger.cpp
 	src/engine/input.cpp
     src/engine/resource_manager.cpp
+    src/engine/camera.cpp
     
     src/graphics/mesh.cpp
     src/graphics/graphics.cpp

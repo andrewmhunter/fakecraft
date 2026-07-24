@@ -1,9 +1,11 @@
 #include <filesystem>
 #include <format>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "engine/logger.hpp"
 #include "chunk.hpp"
+#include "level/collision.hpp"
 #include "serialization/serialize.hpp"
 #include "world.hpp"
 #include "chunk.hpp"
@@ -258,6 +260,10 @@ void Chunk::serializeDeserialize(ser::Object& object) {
     (void)object;
 }
 
+BoundingBox Chunk::getCullBoundingBox() const {
+    glm::vec3 worldPosition = coords * chunkSize;
+    return BoundingBox{worldPosition, worldPosition + glm::vec3{chunkSize}};
+}
 
 bool Chunk::blockInChunk(glm::ivec3 local) {
     return local.x >= 0 && local.x < CHUNK_WIDTH

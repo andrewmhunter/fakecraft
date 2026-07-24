@@ -3,8 +3,11 @@
 
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
+#include <limits>
 
 class World;
+
+
 
 struct BoundingBox {
     glm::vec3 min;
@@ -20,6 +23,76 @@ struct BoundingBox {
         return min.x < other.max.x && max.x > other.min.x
             && min.y < other.max.y && max.y > other.min.y
             && min.z < other.max.z && max.z > other.min.z;
+    }
+
+    constexpr BoundingBox transformed(glm::mat4 transformation) const {
+        glm::vec3 finalMin{std::numeric_limits<float>::infinity()};
+        glm::vec3 finalMax{-std::numeric_limits<float>::infinity()};
+
+        for (int x = 0; x <= 1; ++x) {
+            for (int y = 0; y <= 1; ++y) {
+                for (int z = 0; z <= 1; ++z) {
+                    glm::vec3 minAxis{x, y, z};
+                    glm::vec3 maxAxis = (minAxis - glm::vec3{1.f}) * -1.f;
+
+                    glm::vec3 position = minAxis * min + maxAxis * max;
+
+                    glm::vec3 transformed = transformation * glm::vec4{position, 1.f};
+                    
+                    finalMin = glm::min(finalMin, transformed);
+                    finalMax = glm::max(finalMax, transformed);
+                }
+            }
+        }
+        return BoundingBox{finalMin, finalMax};
+    }
+
+    constexpr glm::vec3 getCenter() const {
+        return (min + max) / 2.f;
+    }
+
+    constexpr glm::vec3 getExtents() const {
+        return max - getCenter();
+    }
+};
+
+struct Plane {
+    glm::vec3 normal;
+    float distance;
+
+    Plane(glm::vec3 normal, float distance);
+    Plane(glm::vec3 point, glm::vec3 normal);
+
+    float getSignedDistance(glm::vec3 point) const;
+
+    constexpr bool isForward(const BoundingBox& boundingBox) const {
+        // https://gdbooks.gitbooks.io/3dcollisions/content/Chapter2/static_aabb_plane.html
+        // https://learnopengl.com/Guest-Articles/2021/Scene/Frustum-Culling
+
+        glm::vec3 extents = boundingBox.getExtents();
+
+        float projection = extents.x * glm::abs(normal.x) + extents.y * glm::abs(normal.y) + extents.z * glm::abs(normal.z);
+        return -projection <= getSignedDistance(boundingBox.getCenter());
+    }
+};
+
+struct Frustrum {
+    Plane top;
+    Plane bottom;
+    Plane left;
+    Plane right;
+    Plane near;
+    // No far plane as far away objects will be unloaded
+    // before they can reach the far plane
+
+    Frustrum(Plane top, Plane bottom, Plane left, Plane right, Plane near);
+
+    constexpr bool isInFrustrum(const BoundingBox& boundingBox) const {
+        return top.isForward(boundingBox)
+            && bottom.isForward(boundingBox)
+            && left.isForward(boundingBox)
+            && right.isForward(boundingBox)
+            && near.isForward(boundingBox);
     }
 };
 
