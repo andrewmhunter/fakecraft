@@ -14,6 +14,8 @@
 #include "engine/logger.hpp"
 
 
+GLuint uboGlobalsBlock;
+
 OpenGLObject::OpenGLObject(OpenGLObjectLifetimeFunction allocFunction, OpenGLObjectLifetimeFunction freeFunction) : freeFunction{freeFunction} {
     allocFunction(1, &this->object);
     Logger::trace("Allocating object");
@@ -198,6 +200,9 @@ ShaderProgram::ShaderProgram(std::span<std::reference_wrapper<const Shader>> sha
 
         Logger::fatal(std::format("Shader program link failed: {}", infoLog));
     }
+
+    GLuint globalsBlockIndex = glGetUniformBlockIndex(programId.object, "Globals");
+    glUniformBlockBinding(programId.object, globalsBlockIndex, 0);
 }
 
 ShaderProgram ShaderProgram::loadFiles(const std::string& vertexFileName, const std::string& fragmentFileName) {
@@ -247,6 +252,14 @@ void ShaderProgram::setUniformVec4(const std::string& uniform, glm::vec4 value) 
 
 void ShaderProgram::setUniformMat4(const std::string& uniform, glm::mat4 value) {
     glProgramUniformMatrix4fv(programId.object, uniformLocation(uniform), 1, false, glm::value_ptr(value));
+}
+
+void ShaderProgram::setModel(glm::mat4 model) {
+    setUniformMat4("model", model);
+}
+
+void ShaderProgram::setColor(glm::vec4 color) {
+    setUniformVec4("color", color);
 }
 
 /*
@@ -407,7 +420,15 @@ std::optional<GPUMesh> cubeMesh{};
 std::optional<GPUMesh> rectangleMesh{};
 std::optional<GPUMesh> cubeMeshWires{};
 
+
 void initMeshes() {
+    glGenBuffers(1, &uboGlobalsBlock);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboGlobalsBlock);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(GlobalsBlock), nullptr, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, uboGlobalsBlock);
+
     Mesh cubeCpuMesh{};
     cubeCpuMesh.pushTexturedPrism(glm::mat4{1.f}, {{0.f, 0.f}, {1.f, 1.f}});
     cubeMesh = cubeCpuMesh.upload();
@@ -440,6 +461,17 @@ void initMeshes() {
     cubeMeshWires = cubeWiresCpuMesh.upload();*/
 }
 
+void setGlobalsBlock(const GlobalsBlock& block) {
+    glBindBuffer(GL_UNIFORM_BUFFER, uboGlobalsBlock);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(GlobalsBlock), &block, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+void setProjectionView(const glm::mat4& projectionView, const glm::vec3& cameraPosition) {
+    GlobalsBlock globalsBlock{projectionView, cameraPosition};
+    setGlobalsBlock(globalsBlock);
+}
+
 void unloadMeshes() {
     cubeMesh = std::nullopt;
     rectangleMesh = std::nullopt;
@@ -465,7 +497,7 @@ void drawCube(ShaderProgram& shader, glm::vec3 position, glm::vec3 size) {
     glm::mat4 transform{1.f};
     transform = glm::translate(transform, position);
     transform = glm::scale(transform, size);
-    shader.setUniformMat4("model", transform);
+    shader.setModel(transform);
     cubeMesh->draw();
 }
 
@@ -473,7 +505,7 @@ void drawRectangle(ShaderProgram& shader, glm::vec2 position, glm::vec2 size) {
     glm::mat4 transform{1.f};
     transform = glm::translate(transform, glm::vec3{position, 0.f});
     transform = glm::scale(transform, glm::vec3{size, 1.f});
-    shader.setUniformMat4("model", transform);
+    shader.setModel(transform);
     rectangleMesh->draw();
 }
 

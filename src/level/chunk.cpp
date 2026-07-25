@@ -143,7 +143,7 @@ void Chunk::drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const {
         Logger::error(std::format("Drawing unloaded chunk with vao: {}", mesh.vertexArrayObject.object));
     }
 
-    shader.setUniformMat4("model", transform);
+    shader.setModel(transform);
     mesh.draw();
 
     if (world->showChunkBorders) {

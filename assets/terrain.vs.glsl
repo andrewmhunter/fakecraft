@@ -1,8 +1,12 @@
 #version 330
 
-uniform mat4 projectionView;
+layout (std140) uniform Globals
+{
+    mat4 projectionView;
+    vec3 cameraPosition;
+};
+
 uniform mat4 model;
-uniform vec3 camPos;
 
 layout (location = 0) in vec3 vertexPosition;
 layout (location = 1) in vec2 vertexTexcoord;
@@ -20,7 +24,7 @@ void main()
     fragColor = vertexColor;
     fragNormal = vertexNormal;
 
-    vec4 diff = model * vec4(vertexPosition, 1.0) - vec4(camPos, 1.0);
+    vec4 diff = model * vec4(vertexPosition, 1.0) - vec4(cameraPosition, 1.0);
     diff = diff * diff;
 
     fragDepth = diff.x + diff.z;

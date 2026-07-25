@@ -89,13 +89,14 @@ void TextBatch::draw() {
 void TextBatch::drawHighlighted(ShaderProgram& shader, int scale) {
     GPUMesh gpuMesh = mesh.upload();
 
-    shader.setUniformVec4("color", glm::vec4{0.f, 0.f, 0.f, 0.5f});
+    shader.setColor(glm::vec4{0.f, 0.f, 0.f, 0.5f});
     glm::vec3 offset = glm::vec3{static_cast<float>(scale), static_cast<float>(-scale), 0.f};
-    shader.setUniformMat4("model", glm::translate(glm::mat4{1.f}, offset));
+    shader.setModel(glm::translate(glm::mat4{1.f}, offset));
     gpuMesh.draw();
 
     shader.setUniformVec4("color", color::white);
-    shader.setUniformMat4("model", glm::mat4{1.f});
+    shader.setColor(color::white);
+    shader.setModel(glm::mat4{1.f});
     gpuMesh.draw();
 }
 

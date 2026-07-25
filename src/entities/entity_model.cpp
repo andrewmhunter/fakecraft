@@ -31,7 +31,7 @@ EntityModelPart::EntityModelPart(glm::vec3 origin, glm::vec3 size, glm::ivec2 te
 {}
 
 void EntityModelPart::draw(ShaderProgram& shader, glm::mat4 transform) const {
-    shader.setUniformMat4("model", transform);
+    shader.setModel(transform);
     mesh.draw();
 }
 

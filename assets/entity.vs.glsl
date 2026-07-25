@@ -1,6 +1,11 @@
 #version 330 core
 
-uniform mat4 projectionView;
+layout (std140) uniform Globals
+{
+    mat4 projectionView;
+    vec3 cameraPosition;
+};
+
 uniform mat4 model;
 
 layout (location = 0) in vec3 vertexPosition;

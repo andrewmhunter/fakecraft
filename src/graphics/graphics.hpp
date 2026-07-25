@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <glad/glad.h>
 #include <glm/detail/qualifier.hpp>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <map>
 #include <span>
@@ -55,6 +56,17 @@ namespace color {
 
     static constexpr glm::vec4 skyblue = fromComponents(102, 191, 255);
 }
+
+constexpr int nBaseAlignment = 4;
+constexpr int vec4BaseAlignment = nBaseAlignment * 4;
+
+struct GlobalsBlock {
+    alignas(vec4BaseAlignment) glm::mat4 projectionView;
+    alignas(vec4BaseAlignment) glm::vec3 cameraPosition;
+};
+
+void setGlobalsBlock(const GlobalsBlock& block);
+void setProjectionView(const glm::mat4& projectionView, const glm::vec3& cameraPosition = glm::vec3{0.f});
 
 using OpenGLObjectLifetimeFunction = std::function<void(GLint, GLuint*)>;
 
@@ -141,31 +153,10 @@ public:
     void setUniformVec3(const std::string& uniform, glm::vec3 value);
     void setUniformVec4(const std::string& uniform, glm::vec4 value);
     void setUniformMat4(const std::string& uniform, glm::mat4 value);
+
+    void setModel(glm::mat4 model);
+    void setColor(glm::vec4 color);
 };
-
-/*class ShaderProgram {
-private:
-    GLuint shaderProgram;
-
-    ShaderProgram(const std::string& vertexShaderString, const std::string& fragmentShaderString);
-
-    GLuint loadShader(const std::string& fileName, GLenum shaderType) const;
-    GLint uniformLocation(const std::string& name);
-
-public:
-    static ShaderProgram buildFiles(const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
-    static ShaderProgram buildStrings(const std::string& vertexShader, const std::string& fragmentShader);
-
-    void setUniformFloat(const std::string& uniform, float value);
-    void setUniformInt(const std::string& uniform, int value);
-    void setUniformUInt(const std::string& uniform, unsigned int value);
-    void setUniformVec3(const std::string& uniform, glm::vec3 value);
-    void setUniformVec4(const std::string& uniform, glm::vec4 value);
-    void setUniformMat4(const std::string& uniform, glm::mat4 value);
-
-    void use() const;
-    void unload();
-};*/
 
 class GPUMesh {
 private:
@@ -256,7 +247,6 @@ public:
     Mesh();
 
     GPUMesh upload() const;
-    void reupload(GPUMesh& gpuMesh) const;
 
     void pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color);
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,

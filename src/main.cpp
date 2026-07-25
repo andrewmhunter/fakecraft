@@ -255,10 +255,7 @@ void runGame(GLFWwindow* window) {
         ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
         ShaderProgram& simpleShader = ResourceManager::instance().shader.simpleShader;
 
-        terrainShader.setUniformMat4("projectionView", Camera::globalCamera.getProjectionViewMatrix());
-        terrainShader.setUniformVec3("camPos", camPosition);
-        simpleShader.setUniformMat4("projectionView", Camera::globalCamera.getProjectionViewMatrix());
-        ResourceManager::instance().shader.entityShader.setUniformMat4("projectionView", Camera::globalCamera.getProjectionViewMatrix());
+        setProjectionView(Camera::globalCamera.getProjectionViewMatrix(), camPosition);
 
         world.draw();
 
@@ -276,7 +273,7 @@ void runGame(GLFWwindow* window) {
             }
 
             if (world.showChunkBorders) {
-                simpleShader.setUniformVec4("color", color::fromRGBA(0xffffff80));
+                simpleShader.setColor(color::fromRGBA(0xffffff80));
                 glDisable(GL_CULL_FACE);
                 glm::ivec3 chunkPosition = worldToChunkV(player->position);
                 chunkPosition += glm::ivec3{1, 0, 1};
@@ -291,9 +288,10 @@ void runGame(GLFWwindow* window) {
 
             glm::ivec2 screenMiddle = Camera::globalCamera.windowSize / 2;
 
+            setProjectionView(Camera::globalCamera.getGUIProjection());
+
             terrainShader.use();
-            terrainShader.setUniformMat4("projectionView", Camera::globalCamera.getGUIProjection());
-            simpleShader.setUniformMat4("projectionView", Camera::globalCamera.getGUIProjection());
+
 
             float iconScale = 48.f;
             float cornerOffset = 75.f;
@@ -302,12 +300,11 @@ void runGame(GLFWwindow* window) {
             indicator = glm::scale(indicator, {iconScale, iconScale, 0.1f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 8.f, {1.f, 0.f, 0.f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 4.f, {0.f, 1.f, 0.f});
-            terrainShader.setUniformMat4("model", indicator);
+            terrainShader.setModel(indicator);
             getBlock(selectedBlock).mesh.draw();
 
             glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-screenMiddle.x, screenMiddle.y, 0.f});
-            terrainShader.setUniformMat4("projectionView", Camera::globalCamera.getGUIProjection() * cornerTransform);
-            terrainShader.setUniformMat4("model", glm::mat4{1.f});
+            setProjectionView(Camera::globalCamera.getGUIProjection() * cornerTransform);
 
             Font& font = ResourceManager::instance().font;
             font.texture.bind();
@@ -323,8 +320,9 @@ void runGame(GLFWwindow* window) {
 
             blendModeInvert();
 
+            setProjectionView(Camera::globalCamera.getGUIProjection());
             simpleShader.use();
-            simpleShader.setUniformVec4("color", color::white);
+            simpleShader.setColor(color::white);
             drawRectangle(simpleShader, {0.f, 0.f}, {16.f, 2.f});
             drawRectangle(simpleShader, {0.f, 0.f}, {2.f, 16.f});
             drawRectangle(simpleShader, {0.f, 0.f}, {2.f, 2.f});
