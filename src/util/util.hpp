@@ -95,5 +95,7 @@ constexpr long double operator ""_px(unsigned long long value) {
     return value / 16.;
 }
 
+void saveScreenshot();
+
 #endif
 

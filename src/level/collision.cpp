@@ -196,7 +196,7 @@ static void aabbResolveAxis(const ChunkCache& chunks, BoundingBox& boundingBox, 
     }
 
     // One is added or subtracted to the positions to round them up using truncate
-    glm::vec3 blockOffset{1};
+    glm::vec3 blockOffset{1 + collisionEpsilon};
     glm::ivec3 mins = glm::ivec3{glm::trunc(glm::min(boundingBox.min + velocity, boundingBox.min) - blockOffset)};
     glm::ivec3 maxes = glm::ivec3{glm::trunc(glm::max(boundingBox.max + velocity, boundingBox.max) + blockOffset)};
 

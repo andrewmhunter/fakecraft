@@ -99,7 +99,8 @@ private:
 
     constexpr bool inCacheLocal(glm::ivec3 localChunkPosition) const {
         std::size_t index = getIndexLocal(localChunkPosition);
-        return index >= 0 && index < chunks.size();
+        // Since index is unsigned we know it's always greater than 0
+        return index < chunks.size();
     }
 
     bool inCacheGlobal(glm::ivec3 globalChunkPosition) const;

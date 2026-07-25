@@ -92,37 +92,6 @@ void toggleFullscreen(GLFWwindow* window) {
     isFullscreen = !isFullscreen;
 }
 
-void saveScreenshot() {
-    // https://stackoverflow.com/questions/1531055/time-into-string-with-hhmmss-format-c-programming
-
-    std::time_t currentTime;
-    std::tm* local;
-    std::time(&currentTime);
-    local = std::localtime(&currentTime);
-    char fileName[64];
-    std::strftime(fileName, sizeof(fileName) - 1, "screenshots/screenshot%FT%T.png", local);
-    fileName[sizeof(fileName) - 1] = '\0';
-
-    int windowWidth = Camera::globalCamera.windowSize.x;
-    int windowHeight = Camera::globalCamera.windowSize.y;
-
-    char* image = new char[3 * windowWidth * windowHeight];
-    glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, image);
-    // glReadPixels starts from the bottom left corner, stbt_write_png starts at the top left
-    // so the image must be vertically flipped or it will save upside down
-    for (int row = 0; row < windowHeight / 2; ++row) {
-        for (int column = 0; column < windowWidth * 3; ++column) {
-            std::swap(image[row * windowWidth * 3 + column], image[(windowHeight - row - 1) * windowWidth * 3 + column]);
-        }
-    }
-    if (stbi_write_png(fileName, windowWidth, windowHeight, 3, image, 3 * windowWidth)) {
-        Logger::info(std::format("Saved screenshot {}", fileName));
-    } else {
-        Logger::error(std::format("Failed to save screenshot {}", fileName));
-    }
-    delete[] image;
-}
-
 void runGame(GLFWwindow* window) {
     Camera::globalCamera.fov = Config::settings->graphics.fov;
 
@@ -143,19 +112,13 @@ void runGame(GLFWwindow* window) {
 
     ResourceManager::loadResources();
 
-    glm::vec3 up{0.f, 1.f, 0.f};
-
     // TODO: Prerender all the block sprites somehow
 
     Block selectedBlock = Block::planks;
 
     registerBlocks();
 
-#ifdef DEFAULT_SET_SEED
-    srand(DEFAULT_SET_SEED);
-#else
     randomizeSeed();
-#endif
 
     World world{};
 
@@ -217,8 +180,6 @@ void runGame(GLFWwindow* window) {
         glm::vec3 lookVec{1.f, 0.f, 0.f};
         lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->pitch, {0.f, 0.f, 1.f}) * glm::vec4{lookVec, 1.f}};
         lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->yaw, {0.f, 1.f, 0.f}) * glm::vec4{lookVec, 1.f}};
-
-        glm::vec3 target = camPosition + lookVec;
 
         WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, Config::settings->game.blockReach);
         glm::vec3 cubePos = glm::vec3{rayCast.blockAt} + 0.5f;
