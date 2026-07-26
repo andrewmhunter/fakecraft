@@ -177,7 +177,7 @@ void World::draw() const {
     terrainShader.use();
     ResourceManager::instance().texture.terrain.bind();
 
-    Frustrum frustrum = Camera::globalCamera.getFrustrum();
+    Frustrum frustrum = globalCamera.getFrustrum();
     int chunksCulled = 0;
 
     glm::ivec3 chunkOffset{0};

@@ -60,7 +60,7 @@ void errorCallbackGlfw(int error, const char* description) {
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     (void)window;
 
-    Camera::globalCamera.windowSize = glm::vec2{width, height};
+    Camera::windowSize = glm::vec2{width, height};
 
     glViewport(0, 0, width, height);
 }
@@ -93,11 +93,11 @@ void toggleFullscreen(GLFWwindow* window) {
 }
 
 void runGame(GLFWwindow* window) {
-    Camera::globalCamera.fov = Config::settings->graphics.fov;
+    globalCamera.fov = Config::settings->graphics.fov;
 
     initMeshes();
 
-    framebufferSizeCallback(window, Camera::globalCamera.windowSize.x, Camera::globalCamera.windowSize.y);
+    framebufferSizeCallback(window, Camera::windowSize.x, Camera::windowSize.y);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -184,8 +184,8 @@ void runGame(GLFWwindow* window) {
         WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, Config::settings->game.blockReach);
         glm::vec3 cubePos = glm::vec3{rayCast.blockAt} + 0.5f;
 
-        Camera::globalCamera.position = camPosition;
-        Camera::globalCamera.lookDirection = lookVec;
+        globalCamera.position = camPosition;
+        globalCamera.lookDirection = lookVec;
 
         float initialBreakTime = 0.3f * 20.f;
         float repeatedBreakTime = 0.15f * 20.f;
@@ -255,7 +255,7 @@ void runGame(GLFWwindow* window) {
         ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
         ShaderProgram& simpleShader = ResourceManager::instance().shader.simpleShader;
 
-        setProjectionView(Camera::globalCamera.getProjectionViewMatrix(), camPosition);
+        globalCamera.use();
 
         world.draw();
 
@@ -286,9 +286,11 @@ void runGame(GLFWwindow* window) {
         if (showGui) {
             glDisable(GL_DEPTH_TEST);
 
-            glm::ivec2 screenMiddle = Camera::globalCamera.windowSize / 2;
+            glm::ivec2 screenMiddle = Camera::windowSize / 2;
 
-            setProjectionView(Camera::globalCamera.getGUIProjection());
+            OrthoCamera centeredGUICamera{glm::mat4{1.f}};
+
+            centeredGUICamera.use();
 
             terrainShader.use();
 
@@ -304,7 +306,8 @@ void runGame(GLFWwindow* window) {
             getBlock(selectedBlock).mesh.draw();
 
             glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-screenMiddle.x, screenMiddle.y, 0.f});
-            setProjectionView(Camera::globalCamera.getGUIProjection() * cornerTransform);
+            OrthoCamera cornerGUICamera{cornerTransform};
+            cornerGUICamera.use();
 
             Font& font = ResourceManager::instance().font;
             font.texture.bind();
@@ -320,7 +323,7 @@ void runGame(GLFWwindow* window) {
 
             blendModeInvert();
 
-            setProjectionView(Camera::globalCamera.getGUIProjection());
+            centeredGUICamera.use();
             simpleShader.use();
             simpleShader.setColor(color::white);
             drawRectangle(simpleShader, {0.f, 0.f}, {16.f, 2.f});
@@ -354,7 +357,7 @@ int main() {
     glfwSetErrorCallback(errorCallbackGlfw);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 
-    GLFWwindow* window = glfwCreateWindow(Camera::globalCamera.windowSize.x, Camera::globalCamera.windowSize.y, "Fakecraft", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(Camera::windowSize.x, Camera::windowSize.y, "Fakecraft", nullptr, nullptr);
     if (window == nullptr) {
         Logger::fatal("Failed to create GLFW window");
     }

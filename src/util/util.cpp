@@ -75,8 +75,8 @@ void saveScreenshot() {
     std::strftime(fileName, sizeof(fileName) - 1, "screenshots/screenshot%FT%T.png", local);
     fileName[sizeof(fileName) - 1] = '\0';
 
-    int windowWidth = Camera::globalCamera.windowSize.x;
-    int windowHeight = Camera::globalCamera.windowSize.y;
+    int windowWidth = Camera::windowSize.x;
+    int windowHeight = Camera::windowSize.y;
 
     char* image = new char[3 * windowWidth * windowHeight];
     glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, image);
