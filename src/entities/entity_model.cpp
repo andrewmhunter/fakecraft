@@ -27,7 +27,20 @@ Mesh EntityModelPart::generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 
 
 EntityModelPart::EntityModelPart(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
     std::span<const TextureCoords<int>, 6> texCoords
-) : mesh{generateMesh(origin, size, textureSize, texCoords).upload()}
+)
+    : mesh{generateMesh(origin, size, textureSize, texCoords).upload()}
+{}
+
+EntityModelPart::EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::ivec2 textureSize, glm::ivec2 netTexcoord)
+    : EntityModelPart(origin, glm::vec3{sizePixels} / 16.f, textureSize, std::array<TextureCoords<int>, 6> {
+        TextureCoords<int>
+        {netTexcoord + glm::ivec2{sizePixels.z, sizePixels.z}, netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, sizePixels.z + sizePixels.y}},
+        {netTexcoord + glm::ivec2{sizePixels.z * 2 + sizePixels.x, sizePixels.z}, netTexcoord + glm::ivec2{sizePixels.z * 2 + sizePixels.x * 2, sizePixels.z + sizePixels.y}},
+        {netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, sizePixels.z}, netTexcoord + glm::ivec2{sizePixels.z * 2 + sizePixels.x, sizePixels.z + sizePixels.y}},
+        {netTexcoord + glm::ivec2{0, sizePixels.z}, netTexcoord + glm::ivec2{sizePixels.z, sizePixels.z + sizePixels.y}},
+        {netTexcoord + glm::ivec2{sizePixels.z, 0}, netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, sizePixels.z}},
+        {netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, 0}, netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x * 2, sizePixels.z}},
+    })
 {}
 
 void EntityModelPart::draw(ShaderProgram& shader, glm::mat4 transform) const {
@@ -40,51 +53,11 @@ HumanModelState::HumanModelState(float yaw, float bodyYaw, float pitch, float li
 {}
 
 HumanModel::HumanModel()
-    : head{{0.f, -0.5f, 0.f}, glm::vec3{8._px}, {64, 32}, std::array<TextureCoords<int>, 6>{
-        TextureCoords<int>
-        {{8, 8}, {16, 16}},
-        {{24, 8}, {32, 16}},
-        {{16, 8}, {24, 16}},
-        {{0, 8}, {8, 16}},
-        {{8, 0}, {16, 8}},
-        {{16, 0}, {24, 8}}}
-    },
-    torso{{0.f, -0.5f, 0.f}, {8._px, 12._px, 4._px}, {64, 32}, std::array<TextureCoords<int>, 6>{
-        TextureCoords<int>
-        {{20, 20}, {28, 32}},
-        {{32, 20}, {40, 32}},
-        {{28, 20}, {32, 32}},
-        {{16, 20}, {20, 32}},
-        {{20, 16}, {28, 20}},
-        {{28, 16}, {36, 20}}}
-    },
-    armLeft{{-0.5f, 0.5f, 0.f}, {4._px, 12._px, 4._px}, {64, 32}, std::array<TextureCoords<int>, 6>{
-        TextureCoords<int>
-        {{44, 20}, {48, 32}},
-        {{52, 20}, {56, 32}},
-        {{48, 20}, {52, 32}},
-        {{40, 20}, {44, 32}},
-        {{44, 16}, {48, 20}},
-        {{48, 16}, {52, 20}}}
-    },
-    armRight{{0.5f, 0.5f, 0.f}, {4._px, 12._px, 4._px}, {64, 32}, std::array<TextureCoords<int>, 6>{
-        TextureCoords<int>
-        {{48, 20}, {44, 32}},
-        {{56, 20}, {52, 32}},
-        {{40, 20}, {44, 32}},
-        {{48, 20}, {52, 32}},
-        {{44, 16}, {48, 20}},
-        {{48, 16}, {52, 20}}}
-    },
-    leg{{0.f, 0.5f, 0.f}, {4._px, 12._px, 4._px}, {64, 32}, std::array<TextureCoords<int>, 6>{
-        TextureCoords<int>
-        {{4, 20}, {8, 32}},
-        {{12, 20}, {16, 32}},
-        {{8, 20}, {12, 32}},
-        {{0, 20}, {4, 32}},
-        {{4, 16}, {8, 20}},
-        {{8, 16}, {12, 20}}}
-    }
+    : head{{0.f, -0.5f, 0.f}, glm::ivec3{8}, {64, 32}, glm::ivec2{0}},
+    torso{{0.f, -0.5f, 0.f}, {8, 12, 4}, {64, 32}, glm::ivec2{16, 16}},
+    armLeft{{-0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, glm::ivec2{40, 16}},
+    armRight{{0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, glm::ivec2{40, 16}},
+    leg{{0.f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, glm::ivec2{0, 16}}
 {}
 
 void HumanModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {

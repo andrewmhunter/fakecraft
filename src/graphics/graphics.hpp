@@ -17,8 +17,10 @@
 #include <optional>
 
 namespace color {
-    static constexpr glm::vec4 fromRGBA(std::uint32_t hexcode) {
-        return glm::vec4{
+    using Color = glm::vec4;
+
+    static constexpr Color fromRGBA(std::uint32_t hexcode) {
+        return Color{
             ((hexcode >> 24) & 0xff) / 255.f,
             ((hexcode >> 16) & 0xff) / 255.f,
             ((hexcode >> 8) & 0xff) / 255.f,
@@ -26,35 +28,35 @@ namespace color {
         };
     }
 
-    static constexpr glm::vec4 fromRGB(std::uint32_t hexcode) {
+    static constexpr Color fromRGB(std::uint32_t hexcode) {
         return fromRGBA((hexcode << 8) | 0xff);
     }
 
-    static constexpr glm::vec4 fromComponents(glm::ivec4 components) {
+    static constexpr Color fromComponents(glm::ivec4 components) {
         return glm::vec4{components} / 255.f;
     }
 
-    static constexpr glm::vec4 fromComponents(glm::ivec3 components) {
+    static constexpr Color fromComponents(glm::ivec3 components) {
         return fromComponents(glm::ivec4{components, 1});
     }
 
-    static constexpr glm::vec4 fromComponents(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha = 255) {
+    static constexpr Color fromComponents(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha = 255) {
         return fromComponents(glm::ivec4{red, green, blue, alpha});
     }
 
-    static constexpr glm::vec4 white{1.f, 1.f, 1.f, 1.f};
-    static constexpr glm::vec4 black{0.f, 0.f, 0.f, 1.f};
-    static constexpr glm::vec4 gray{0.5f, 0.5f, 0.5f, 1.f};
+    static constexpr Color white{1.f, 1.f, 1.f, 1.f};
+    static constexpr Color black{0.f, 0.f, 0.f, 1.f};
+    static constexpr Color gray{0.5f, 0.5f, 0.5f, 1.f};
 
-    static constexpr glm::vec4 red{1.f, 0.f, 0.f, 1.f};
-    static constexpr glm::vec4 green{0.f, 1.f, 0.f, 1.f};
-    static constexpr glm::vec4 blue{0.f, 0.f, 1.f, 1.f};
+    static constexpr Color red{1.f, 0.f, 0.f, 1.f};
+    static constexpr Color green{0.f, 1.f, 0.f, 1.f};
+    static constexpr Color blue{0.f, 0.f, 1.f, 1.f};
 
-    static constexpr glm::vec4 cyan{0.f, 1.f, 1.f, 1.f};
-    static constexpr glm::vec4 magenta{1.f, 0.f, 1.f, 1.f};
-    static constexpr glm::vec4 yellow{1.f, 1.f, 0.f, 1.f};
+    static constexpr Color cyan{0.f, 1.f, 1.f, 1.f};
+    static constexpr Color magenta{1.f, 0.f, 1.f, 1.f};
+    static constexpr Color yellow{1.f, 1.f, 0.f, 1.f};
 
-    static constexpr glm::vec4 skyblue = fromComponents(102, 191, 255);
+    static constexpr Color skyblue = fromComponents(102, 191, 255);
 }
 
 
@@ -64,9 +66,35 @@ constexpr GLenum getGLEnumType() {
     return 0;
 }
 
+
 template<>
 constexpr GLenum getGLEnumType<GLfloat>() {
     return GL_FLOAT;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLdouble>() {
+    return GL_DOUBLE;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLbyte>() {
+    return GL_BYTE;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLubyte>() {
+    return GL_UNSIGNED_BYTE;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLshort>() {
+    return GL_SHORT;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLushort>() {
+    return GL_UNSIGNED_SHORT;
 }
 
 template<>

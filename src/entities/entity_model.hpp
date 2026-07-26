@@ -22,6 +22,8 @@ public:
         std::span<const TextureCoords<int>, 6> texCoords
     );
 
+    explicit EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::ivec2 textureSize, glm::ivec2 netTexcoord);
+
     void draw(ShaderProgram& shader, glm::mat4 transform) const;
 };
 
