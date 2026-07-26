@@ -57,12 +57,35 @@ namespace color {
     static constexpr glm::vec4 skyblue = fromComponents(102, 191, 255);
 }
 
-constexpr int nBaseAlignment = 4;
-constexpr int vec4BaseAlignment = nBaseAlignment * 4;
+
+template<typename T>
+constexpr GLenum getGLEnumType() {
+    static_assert(false, "Type does not have a supported OpenGL enum");
+    return 0;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLfloat>() {
+    return GL_FLOAT;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLint>() {
+    return GL_INT;
+}
+
+template<>
+constexpr GLenum getGLEnumType<GLuint>() {
+    return GL_UNSIGNED_INT;
+}
+
+
+constexpr int uboNBaseAlignment = 4;
+constexpr int uboVec4BaseAlignment = uboNBaseAlignment * 4;
 
 struct GlobalsBlock {
-    alignas(vec4BaseAlignment) glm::mat4 projectionView;
-    alignas(vec4BaseAlignment) glm::vec3 cameraPosition;
+    alignas(uboVec4BaseAlignment) glm::mat4 projectionView;
+    alignas(uboVec4BaseAlignment) glm::vec3 cameraPosition;
 };
 
 void setGlobalsBlock(const GlobalsBlock& block);
@@ -175,7 +198,7 @@ public:
     void draw() const;
 };
 
-template<typename T, GLenum GLType>
+template<typename T>
 class VecVertexData {
 private:
     using VecType = T;
@@ -227,7 +250,7 @@ public:
         }
 
         glBufferSubData(GL_ARRAY_BUFFER, offset, sizeBytes(), data());
-        glVertexAttribPointer(attributeIndex, T::length(), GLType, false, stride(), (void*)offset);
+        glVertexAttribPointer(attributeIndex, T::length(), getGLEnumType<typename T::value_type>(), false, stride(), (void*)offset);
         glEnableVertexAttribArray(attributeIndex);
         return offset + sizeBytes();
     }
@@ -237,11 +260,11 @@ class Mesh {
 public:
     GLenum primative{GL_TRIANGLES};
 
-    VecVertexData<glm::vec3, GL_FLOAT> positions;
-    VecVertexData<glm::vec3, GL_FLOAT> normals;
-    VecVertexData<glm::vec2, GL_FLOAT> texcoords;
-    VecVertexData<glm::vec4, GL_FLOAT> colors;
-    VecVertexData<glm::uvec3, GL_UNSIGNED_INT> indicies;
+    VecVertexData<glm::vec3> positions;
+    VecVertexData<glm::vec3> normals;
+    VecVertexData<glm::vec2> texcoords;
+    VecVertexData<glm::vec4> colors;
+    VecVertexData<glm::uvec3> indicies;
 
     Mesh(GLenum primative);
     Mesh();

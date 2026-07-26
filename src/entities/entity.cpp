@@ -116,6 +116,8 @@ void Entity::update(float deltaTime) {
     } else if (yawDifference < -allowedNeckRotation) {
         bodyYaw = yaw + allowedNeckRotation;
     }
+
+    armRotation += deltaTime;
 }
 
 constexpr float force = 0.2f;
@@ -146,7 +148,7 @@ BoundingBox Entity::getCullBoundingBox() const {
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);
 
 void Entity::draw(ShaderProgram& shader) {
-    (void)shader;
+    ResourceManager::instance().entityModel.human.draw(shader, position, HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)});
 }
 
 
@@ -177,7 +179,7 @@ Human::Human(World* world, EntityID id, glm::vec3 position)
 void Human::update(float deltaTime) {
     Entity::update(deltaTime);
 
-    armRotation += deltaTime;
+
 
     if (glm::distance(position, world->player->position) < 15.f) {
         glm::vec3 lookVector = world->player->position - position;
@@ -193,7 +195,6 @@ void Human::update(float deltaTime) {
 
 void Human::draw(ShaderProgram& shader) {
     Entity::draw(shader);
-    ResourceManager::instance().entityModel.human.draw(shader, position, HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)});
 }
 
 
@@ -215,19 +216,19 @@ void Player::update(float deltaTime) {
     glm::vec3 movement{0.f};
 
     if (keyDown(GLFW_KEY_W)) {
-        movement.x += 1.f;
+        movement.z += 1.f;
     }
 
     if (keyDown(GLFW_KEY_S)) {
-        movement.x -= 1.f;
-    }
-
-    if (keyDown(GLFW_KEY_A)) {
         movement.z -= 1.f;
     }
 
+    if (keyDown(GLFW_KEY_A)) {
+        movement.x += 1.f;
+    }
+
     if (keyDown(GLFW_KEY_D)) {
-        movement.z += 1.f;
+        movement.x -= 1.f;
     }
 
     if (flying && keyDown(GLFW_KEY_LEFT_CONTROL)) {
@@ -254,7 +255,7 @@ void Player::update(float deltaTime) {
 
     glm::dvec2 mouseDelta = getMouseDelta() * static_cast<double>(Config::settings->controls.sensitivity);
     yaw -= mouseDelta.x;
-    pitch -= mouseDelta.y;
+    pitch += mouseDelta.y;
     pitch = glm::clamp(pitch, -glm::pi<float>() / 2.f + 0.01f, glm::pi<float>() / 2.f - 0.01f);
 
     movement = glm::vec3{glm::rotate(glm::mat4{1.f}, yaw, {0.f, 1.f, 0.f}) * glm::vec4{movement, 1.f}};
@@ -272,7 +273,9 @@ void Player::update(float deltaTime) {
 }
 
 void Player::draw(ShaderProgram& shader) {
-    Entity::draw(shader);
+    if (cameraPerson != CameraPerson::first) {
+        Entity::draw(shader);
+    }
 }
 
 std::unique_ptr<Entity> entityFactory(World* world, EntityType type, EntityID id, glm::vec3 position) {

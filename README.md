@@ -53,6 +53,8 @@ Decrease Render Distance: F8
 
 Increase Render Distance: F9
 
+Toggle Third Person Camera: F5
+
 Toggle Fullscreen: F11
 
 Close Game: ESC

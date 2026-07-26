@@ -47,6 +47,8 @@ public:
     bool onGround{false};
     bool noClip{false};
     bool flying{false};
+
+    float armRotation{0.f};
     
     explicit Entity(World* world, EntityType type, EntityID id, glm::vec3 position, glm::vec3 size);
     virtual ~Entity();
@@ -64,8 +66,6 @@ public:
 
 class Human : public Entity {
 public:
-    float armRotation{0.f};
-
     explicit Human(World* world, EntityID id, glm::vec3 position);
 
     virtual void update(float deltaTime) override;
@@ -74,6 +74,13 @@ public:
 
 class Player final : public Entity {
 public:
+    enum class CameraPerson {
+        first,
+        third_back,
+        third_front
+    };
+
+    CameraPerson cameraPerson = CameraPerson::first;
     Timer breakTimer{timerInit(0.25)};
 
     explicit Player(World* world, EntityID id, glm::vec3 position);

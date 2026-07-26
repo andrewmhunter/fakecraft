@@ -171,21 +171,40 @@ void runGame(GLFWwindow* window) {
             world.renderDistance++;
         }
 
+        if (keyPressed(GLFW_KEY_F5)) {
+            player->cameraPerson = static_cast<Player::CameraPerson>((static_cast<int>(player->cameraPerson) + 1) % 3);
+        }
+
         if (keyPressed(GLFW_KEY_ESCAPE)) {
             glfwSetWindowShouldClose(window, true);
         }
 
-        glm::vec3 camPosition = player->position + glm::vec3{0, PLAYER_EYE, 0};
+        world.update(deltaTime);
 
-        glm::vec3 lookVec{1.f, 0.f, 0.f};
-        lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->pitch, {0.f, 0.f, 1.f}) * glm::vec4{lookVec, 1.f}};
+        glm::vec3 playerEye = player->position + glm::vec3{0, PLAYER_EYE, 0};
+
+        glm::vec3 lookVec{0.f, 0.f, 1.f};
+        lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->pitch, {1.f, 0.f, 0.f}) * glm::vec4{lookVec, 1.f}};
         lookVec = glm::vec3{glm::rotate(glm::mat4{1.f}, player->yaw, {0.f, 1.f, 0.f}) * glm::vec4{lookVec, 1.f}};
 
-        WalkCollision rayCast = ddaCastRay(&world, camPosition, lookVec, Config::settings->game.blockReach);
+        WalkCollision rayCast = ddaCastRay(&world, playerEye, lookVec, Config::settings->game.blockReach);
         glm::vec3 cubePos = glm::vec3{rayCast.blockAt} + 0.5f;
 
-        globalCamera.position = camPosition;
         globalCamera.lookDirection = lookVec;
+
+        if (player->cameraPerson == Player::CameraPerson::first) {
+            globalCamera.position = playerEye;
+        } else {
+            float sideFactor = player->cameraPerson == Player::CameraPerson::third_front ? 1.f : -1.f;
+            float followDistance = 3.5f;
+            globalCamera.lookDirection *= -sideFactor;
+            WalkCollision thirdPersonCameraRayCast = ddaCastRay(&world, playerEye, sideFactor * lookVec, followDistance);
+            globalCamera.position = playerEye + sideFactor * lookVec
+                * ((thirdPersonCameraRayCast.collided
+                    ? thirdPersonCameraRayCast.length
+                    : followDistance)
+                - 0.5f);
+        }
 
         float initialBreakTime = 0.3f * 20.f;
         float repeatedBreakTime = 0.15f * 20.f;
@@ -248,7 +267,6 @@ void runGame(GLFWwindow* window) {
 
         selectedBlock = static_cast<Block>(wrapInt(static_cast<int>(selectedBlock), 2, blockCount));
 
-        world.update(deltaTime);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -273,11 +291,21 @@ void runGame(GLFWwindow* window) {
             }
 
             if (world.showChunkBorders) {
-                simpleShader.setColor(color::fromRGBA(0xffffff80));
+                simpleShader.setColor(color::white);
                 glDisable(GL_CULL_FACE);
+                wireframeEnable();
                 glm::ivec3 chunkPosition = worldToChunkV(player->position);
                 chunkPosition += glm::ivec3{1, 0, 1};
-                drawCube(simpleShader, glm::vec3{chunkPosition} * glm::vec3{chunkSize} + glm::vec3{chunkSize} / glm::vec3{-2.f, 2.f, -2.f}, glm::vec3{chunkSize});
+                for (int i = 0; i < 16; ++i) {
+                    drawCube(
+                        simpleShader,
+                        glm::vec3{chunkPosition}
+                            * glm::vec3{16} + glm::vec3{16}
+                            / glm::vec3{-2.f, 2.f, -2.f} + glm::vec3{0.f, i * 16.f, 0.f},
+                            glm::vec3{16}
+                        );
+                }
+                wireframeDisable();
                 glEnable(GL_CULL_FACE);
                 
             }
