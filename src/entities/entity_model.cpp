@@ -4,14 +4,11 @@
 #include <cstddef>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
 #include "util/util.hpp"
 
-Mesh EntityModelPart::generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
-    std::span<const TextureCoords<int>, directionCount> texCoords
-) {
-    Mesh mesh{GL_TRIANGLES};
-
+void EntityModelPart::generateMesh(Mesh& mesh) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::scale(baseTransform, size);
     baseTransform = glm::translate(baseTransform, -origin);
@@ -22,17 +19,16 @@ Mesh EntityModelPart::generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 
         adjustedTexCoords[i].second = glm::vec2{texCoords[i].second} / glm::vec2{textureSize};
     }
 
-    mesh.pushTexturedPrism(baseTransform, adjustedTexCoords);
-    return mesh;
+    mesh.pushTexturedPrism(baseTransform, adjustedTexCoords, boneId);
 }
 
 EntityModelPart::EntityModelPart(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
-    std::span<const TextureCoords<int>, 6> texCoords
+    std::array<TextureCoords<int>, 6> texCoords, int boneId
 )
-    : mesh{generateMesh(origin, size, textureSize, texCoords).upload()}
+    : origin{origin}, size{size}, textureSize{textureSize}, texCoords{texCoords}, boneId{boneId}
 {}
 
-EntityModelPart::EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::ivec2 textureSize, glm::ivec2 netTexcoord)
+EntityModelPart::EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::ivec2 textureSize, glm::ivec2 netTexcoord, int boneId)
     : EntityModelPart(origin, glm::vec3{sizePixels} / 16.f, textureSize, std::array<TextureCoords<int>, 6> {
         TextureCoords<int>
         {netTexcoord + glm::ivec2{sizePixels.z, sizePixels.z}, netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, sizePixels.z + sizePixels.y}},
@@ -41,11 +37,33 @@ EntityModelPart::EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::i
         {netTexcoord + glm::ivec2{0, sizePixels.z}, netTexcoord + glm::ivec2{sizePixels.z, sizePixels.z + sizePixels.y}},
         {netTexcoord + glm::ivec2{sizePixels.z, 0}, netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, sizePixels.z}},
         {netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x, 0}, netTexcoord + glm::ivec2{sizePixels.z + sizePixels.x * 2, sizePixels.z}},
-    })
+    }, boneId)
 {}
 
-void EntityModelPart::draw(ShaderProgram& shader, glm::mat4 transform) const {
-    shader.setModel(transform);
+static Mesh generateMeshFromParts(std::span<const EntityModelPart> parts) {
+    Mesh mesh{};
+    for (const EntityModelPart& part : parts) {
+        part.generateMesh(mesh);
+    }
+
+    return mesh;
+}
+
+EntityModel::EntityModel(std::span<const EntityModelPart> parts)
+    : mesh{generateMeshFromParts(parts).upload()}
+{}
+
+void EntityModel::getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const {
+
+}
+
+void EntityModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {
+    std::array<glm::mat4, maxBones> bones{};
+    getBones(bones, position, state);
+    for (std::size_t i = 0; i < bones.size(); ++i) {
+        shader.setUniformMat4(std::format("bones[{}]", i), bones[i]);
+    }
+    shader.setModel(glm::mat4{1.f});
     mesh.draw();
 }
 
@@ -54,14 +72,23 @@ HumanModelState::HumanModelState(float yaw, float bodyYaw, float pitch, float li
 {}
 
 HumanModel::HumanModel()
-    : head{{0.f, -0.5f, 0.f}, glm::ivec3{8}, {64, 32}, {0, 0}},
-    torso{{0.f, -0.5f, 0.f}, {8, 12, 4}, {64, 32}, {16, 16}},
-    armLeft{{-0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {40, 16}},
-    armRight{{0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {40, 16}},
-    leg{{0.f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {0, 16}}
+    : EntityModel{std::vector{EntityModelPart
+        // Torso
+        {{0.f, -0.5f, 0.f}, {8, 12, 4}, {64, 32}, {16, 16}, 0},
+        // Head
+        {{0.f, -0.5f, 0.f}, glm::ivec3{8}, {64, 32}, {0, 0}, 1},
+        // Right arm
+        {{-0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {40, 16}, 2},
+        // Left arm
+        {{0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {40, 16}, 3},
+        // Right Leg
+        {{0.f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {0, 16}, 4},
+        // Left Leg
+        {{0.f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {0, 16}, 5},
+    }}
 {}
 
-void HumanModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {
+void HumanModel::getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::translate(baseTransform, position);
 
@@ -69,71 +96,82 @@ void HumanModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanMode
     headTransform = glm::rotate(baseTransform, state.yaw, glm::vec3{0.f, 1.f, 0.f});
     headTransform = glm::translate(headTransform, {0._px, 24._px, 0._px});
     headTransform = glm::rotate(headTransform, state.pitch, glm::vec3{1.f, 0.f, 0.f});
-    head.draw(shader, headTransform);
+    bones[1] = headTransform;
 
 
     baseTransform = glm::rotate(baseTransform, state.bodyYaw, glm::vec3{0.f, 1.f, 0.f});
 
-    glm::mat4 leg0Transform = baseTransform;
-    leg0Transform = glm::translate(leg0Transform, {2._px, 12._px, 0._px});
-    leg0Transform = glm::rotate(leg0Transform, std::sin(state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
-    leg.draw(shader, leg0Transform);
-    glm::mat4 leg1Transform = baseTransform; 
-    leg1Transform = glm::translate(leg1Transform, {-2._px, 12._px, 0._px});
-    leg1Transform = glm::rotate(leg1Transform, std::sin(-state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
-    leg.draw(shader, leg1Transform);
-
     glm::mat4 torsoTransform = baseTransform;
     torsoTransform = glm::translate(torsoTransform, {0._px, 12._px, 0._px});
-    torso.draw(shader, torsoTransform);
+    bones[0] = torsoTransform;
+
 
     glm::mat4 arm0Transform = baseTransform;
     arm0Transform = glm::translate(arm0Transform, {4._px, 24._px, 0._px});
     arm0Transform = glm::rotate(arm0Transform, std::sin(-state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
-    armLeft.draw(shader, arm0Transform);
+    bones[2] = arm0Transform;
 
     glm::mat4 arm1Transform = baseTransform;
     arm1Transform = glm::translate(arm1Transform, {-4._px, 24._px, 0._px});
     arm1Transform = glm::rotate(arm1Transform, std::sin(state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
-    armRight.draw(shader, arm1Transform);
+    bones[3] = arm1Transform;
 
+    glm::mat4 leg0Transform = baseTransform;
+    leg0Transform = glm::translate(leg0Transform, {2._px, 12._px, 0._px});
+    leg0Transform = glm::rotate(leg0Transform, std::sin(state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
+    bones[4] = leg0Transform;
+
+    glm::mat4 leg1Transform = baseTransform; 
+    leg1Transform = glm::translate(leg1Transform, {-2._px, 12._px, 0._px});
+    leg1Transform = glm::rotate(leg1Transform, std::sin(-state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
+    bones[5] = leg1Transform;
 }
 
 
 PigModel::PigModel()
-    : head{{0.f, -0.5f, -0.5f}, glm::ivec3{8}, {64, 32}, {0, 0}},
-    torso{{0.f, -0.5f, 0.5f}, {10, 16, 8}, {64, 32}, {28, 8}},
-    leg{{0.f, 0.5f, 0.f}, {4, 6, 4}, {64, 32}, {0, 16}}
+    : EntityModel{std::vector{EntityModelPart
+        // Torso
+        {{0.f, -0.5f, 0.5f}, {10, 16, 8}, {64, 32}, {28, 8}, 0},
+        // Head
+        {{0.f, -0.5f, -0.5f}, glm::ivec3{8}, {64, 32}, {0, 0}, 1},
+        // Leg Right Front
+        {{0.f, 0.5f, 0.f}, {4, 6, 4}, {64, 32}, {0, 16}, 2},
+        // Leg Right Back
+        {{0.f, 0.5f, 0.f}, {4, 6, 4}, {64, 32}, {0, 16}, 3},
+        // Leg Left Front
+        {{0.f, 0.5f, 0.f}, {4, 6, 4}, {64, 32}, {0, 16}, 4},
+        // Leg Left Back
+        {{0.f, 0.5f, 0.f}, {4, 6, 4}, {64, 32}, {0, 16}, 5},
+    }}
 {}
     
-void PigModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {
+void PigModel::getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::translate(baseTransform, position);
-
     baseTransform = glm::rotate(baseTransform, state.bodyYaw, glm::vec3{0.f, 1.f, 0.f});
 
     glm::mat4 headTransform = baseTransform;
     headTransform = glm::translate(headTransform, {0._px, 10._px, 6._px});
     headTransform = glm::rotate(headTransform, state.yaw - state.bodyYaw, glm::vec3{0.f, 1.f, 0.f});
     headTransform = glm::rotate(headTransform, state.pitch, glm::vec3{1.f, 0.f, 0.f});
-    head.draw(shader, headTransform);
+    bones[1] = headTransform;
 
 
     glm::mat4 leg0Rotate = glm::rotate(glm::mat4{1.f}, std::sin(state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
     glm::mat4 leg1Rotate = glm::rotate(glm::mat4{1.f}, std::sin(-state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
 
     glm::mat4 legRF = glm::translate(baseTransform, {3._px, 6._px, 6._px});
-    leg.draw(shader, legRF * leg0Rotate);
     glm::mat4 legRB = glm::translate(baseTransform, {3._px, 6._px, -6._px});
-    leg.draw(shader, legRB * leg1Rotate);
     glm::mat4 legLF = glm::translate(baseTransform, {-3._px, 6._px, 6._px});
-    leg.draw(shader, legLF * leg1Rotate);
     glm::mat4 legLB = glm::translate(baseTransform, {-3._px, 6._px, -6._px});
-    leg.draw(shader, legLB * leg0Rotate);
+
+    bones[2] = legRF * leg0Rotate;
+    bones[3] = legRB * leg1Rotate;
+    bones[4] = legLF * leg1Rotate;
+    bones[5] = legLB * leg0Rotate;
 
     glm::mat4 torsoTransform = baseTransform;
     torsoTransform = glm::translate(torsoTransform, {0._px, 6._px, -8._px});
     torsoTransform = glm::rotate(torsoTransform, glm::radians(90.f), glm::vec3{1.f, 0.f, 0.f});
-
-    torso.draw(shader, torsoTransform);
+    bones[0] = torsoTransform;
 }

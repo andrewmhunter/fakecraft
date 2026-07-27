@@ -8,17 +8,24 @@ layout (std140) uniform Globals
 
 uniform mat4 model;
 
+const int MAX_BONES = 8;
+uniform mat4 bones[MAX_BONES];
+
 layout (location = 0) in vec3 vertexPosition;
 layout (location = 1) in vec2 vertexTexcoord;
+layout (location = 2) in vec3 vertexNormal;
 layout (location = 3) in vec4 vertexColor;
+layout (location = 4) in int boneId;
 
 out vec4 fragColor;
 out vec2 fragTexcoord;
+
+const vec4 boneColors[4] = vec4[](vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0, 0.0, 1.0, 1.0));
 
 void main()
 {
     fragColor = vertexColor;
     fragTexcoord = vertexTexcoord;
-    gl_Position = projectionView * model * vec4(vertexPosition, 1.0);
+    gl_Position = projectionView * model * bones[boneId] * vec4(vertexPosition, 1.0);
 };
 

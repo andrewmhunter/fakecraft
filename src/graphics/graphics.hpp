@@ -207,6 +207,8 @@ public:
 
     void setModel(glm::mat4 model);
     void setColor(glm::vec4 color);
+
+    GLuint getId() const;
 };
 
 class GPUMesh {
@@ -226,28 +228,21 @@ public:
     void draw() const;
 };
 
-template<typename T>
-class VecVertexData {
+template<typename T, glm::length_t L = 1>
+class VertexData {
 private:
-    using VecType = T;
-    std::vector<typename T::value_type> contents;
+    std::vector<T> contents;
 
 public:
-    void push(typename T::value_type value) {
+    void push(T value) {
         contents.push_back(value);
     }
 
-    void push(T vec) {
-        for (int i = 0; i < T::length(); ++i) {
-            push(vec[i]);
-        }
-    }
-
-    const typename T::value_type* data() const {
+    const T* data() const {
         return contents.data();
     }
 
-    std::span<const typename T::value_type> getSpan() const {
+    std::span<const T> getSpan() const {
         return contents;
     }
 
@@ -256,16 +251,16 @@ public:
     }
 
     std::size_t vertexLength() const {
-        assert(contents.size() % T::length() == 0);
-        return elementLength() / T::length();
+        assert(contents.size() % L == 0);
+        return elementLength() / L;
     }
 
     std::size_t sizeBytes() const {
-        return elementLength() * sizeof(typename T::value_type);
+        return elementLength() * sizeof(T);
     }
 
     std::size_t stride() const {
-        return T::length() * sizeof(typename T::value_type);
+        return L * sizeof(T);
     }
 
     bool hasData() const {
@@ -278,11 +273,28 @@ public:
         }
 
         glBufferSubData(GL_ARRAY_BUFFER, offset, sizeBytes(), data());
-        glVertexAttribPointer(attributeIndex, T::length(), getGLEnumType<typename T::value_type>(), false, stride(), (void*)offset);
+        if (std::is_integral_v<T>) {
+            glVertexAttribIPointer(attributeIndex, L, getGLEnumType<T>(), stride(), (void*)offset);
+        } else {
+            glVertexAttribPointer(attributeIndex, L, getGLEnumType<T>(), false, stride(), (void*)offset);
+        }
         glEnableVertexAttribArray(attributeIndex);
         return offset + sizeBytes();
     }
 };
+
+template<typename T>
+class VecVertexData : public VertexData<typename T::value_type, T::length()> {
+public:
+    void pushVec(T vec) {
+        for (int i = 0; i < T::length(); ++i) {
+            this->push(vec[i]);
+        }
+    }
+};
+
+
+constexpr int maxBones = 8;
 
 class Mesh {
 public:
@@ -292,6 +304,7 @@ public:
     VecVertexData<glm::vec3> normals;
     VecVertexData<glm::vec2> texcoords;
     VecVertexData<glm::vec4> colors;
+    VertexData<int> boneIds;
     VecVertexData<glm::uvec3> indicies;
 
     Mesh(GLenum primative);
@@ -299,22 +312,22 @@ public:
 
     GPUMesh upload() const;
 
-    void pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color);
+    void pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color, int boneId = 0);
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-        glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal);
+        glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal, int boneId = 0);
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-        std::pair<glm::vec2, glm::vec2> texcoord, glm::vec4 color, glm::vec3 normal);
+        std::pair<glm::vec2, glm::vec2> texcoord, glm::vec4 color, glm::vec3 normal, int boneId = 0);
 
     void makeTriangle(int offset0, int offset1, int offset2);
 
     void pushTexturedPrism(glm::mat4 transformation,
-        std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords);
+        std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords, int boneId = 0);
 
     void pushTexturedPrism(glm::mat4 transformation,
-        std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords);
+        std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords, int boneId = 0);
 
     void pushTexturedPrism(glm::mat4 transformation,
-        std::pair<glm::vec2, glm::vec2> texcoords);
+        std::pair<glm::vec2, glm::vec2> texcoords, int boneId = 0);
 };
 
 void wireframeEnable();

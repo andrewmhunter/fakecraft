@@ -148,7 +148,7 @@ BoundingBox Entity::getCullBoundingBox() const {
 void drawPlayerModel(ShaderProgram& shader, glm::vec3 position);
 
 void Entity::draw(ShaderProgram& shader) {
-    ResourceManager::instance().entityModel.pig.draw(shader, position, HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)});
+    ResourceManager::instance().entityModel.human.draw(shader, position, HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)});
 }
 
 

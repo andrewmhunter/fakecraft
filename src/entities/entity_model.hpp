@@ -10,21 +10,21 @@ using TextureCoords = std::pair<glm::vec<2, T>, glm::vec<2, T>>;
 
 class EntityModelPart {
 private:
-    GPUMesh mesh;
-
-    static Mesh generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
-        std::span<const TextureCoords<int>, 6> texCoords
-    );
+    glm::vec3 origin;
+    glm::vec3 size;
+    glm::ivec2 textureSize;
+    std::array<TextureCoords<int>, 6> texCoords;
+    int boneId;
 
 public:
 
-    explicit EntityModelPart(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
-        std::span<const TextureCoords<int>, 6> texCoords
+    void generateMesh(Mesh& mesh) const;
+
+    EntityModelPart(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
+        std::array<TextureCoords<int>, 6> texCoords, int boneId
     );
 
-    explicit EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::ivec2 textureSize, glm::ivec2 netTexcoord);
-
-    void draw(ShaderProgram& shader, glm::mat4 transform) const;
+    EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::ivec2 textureSize, glm::ivec2 netTexcoord, int boneId);
 };
 
 class HumanModelState {
@@ -37,30 +37,31 @@ public:
     explicit HumanModelState(float yaw, float bodyYaw, float pitch, float limbRotation);
 };
 
-class HumanModel {
+class EntityModel {
 private:
-    EntityModelPart head;
-    EntityModelPart torso;
-    EntityModelPart armLeft;
-    EntityModelPart armRight;
-    EntityModelPart leg;
-
 public:
-    explicit HumanModel();
+    GPUMesh mesh;
 
+    explicit EntityModel(std::span<const EntityModelPart> parts);
+
+    virtual void getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const = 0;
     void draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const;
 };
 
-class PigModel {
+class HumanModel : public EntityModel {
 private:
-    EntityModelPart head;
-    EntityModelPart torso;
-    EntityModelPart leg;
+public:
+    explicit HumanModel();
 
+    virtual void getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const override;
+};
+
+class PigModel : public EntityModel {
+private:
 public:
     explicit PigModel();
-    
-    void draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const;
+
+    virtual void getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const override;
 };
 
 #endif

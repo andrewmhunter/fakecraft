@@ -262,6 +262,10 @@ void ShaderProgram::setColor(glm::vec4 color) {
     setUniformVec4("color", color);
 }
 
+GLuint ShaderProgram::getId() const {
+    return programId.object;
+}
+
 /*
  * GPUMesh
  */
@@ -306,7 +310,7 @@ GPUMesh Mesh::upload() const {
     gpuMesh.elementCount = indicies.elementLength();
 
     std::size_t vertexBufferSize = positions.sizeBytes() + normals.sizeBytes()
-        + texcoords.sizeBytes() + colors.sizeBytes();
+        + texcoords.sizeBytes() + colors.sizeBytes() + boneIds.sizeBytes();
 
     glGenBuffers(1, &gpuMesh.vertexBufferObject.object);
     glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vertexBufferObject.object);
@@ -317,6 +321,7 @@ GPUMesh Mesh::upload() const {
     offset = texcoords.bufferData(1, offset);
     offset = normals.bufferData(2, offset);
     offset = colors.bufferData(3, offset);
+    offset = boneIds.bufferData(4, offset);
 
     glGenBuffers(1, &gpuMesh.elementBufferObject.object);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.elementBufferObject.object);
@@ -326,29 +331,30 @@ GPUMesh Mesh::upload() const {
     return gpuMesh;
 }
 
-void Mesh::pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color) {
-    positions.push(position);
-    normals.push(normal);
-    texcoords.push(texcoord);
-    colors.push(color);
+void Mesh::pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color, int boneId) {
+    positions.pushVec(position);
+    normals.pushVec(normal);
+    texcoords.pushVec(texcoord);
+    colors.pushVec(color);
+    boneIds.push(boneId);
 }
 
 void Mesh::pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-    glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal
+    glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal, int boneId
 ) {
-    pushVertex(position0, normal, texcoord0, color);
-    pushVertex(position1, normal, {texcoord0.x, texcoord1.y}, color);
-    pushVertex(position2, normal, texcoord1, color);
-    pushVertex(position3, normal, {texcoord1.x, texcoord0.y}, color);
+    pushVertex(position0, normal, texcoord0, color, boneId);
+    pushVertex(position1, normal, {texcoord0.x, texcoord1.y}, color, boneId);
+    pushVertex(position2, normal, texcoord1, color, boneId);
+    pushVertex(position3, normal, {texcoord1.x, texcoord0.y}, color, boneId);
 
     makeTriangle(-3, -2, 0);
     makeTriangle(-2, -1, 0);
 }
 
 void Mesh::pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-    std::pair<glm::vec2, glm::vec2> texcoords, glm::vec4 color, glm::vec3 normal
+    std::pair<glm::vec2, glm::vec2> texcoords, glm::vec4 color, glm::vec3 normal, int boneId
 ) {
-    pushFace(position0, position1, position2, position3, texcoords.first, texcoords.second, color, normal);
+    pushFace(position0, position1, position2, position3, texcoords.first, texcoords.second, color, normal, boneId);
 }
 
 void Mesh::makeTriangle(int offset0, int offset1, int offset2) {
@@ -359,7 +365,7 @@ void Mesh::makeTriangle(int offset0, int offset1, int offset2) {
 }
 
 void Mesh::pushTexturedPrism(glm::mat4 transformation,
-        std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords
+        std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords, int boneId
 ) {
     assert(texcoords.size() == 6);
 
@@ -374,18 +380,18 @@ void Mesh::pushTexturedPrism(glm::mat4 transformation,
     glm::vec3 vrtb = transformation * glm::vec4{ 0.5,  0.5f, -0.5f, 1.f};
     glm::vec3 vrtf = transformation * glm::vec4{ 0.5,  0.5f,  0.5f, 1.f};
 
-    pushFace(vltf, vlbf, vrbf, vrtf, texcoords[0], color, {0.f, 0.f, 1.f});
-    pushFace(vrtb, vrbb, vlbb, vltb, texcoords[1], color, {0.f, 0.f, -1.f});
+    pushFace(vltf, vlbf, vrbf, vrtf, texcoords[0], color, {0.f, 0.f, 1.f}, boneId);
+    pushFace(vrtb, vrbb, vlbb, vltb, texcoords[1], color, {0.f, 0.f, -1.f}, boneId);
 
-    pushFace(vrtf, vrbf, vrbb, vrtb, texcoords[2], color, {1.f, 0.f, 0.f});
-    pushFace(vltb, vlbb, vlbf, vltf, texcoords[3], color, {-1.f, 0.f, 0.f});
+    pushFace(vrtf, vrbf, vrbb, vrtb, texcoords[2], color, {1.f, 0.f, 0.f}, boneId);
+    pushFace(vltb, vlbb, vlbf, vltf, texcoords[3], color, {-1.f, 0.f, 0.f}, boneId);
 
-    pushFace(vltb, vltf, vrtf, vrtb, texcoords[4], color, {0.f, 1.f, 0.f});
-    pushFace(vlbf, vlbb, vrbb, vrbf, texcoords[5], color, {0.f, -1.f, 0.f});
+    pushFace(vltb, vltf, vrtf, vrtb, texcoords[4], color, {0.f, 1.f, 0.f}, boneId);
+    pushFace(vlbf, vlbb, vrbb, vrbf, texcoords[5], color, {0.f, -1.f, 0.f}, boneId);
 }
 
 void Mesh::pushTexturedPrism(glm::mat4 transformation,
-        std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords
+        std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords, int boneId
 ) {
     std::array<std::pair<glm::vec2, glm::vec2>, 6> texcoords6{
         texcoords[0], texcoords[0],
@@ -393,14 +399,14 @@ void Mesh::pushTexturedPrism(glm::mat4 transformation,
         texcoords[2], texcoords[2],
     };
 
-    pushTexturedPrism(transformation, texcoords6);
+    pushTexturedPrism(transformation, texcoords6, boneId);
 }
 
 void Mesh::pushTexturedPrism(glm::mat4 transformation,
-        std::pair<glm::vec2, glm::vec2> texcoords
+        std::pair<glm::vec2, glm::vec2> texcoords, int boneId
 ) {
     std::array<std::pair<glm::vec2, glm::vec2>, 3> texcoords3{texcoords, texcoords, texcoords};
-    pushTexturedPrism(transformation, texcoords3);
+    pushTexturedPrism(transformation, texcoords3, boneId);
 }
 
 
