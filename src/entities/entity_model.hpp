@@ -51,4 +51,16 @@ public:
     void draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const;
 };
 
+class PigModel {
+private:
+    EntityModelPart head;
+    EntityModelPart torso;
+    EntityModelPart leg;
+
+public:
+    explicit PigModel();
+    
+    void draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const;
+};
+
 #endif

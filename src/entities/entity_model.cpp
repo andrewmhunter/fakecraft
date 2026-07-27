@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
+#include <glm/trigonometric.hpp>
 #include "util/util.hpp"
 
 Mesh EntityModelPart::generateMesh(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
@@ -53,11 +54,11 @@ HumanModelState::HumanModelState(float yaw, float bodyYaw, float pitch, float li
 {}
 
 HumanModel::HumanModel()
-    : head{{0.f, -0.5f, 0.f}, glm::ivec3{8}, {64, 32}, glm::ivec2{0}},
-    torso{{0.f, -0.5f, 0.f}, {8, 12, 4}, {64, 32}, glm::ivec2{16, 16}},
-    armLeft{{-0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, glm::ivec2{40, 16}},
-    armRight{{0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, glm::ivec2{40, 16}},
-    leg{{0.f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, glm::ivec2{0, 16}}
+    : head{{0.f, -0.5f, 0.f}, glm::ivec3{8}, {64, 32}, {0, 0}},
+    torso{{0.f, -0.5f, 0.f}, {8, 12, 4}, {64, 32}, {16, 16}},
+    armLeft{{-0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {40, 16}},
+    armRight{{0.5f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {40, 16}},
+    leg{{0.f, 0.5f, 0.f}, {4, 12, 4}, {64, 32}, {0, 16}}
 {}
 
 void HumanModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {
@@ -96,4 +97,43 @@ void HumanModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanMode
     arm1Transform = glm::rotate(arm1Transform, std::sin(state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
     armRight.draw(shader, arm1Transform);
 
+}
+
+
+PigModel::PigModel()
+    : head{{0.f, -0.5f, -0.5f}, glm::ivec3{8}, {64, 32}, {0, 0}},
+    torso{{0.f, -0.5f, 0.5f}, {10, 16, 8}, {64, 32}, {28, 8}},
+    leg{{0.f, 0.5f, 0.f}, {4, 6, 4}, {64, 32}, {0, 16}}
+{}
+    
+void PigModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {
+    glm::mat4 baseTransform{1.f};
+    baseTransform = glm::translate(baseTransform, position);
+
+    baseTransform = glm::rotate(baseTransform, state.bodyYaw, glm::vec3{0.f, 1.f, 0.f});
+
+    glm::mat4 headTransform = baseTransform;
+    headTransform = glm::translate(headTransform, {0._px, 10._px, 6._px});
+    headTransform = glm::rotate(headTransform, state.yaw - state.bodyYaw, glm::vec3{0.f, 1.f, 0.f});
+    headTransform = glm::rotate(headTransform, state.pitch, glm::vec3{1.f, 0.f, 0.f});
+    head.draw(shader, headTransform);
+
+
+    glm::mat4 leg0Rotate = glm::rotate(glm::mat4{1.f}, std::sin(state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
+    glm::mat4 leg1Rotate = glm::rotate(glm::mat4{1.f}, std::sin(-state.limbRotation), glm::vec3{1.f, 0.f, 0.f});
+
+    glm::mat4 legRF = glm::translate(baseTransform, {3._px, 6._px, 6._px});
+    leg.draw(shader, legRF * leg0Rotate);
+    glm::mat4 legRB = glm::translate(baseTransform, {3._px, 6._px, -6._px});
+    leg.draw(shader, legRB * leg1Rotate);
+    glm::mat4 legLF = glm::translate(baseTransform, {-3._px, 6._px, 6._px});
+    leg.draw(shader, legLF * leg1Rotate);
+    glm::mat4 legLB = glm::translate(baseTransform, {-3._px, 6._px, -6._px});
+    leg.draw(shader, legLB * leg0Rotate);
+
+    glm::mat4 torsoTransform = baseTransform;
+    torsoTransform = glm::translate(torsoTransform, {0._px, 6._px, -8._px});
+    torsoTransform = glm::rotate(torsoTransform, glm::radians(90.f), glm::vec3{1.f, 0.f, 0.f});
+
+    torso.draw(shader, torsoTransform);
 }

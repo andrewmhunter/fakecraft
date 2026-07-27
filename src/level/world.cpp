@@ -201,7 +201,7 @@ void World::draw() const {
     
     ShaderProgram& entityShader = ResourceManager::instance().shader.entityShader;
     entityShader.use();
-    ResourceManager::instance().texture.human.bind();
+    ResourceManager::instance().texture.pig.bind();
 
     int entitiesCulled = 0;
 

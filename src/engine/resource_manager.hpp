@@ -24,6 +24,7 @@ public:
         Texture terrain{"assets/resources/alphaTerrain.png"};
         Texture human{"assets/resources/mob/char.png"};
         Texture pigman{"assets/resources/mob/pigman.png"};
+        Texture pig{"assets/resources/mob/pig.png"};
     } texture;
 
     struct {
@@ -34,6 +35,7 @@ public:
 
     struct {
         HumanModel human{};
+        PigModel pig{};
     } entityModel;
 
     Font font{"assets/resources/font/default.png"};
