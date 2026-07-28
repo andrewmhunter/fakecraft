@@ -1,4 +1,6 @@
 #include <format>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 #include <string>
 
 #include <glad/glad.h>
@@ -11,6 +13,7 @@
 #include <glm/fwd.hpp>
 
 #include "engine/camera.hpp"
+#include "engine/input.hpp"
 #include "level/block.hpp"
 #include "level/chunk.hpp"
 #include "engine/resource_manager.hpp"
@@ -262,6 +265,23 @@ void runGame(GLFWwindow* window) {
             mob.velocity = player->velocity * 2.f;
         }
 
+        if (keyDown(GLFW_KEY_C)) {
+            globalCamera.fov = 20.f;
+        } else {
+            globalCamera.fov = Config::settings->graphics.fov;
+        }
+
+
+        glm::mat4 orthoCameraTransform{1.f};
+        orthoCameraTransform = glm::translate(orthoCameraTransform, playerEye);
+        //orthoCameraTransform = glm::translate(orthoCameraTransform, glm::vec3{250.f, 250.f, -250.f});
+        //orthoCameraTransform = glm::rotate(orthoCameraTransform, glm::radians(45.f), glm::vec3{0.f, 1.f, 0.f});
+        //orthoCameraTransform = glm::rotate(orthoCameraTransform, glm::radians(45.f), glm::vec3{1.f, 0.f, 0.f});
+        orthoCameraTransform = glm::scale(orthoCameraTransform, glm::vec3{2.f});
+        OrthoCamera orthoCamera{orthoCameraTransform};
+
+        
+
 
         if (getMouseScroll() < 0) {
             selectedBlock = static_cast<Block>(static_cast<int>(selectedBlock) + 1);
@@ -279,7 +299,11 @@ void runGame(GLFWwindow* window) {
         ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
         ShaderProgram& simpleShader = ResourceManager::instance().shader.simpleShader;
 
-        globalCamera.use();
+        if (keyDown(GLFW_KEY_F7)) {
+            orthoCamera.use();
+        } else {
+            globalCamera.use();
+        }
 
         world.draw();
 

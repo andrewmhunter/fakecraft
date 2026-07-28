@@ -182,13 +182,12 @@ Shader Shader::fromFile(GLenum shaderType, const std::string& fileName) {
 }
 
 
-ShaderProgram::ShaderProgram(std::span<std::reference_wrapper<const Shader>> shaders)
+ShaderProgram::ShaderProgram(const Shader& vertex, const Shader& fragment)
     : programId{[](GLint, GLuint* id){*id = glCreateProgram();},
         [](GLint, GLuint* id){glDeleteProgram(*id);}}
 {
-    for (const Shader& shader : shaders) {
-        glAttachShader(programId.object, shader.shaderId.object);
-    }
+    glAttachShader(programId.object, vertex.shaderId.object);
+    glAttachShader(programId.object, fragment.shaderId.object);
 
     glLinkProgram(programId.object);
 
@@ -208,8 +207,7 @@ ShaderProgram::ShaderProgram(std::span<std::reference_wrapper<const Shader>> sha
 ShaderProgram ShaderProgram::loadFiles(const std::string& vertexFileName, const std::string& fragmentFileName) {
     Shader vertexShader = Shader::fromFile(GL_VERTEX_SHADER, vertexFileName);
     Shader fragmentShader = Shader::fromFile(GL_FRAGMENT_SHADER, fragmentFileName);
-    std::array<std::reference_wrapper<const Shader>, 2> shaders = {vertexShader, fragmentShader};
-    return ShaderProgram{shaders};
+    return ShaderProgram{vertexShader, fragmentShader};
 }
 
 

@@ -1,7 +1,6 @@
 #include <cmath>
 #include <filesystem>
 #include <format>
-#include <functional>
 #include <future>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
@@ -15,6 +14,7 @@
 #include "entities/entity_model.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/resource_manager.hpp"
+#include "engine/input.hpp"
 #include "level/collision.hpp"
 #include "level/octree.hpp"
 #include "serialization/serialize.hpp"
@@ -195,7 +195,9 @@ void World::draw() const {
 
         if (!frustrum.isInFrustrum(chunk->getCullBoundingBox())) {
             chunksCulled++;
-            continue;
+            if (!keyDown(GLFW_KEY_F7)) {
+                continue;
+            }
         }
 
         chunk->draw(terrainShader);

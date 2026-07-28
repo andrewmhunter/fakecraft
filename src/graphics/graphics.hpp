@@ -190,7 +190,7 @@ private:
     std::map<std::string, GLint> uniformCache{};
 
 public:
-    ShaderProgram(std::span<std::reference_wrapper<const Shader>> shaders);
+    ShaderProgram(const Shader& vertex, const Shader& fragment);
     
     static ShaderProgram loadFiles(const std::string& vertexFileName, const std::string& fragmentFileName);
     

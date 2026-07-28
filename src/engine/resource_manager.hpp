@@ -28,9 +28,20 @@ public:
     } texture;
 
     struct {
-        ShaderProgram terrainShader = ShaderProgram::loadFiles("assets/terrain.vs.glsl", "assets/terrain.fs.glsl");
-        ShaderProgram simpleShader = ShaderProgram::loadFiles("assets/simple.vs.glsl", "assets/simple.fs.glsl");
-        ShaderProgram entityShader = ShaderProgram::loadFiles("assets/entity.vs.glsl", "assets/entity.fs.glsl");
+        struct {
+            Shader terrain = Shader::fromFile(GL_VERTEX_SHADER, "assets/terrain.vs.glsl");
+            Shader entity = Shader::fromFile(GL_VERTEX_SHADER, "assets/entity.vs.glsl");
+            Shader simple = Shader::fromFile(GL_VERTEX_SHADER, "assets/simple.vs.glsl");
+        } vertex;
+        struct {
+            Shader terrain = Shader::fromFile(GL_FRAGMENT_SHADER, "assets/terrain.fs.glsl");
+            Shader entity = Shader::fromFile(GL_FRAGMENT_SHADER, "assets/entity.fs.glsl");
+            Shader simple = Shader::fromFile(GL_FRAGMENT_SHADER, "assets/simple.fs.glsl");
+        } fragment;
+
+        ShaderProgram terrainShader = ShaderProgram{vertex.terrain, fragment.terrain};
+        ShaderProgram simpleShader = ShaderProgram{vertex.simple, fragment.simple};
+        ShaderProgram entityShader = ShaderProgram{vertex.entity, fragment.entity};
     } shader;
 
     struct {
