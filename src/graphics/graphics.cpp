@@ -127,7 +127,7 @@ Texture::Texture(const Image& image) : textureId{glGenTextures, glDeleteTextures
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-void Texture::bind() {
+void Texture::bind() const {
     if (textureId.object == 0) {
         Logger::error("Texture invalid");
     }
@@ -135,7 +135,7 @@ void Texture::bind() {
     glBindTexture(GL_TEXTURE_2D, textureId.object);
 }
 
-void Texture::bind(int textureUnit) {
+void Texture::bind(int textureUnit) const {
     glActiveTexture(GL_TEXTURE0 + textureUnit);
     bind();
 }

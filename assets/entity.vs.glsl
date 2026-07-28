@@ -20,8 +20,6 @@ layout (location = 4) in int boneId;
 out vec4 fragColor;
 out vec2 fragTexcoord;
 
-const vec4 boneColors[4] = vec4[](vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0, 0.0, 1.0, 1.0));
-
 void main()
 {
     fragColor = vertexColor;

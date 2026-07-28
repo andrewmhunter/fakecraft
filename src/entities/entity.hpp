@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include <glm/glm.hpp>
+#include "entities/entity_model.hpp"
 #include "level/collision.hpp"
 #include "serialization/serialize.hpp"
 #include "util/timer.hpp"
@@ -25,7 +26,8 @@ struct EntityID {
 
 enum class EntityType {
     player,
-    mob,
+    human,
+    pig,
 };
 
 class Entity {
@@ -55,6 +57,7 @@ public:
     
     virtual void update(float deltaTime);
     virtual void draw(ShaderProgram& shader);
+    virtual void appendDrawCommands(EntityDrawCommands& commands) const;
     virtual void collide(float deltaTime, EntityID otherID);
 
     virtual BoundingBox getBoundingBox() const;
@@ -69,7 +72,6 @@ public:
     explicit Human(World* world, EntityID id, glm::vec3 position);
 
     virtual void update(float deltaTime) override;
-    virtual void draw(ShaderProgram& shader) override;
 };
 
 class Player final : public Entity {
@@ -86,7 +88,14 @@ public:
     explicit Player(World* world, EntityID id, glm::vec3 position);
 
     virtual void update(float deltaTime) override;
-    virtual void draw(ShaderProgram& shader) override;
+    virtual void appendDrawCommands(EntityDrawCommands& commands) const override;
+};
+
+class Pig final : public Entity {
+public:
+    explicit Pig(World* world, EntityID id, glm::vec3 position);
+
+    virtual void appendDrawCommands(EntityDrawCommands& commands) const override;
 };
 
 

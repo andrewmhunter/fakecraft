@@ -16,6 +16,7 @@
 #include "engine/resource_manager.hpp"
 #include "level/world.hpp"
 #include "util/util.hpp"
+#include "util/util.hpp"
 #include "level/collision.hpp"
 #include "entities/entity.hpp"
 #include "engine/logger.hpp"
@@ -254,6 +255,11 @@ void runGame(GLFWwindow* window) {
                 Entity& mob = world.spawnEntity<Human>(player->position);
                 mob.velocity = player->velocity * 2.f;
             }
+        }
+
+        if (keyPressed(GLFW_KEY_P)) {
+            Entity& mob = world.spawnEntity<Pig>(player->position);
+            mob.velocity = player->velocity * 2.f;
         }
 
 

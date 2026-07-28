@@ -1,15 +1,18 @@
 #include <cmath>
 #include <filesystem>
 #include <format>
+#include <functional>
 #include <future>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <memory>
 #include "world.hpp"
 #include "engine/camera.hpp"
 #include "engine/config.hpp"
 #include "entities/entity.hpp"
+#include "entities/entity_model.hpp"
 #include "graphics/graphics.hpp"
 #include "engine/resource_manager.hpp"
 #include "level/collision.hpp"
@@ -78,7 +81,7 @@ void World::update(float deltaTime) {
         auto collisions = collisionWorld.getCollisions(entity.second->getBoundingBox(), entity.first);
         entity.second->update(deltaTime);
         for (EntityID other : collisions) {
-            entity.second->collide(deltaTime, other);
+           entity.second->collide(deltaTime, other);
         }
     }
 
@@ -205,12 +208,28 @@ void World::draw() const {
 
     int entitiesCulled = 0;
 
+    std::map<EntityDrawFeatures, std::vector<Bones>> entitiesToDraw{};
+
+    entityShader.setModel(glm::mat4{1.f});
     for (auto& entity : entities) {
         if (!frustrum.isInFrustrum(entity.second->getCullBoundingBox())) {
             entitiesCulled++;
             continue;
         }
-        entity.second->draw(entityShader);
+        entity.second->appendDrawCommands(entitiesToDraw);
+    }
+
+    GLint bonesUniformLocation = entityShader.uniformLocation("bones");
+
+    for (const auto& entityKind : entitiesToDraw) {
+        entityKind.first.first->bind();
+
+        entityKind.first.second->bind();
+
+        for (const Bones& bones : entityKind.second) {
+            glUniformMatrix4fv(bonesUniformLocation, maxBones, false, glm::value_ptr(bones[0]));
+            entityKind.first.second->draw();
+        }
     }
 
     //Logger::info(std::format("Chunks culled: {}, Entities culed: {}", chunksCulled, entitiesCulled));
@@ -393,6 +412,10 @@ static std::filesystem::path worldFileName() {
 } 
 
 void World::serialize() {
+    if (!Config::settings->game.saveChunks) {
+        return;
+    }
+
     ser::Object object{};
     serializeDeserialize(object);
 
@@ -420,6 +443,10 @@ void World::serialize() {
 }
 
 bool World::deserialize() {
+    if (!Config::settings->game.loadChunks) {
+        return false;
+    }
+
     std::filesystem::path fileName = worldFileName();
     if (!std::filesystem::is_regular_file(fileName)) {
         return false;

@@ -2,6 +2,7 @@
 #define ENTITY_MODEL_HPP
 
 #include "graphics/graphics.hpp"
+#include <functional>
 #include <glm/fwd.hpp>
 #include <span>
 
@@ -37,15 +38,25 @@ public:
     explicit HumanModelState(float yaw, float bodyYaw, float pitch, float limbRotation);
 };
 
+using Bones = std::array<glm::mat4, maxBones>;
+using BoneSpan = std::span<glm::mat4, maxBones>;
+
+using EntityDrawFeatures = std::pair<const Texture*, const GPUMesh*>;
+
+using EntityDrawCommands = std::map<EntityDrawFeatures, std::vector<Bones>>;
+
 class EntityModel {
 private:
+    static GLint bonesUniformLocation;
+
 public:
     GPUMesh mesh;
 
     explicit EntityModel(std::span<const EntityModelPart> parts);
 
-    virtual void getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const = 0;
+    virtual void getBones(BoneSpan bones, glm::vec3 position, const HumanModelState& state) const = 0;
     void draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const;
+    void appendDrawCommands(EntityDrawCommands& commands, const Texture& texture, glm::vec3 position, const HumanModelState& state) const;
 };
 
 class HumanModel : public EntityModel {
@@ -53,7 +64,7 @@ private:
 public:
     explicit HumanModel();
 
-    virtual void getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const override;
+    virtual void getBones(BoneSpan bones, glm::vec3 position, const HumanModelState& state) const override;
 };
 
 class PigModel : public EntityModel {
@@ -61,7 +72,7 @@ private:
 public:
     explicit PigModel();
 
-    virtual void getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const override;
+    virtual void getBones(BoneSpan bones, glm::vec3 position, const HumanModelState& state) const override;
 };
 
 #endif

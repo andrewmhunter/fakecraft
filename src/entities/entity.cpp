@@ -151,6 +151,15 @@ void Entity::draw(ShaderProgram& shader) {
     ResourceManager::instance().entityModel.human.draw(shader, position, HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)});
 }
 
+void Entity::appendDrawCommands(EntityDrawCommands& commands) const {
+    ResourceManager::instance().entityModel.human.appendDrawCommands(
+        commands,
+        ResourceManager::instance().texture.human,
+        position,
+        HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)}
+    );
+}
+
 
 void Entity::serialize(ser::Object& object) {
     object.setField("type", static_cast<i32>(type));
@@ -173,7 +182,7 @@ void Entity::serializeDeserialize(ser::Object& object) {
 
 
 Human::Human(World* world, EntityID id, glm::vec3 position)
-: Entity{world, EntityType::mob, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
+: Entity{world, EntityType::human, id, position, glm::vec3{0.6f, 1.8f, 0.6f}}
 {}
 
 void Human::update(float deltaTime) {
@@ -191,10 +200,6 @@ void Human::update(float deltaTime) {
             velocity.y += 0.5f;
         }
     }
-}
-
-void Human::draw(ShaderProgram& shader) {
-    Entity::draw(shader);
 }
 
 
@@ -272,18 +277,31 @@ void Player::update(float deltaTime) {
     velocity += movement;
 }
 
-void Player::draw(ShaderProgram& shader) {
+void Player::appendDrawCommands(EntityDrawCommands& commands) const {
     if (cameraPerson != CameraPerson::first) {
-        Entity::draw(shader);
+        Entity::appendDrawCommands(commands);
     }
+}
+
+Pig::Pig(World* world, EntityID id, glm::vec3 position) : Entity{world, EntityType::pig, id, position, glm::vec3{0.6f}} {}
+
+void Pig::appendDrawCommands(EntityDrawCommands& commands) const {
+    ResourceManager::instance().entityModel.pig.appendDrawCommands(
+        commands,
+        ResourceManager::instance().texture.pig,
+        position,
+        HumanModelState{yaw, bodyYaw, pitch, std::sin(armRotation / 2.f)}
+    );
 }
 
 std::unique_ptr<Entity> entityFactory(World* world, EntityType type, EntityID id, glm::vec3 position) {
     switch (type) {
-        case EntityType::mob:
+        case EntityType::human:
             return std::make_unique<Human>(world, id, position);
         case EntityType::player:
             return std::make_unique<Player>(world, id, position);
+        case EntityType::pig:
+            return std::make_unique<Pig>(world, id, position);
     }
-    Logger::unreachable();
+    Logger::fatal("Unrecognized entity type");
 }

@@ -169,8 +169,8 @@ public:
     Texture(const std::string& fileName);
     Texture(const Image& image);
 
-    void bind();
-    void bind(int textureUnit);
+    void bind() const;
+    void bind(int textureUnit) const;
 };
 
 class Shader {
@@ -189,14 +189,14 @@ private:
     OpenGLObject programId;
     std::map<std::string, GLint> uniformCache{};
 
-    GLint uniformLocation(const std::string& name);
-
 public:
     ShaderProgram(std::span<std::reference_wrapper<const Shader>> shaders);
-
+    
     static ShaderProgram loadFiles(const std::string& vertexFileName, const std::string& fragmentFileName);
-
+    
     void use() const;
+
+    GLint uniformLocation(const std::string& name);
 
     void setUniformFloat(const std::string& uniform, float value);
     void setUniformInt(const std::string& uniform, int value);

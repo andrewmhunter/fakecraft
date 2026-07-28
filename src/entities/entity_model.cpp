@@ -2,10 +2,12 @@
 #include "util/direction.hpp"
 #include "graphics/graphics.hpp"
 #include <cstddef>
+#include <functional>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
+#include <vector>
 #include "util/util.hpp"
 
 void EntityModelPart::generateMesh(Mesh& mesh) const {
@@ -53,18 +55,28 @@ EntityModel::EntityModel(std::span<const EntityModelPart> parts)
     : mesh{generateMeshFromParts(parts).upload()}
 {}
 
-void EntityModel::getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const {
-
-}
+GLint EntityModel::bonesUniformLocation = -1;
 
 void EntityModel::draw(ShaderProgram& shader, glm::vec3 position, const HumanModelState& state) const {
-    std::array<glm::mat4, maxBones> bones{};
-    getBones(bones, position, state);
-    for (std::size_t i = 0; i < bones.size(); ++i) {
-        shader.setUniformMat4(std::format("bones[{}]", i), bones[i]);
+    Bones bones{};
+    if (bonesUniformLocation == -1) {
+        bonesUniformLocation = shader.uniformLocation("bones");
     }
+    getBones(bones, position, state);
+    glProgramUniformMatrix4fv(shader.getId(), shader.uniformLocation("bones"), maxBones, false, glm::value_ptr(bones[0]));
     shader.setModel(glm::mat4{1.f});
     mesh.draw();
+}
+
+void EntityModel::appendDrawCommands(EntityDrawCommands& commands, const Texture& texture, glm::vec3 position, const HumanModelState& state) const {
+    EntityDrawFeatures features{&texture, &mesh};
+    if (!commands.contains(features)) {
+        commands[features] = std::vector<Bones>{};
+    }
+
+    Bones bones{};
+    getBones(bones, position, state);
+    commands.at(features).push_back(bones);
 }
 
 HumanModelState::HumanModelState(float yaw, float bodyYaw, float pitch, float limbRotation)
@@ -88,7 +100,7 @@ HumanModel::HumanModel()
     }}
 {}
 
-void HumanModel::getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const {
+void HumanModel::getBones(BoneSpan bones, glm::vec3 position, const HumanModelState& state) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::translate(baseTransform, position);
 
@@ -145,7 +157,7 @@ PigModel::PigModel()
     }}
 {}
     
-void PigModel::getBones(std::span<glm::mat4, maxBones> bones, glm::vec3 position, const HumanModelState& state) const {
+void PigModel::getBones(BoneSpan bones, glm::vec3 position, const HumanModelState& state) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::translate(baseTransform, position);
     baseTransform = glm::rotate(baseTransform, state.bodyYaw, glm::vec3{0.f, 1.f, 0.f});
