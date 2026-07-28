@@ -296,8 +296,8 @@ void runGame(GLFWwindow* window) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
-        ShaderProgram& simpleShader = ResourceManager::instance().shader.simpleShader;
+        ShaderProgram& terrainShader = ResourceManager::instance().shader.terrain;
+        ShaderProgram& simpleShader = ResourceManager::instance().shader.simple;
 
         if (keyDown(GLFW_KEY_F7)) {
             orthoCamera.use();

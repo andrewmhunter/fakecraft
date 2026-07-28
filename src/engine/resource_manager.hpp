@@ -39,9 +39,9 @@ public:
             Shader simple = Shader::fromFile(GL_FRAGMENT_SHADER, "assets/simple.fs.glsl");
         } fragment;
 
-        ShaderProgram terrainShader = ShaderProgram{vertex.terrain, fragment.terrain};
-        ShaderProgram simpleShader = ShaderProgram{vertex.simple, fragment.simple};
-        ShaderProgram entityShader = ShaderProgram{vertex.entity, fragment.entity};
+        ShaderProgram terrain = ShaderProgram{vertex.terrain, fragment.terrain};
+        ShaderProgram simple = ShaderProgram{vertex.simple, fragment.simple};
+        ShaderProgram entity = ShaderProgram{vertex.entity, fragment.entity};
     } shader;
 
     struct {

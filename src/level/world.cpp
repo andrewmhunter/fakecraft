@@ -25,7 +25,7 @@
 #include "engine/logger.hpp"
 
 static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
-    return (int)floorf(sqrtf(squaref(from.x - to.x) + squaref(from.z - to.z)));
+    return std::floorf(std::sqrtf(squaref(from.x - to.x) + squaref(from.z - to.z)));
 }
 
 
@@ -162,7 +162,7 @@ void World::update(float deltaTime) {
 }
 
 void World::draw() const {
-    ShaderProgram& terrainShader = ResourceManager::instance().shader.terrainShader;
+    ShaderProgram& terrainShader = ResourceManager::instance().shader.terrain;
     terrainShader.setUniformFloat("skyLight", skyLight);
     terrainShader.setUniformVec4("fogColor", skyColor);
 
@@ -204,7 +204,7 @@ void World::draw() const {
     } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
 
     
-    ShaderProgram& entityShader = ResourceManager::instance().shader.entityShader;
+    ShaderProgram& entityShader = ResourceManager::instance().shader.entity;
     entityShader.use();
     ResourceManager::instance().texture.human.bind();
 
