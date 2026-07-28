@@ -19,8 +19,7 @@
 Chunk::Chunk(World* world, glm::ivec3 coords)
     : world{world},
     coords{coords},
-    adjacentChunks{coords, this},
-    loaded{true}
+    adjacentChunks{coords, this}
 {
     Logger::assertion(world);
 
@@ -42,7 +41,7 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
 }
 
 Chunk::~Chunk() {
-    if (loaded) {
+    if (state == ChunkState::loaded) {
         unload();
     }
 }
@@ -52,17 +51,20 @@ Chunk::Chunk() {}
 void Chunk::generateOrLoad() {
     if (deserialize()) {
         Logger::trace(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
+        state = ChunkState::loaded;
         return;
     }
 
     generateTerrain(this);
     placeFeatures(this);
 
+    
     Logger::trace(std::format("Chunk {}, {} generated", coords.x, coords.z));
+    state = ChunkState::loaded;
 }
 
 void Chunk::unload() {
-    loaded = false;
+    state = ChunkState::unloaded;
 
     for (int x = -1; x <= 1; ++x) {
         for (int z = -1; z <= 1; ++z) {
@@ -139,7 +141,7 @@ void Chunk::drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const {
     //transform = glm::scale(transform, CHUNK_SIZE);
     //transform = glm::translate(transform, pointToVector3(chunk->coords));
 
-    if (!loaded) {
+    if (state != ChunkState::loaded) {
         Logger::error(std::format("Drawing unloaded chunk with vao: {}", mesh.vertexArrayObject.object));
     }
 
@@ -198,6 +200,8 @@ void Chunk::serialize() {
 
     serializeDeserialize(object);
 
+    object.setField("state", static_cast<u8>(state.load()));
+
     std::vector<u8> savedBlocks{};
 
     int currentNumber = 0;
@@ -242,6 +246,8 @@ bool Chunk::deserialize() {
         ser::Object object = ser::deserialize(fileName).get<ser::Object>();
 
         serializeDeserialize(object);
+
+        state = static_cast<ChunkState>(object.getField<u8>("state"));
 
         std::vector<u8>& loadedBlocks = object.getField<ser::List>("blocks").getVector<u8>();
 

@@ -1,6 +1,7 @@
 #ifndef WORLD_HPP
 #define WORLD_HPP
 
+#include <concepts>
 #include <map>
 #include <memory>
 #include <glm/fwd.hpp>
@@ -44,7 +45,7 @@ public:
     void tryPlaceBox(glm::ivec3 start, glm::ivec3 size, Block block);
     void placeBox(glm::ivec3 start, glm::ivec3 size, Block block);
 
-    template<typename T, typename... Args>
+    template<std::derived_from<Entity> T, typename... Args>
     T& spawnEntity(Args... args) {
         EntityID id = currentEntityID++;
         std::unique_ptr<T> entity = std::make_unique<T>(this, id, args...);
@@ -60,17 +61,6 @@ public:
     bool deserialize();
     void serializeDeserialize(ser::Object& object);
 };
-
-typedef struct {
-    int distance;
-    int row;
-    int direction;
-    int column;
-    int side;
-} CircleIterator;
-
-CircleIterator circleIteratorInit(int distance);
-bool iterateCircleIterator(CircleIterator* state, glm::ivec3* pointOut);
 
 #endif
 

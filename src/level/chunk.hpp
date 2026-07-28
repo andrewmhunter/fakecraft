@@ -1,6 +1,7 @@
 #ifndef CHUNK_HPP
 #define CHUNK_HPP
 
+#include <atomic>
 #include <cstddef>
 #include <filesystem>
 #include <glm/fwd.hpp>
@@ -138,6 +139,11 @@ struct BlockInstance {
 class World;
 class ChunkCache;
 
+enum class ChunkState {
+    unloaded,
+    loaded,
+};
+
 class Chunk {
 private:
     void drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const;
@@ -154,7 +160,8 @@ public:
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     LightValues light[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
-    bool loaded{false};
+
+    std::atomic<ChunkState> state{ChunkState::unloaded};
 
     explicit Chunk(World* world, glm::ivec3 coords);
     Chunk();

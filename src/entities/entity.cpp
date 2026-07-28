@@ -120,7 +120,7 @@ void Entity::update(float deltaTime) {
     armRotation += deltaTime;
 }
 
-constexpr float force = 0.2f;
+constexpr float force = 0.3f;
 
 void Entity::collide(float deltaTime, EntityID otherID) {
     const Entity& other = *world->entities[otherID];

@@ -86,52 +86,53 @@ void World::update(float deltaTime) {
     }
 
     if (player) {
-        int maxChunkLoads = 2;
+        int maxChunkLoads = 1024;
 
-        glm::ivec3 chunkOffset{0};
-        CircleIterator offsetIterator = circleIteratorInit(renderDistance);
+        #if ASYNC_GENERATION
+            std::vector<std::future<void>> asyncGenerators{};
+        #endif
 
-#if ASYNC_GENERATION
-        std::vector<std::future<void>> asyncGenerators{};
-#endif
+        for (int x = -renderDistance; x <= renderDistance; ++x) {
+            for (int z = -renderDistance; z <= renderDistance; ++z) {
 
-        do {
-            glm::ivec3 chunkCoord = chunkOffset + worldToChunkV(player->position);
-            chunkCoord.y = 0;
-            Chunk* chunk = getChunk(chunkCoord);
+                glm::ivec3 chunkCoord = glm::ivec3{x, 0, z} + worldToChunkV(player->position);
+                chunkCoord.y = 0;
+                Chunk* chunk = getChunk(chunkCoord);
+    
+                if (chunk != nullptr) {
+                    continue;
+                }
+    
+                int distance = chunkDistance(worldToChunkV(player->position), chunkCoord);
+                if (distance > renderDistance) {
+                    continue;
+                }
+    
+                if (maxChunkLoads <= 0 && distance != 0) {
+                    continue;
+                }
+                maxChunkLoads--;
+                
+                std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(this, chunkCoord);
+                chunks[chunkCoord] = std::move(newChunk);
+                auto& thisChunk = *chunks[chunkCoord];
+    
+                #if ASYNC_GENERATION
+                    asyncGenerators.push_back(std::async([&thisChunk](){
+                        thisChunk.generateOrLoad();
+                    }));
+                #else
+                    thisChunk.generateOrLoad();
+                #endif
 
-            if (chunk != nullptr) {
-                continue;
             }
-
-            int distance = chunkDistance(worldToChunkV(player->position), chunkCoord);
-            if (distance > renderDistance) {
-                continue;
-            }
-
-            if (maxChunkLoads <= 0 && distance != 0) {
-                continue;
-            }
-            maxChunkLoads--;
-            
-            std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(this, chunkCoord);
-            chunks[chunkCoord] = std::move(newChunk);
-            auto& thisChunk = *chunks[chunkCoord];
-
-#if ASYNC_GENERATION
-            asyncGenerators.push_back(std::async([&thisChunk](){
-                thisChunk.generateOrLoad();
-            }));
-#else
-            thisChunk.generateOrLoad();
-#endif
-        } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
-
-#if ASYNC_GENERATION
-        for (auto& handle : asyncGenerators) {
-            handle.get();
         }
-#endif
+
+        #if ASYNC_GENERATION
+            for (auto& handle : asyncGenerators) {
+                handle.get();
+            }
+        #endif
     }
 
     std::vector<Chunk*> toUnload{};
@@ -184,11 +185,8 @@ void World::draw() const {
     int chunksCulled = 0;
 
     glm::ivec3 chunkOffset{0};
-    CircleIterator offsetIterator = circleIteratorInit(renderDistance + 1);
-    do {
-        glm::ivec3 chunkCoord = chunkOffset + worldToChunkV(player->position);
-        chunkCoord.y = 0;
-        const Chunk* chunk = getChunk(chunkCoord);
+    for (const auto& chunkIt : chunks) {
+        const Chunk* chunk = chunkIt.second.get();
         if (chunk == NULL) {
             continue;
         }
@@ -201,7 +199,7 @@ void World::draw() const {
         }
 
         chunk->draw(terrainShader);
-    } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
+    }
 
     
     ShaderProgram& entityShader = ResourceManager::instance().shader.entity;
@@ -241,11 +239,9 @@ void World::draw() const {
 
     glDisable(GL_CULL_FACE);
     chunkOffset = glm::ivec3{0};
-    offsetIterator = circleIteratorInit(renderDistance + 1);
-    do {
-        glm::ivec3 chunkCoord = chunkOffset + worldToChunkV(player->position);
-        chunkCoord.y = 0;
-        const Chunk* chunk = getChunk(chunkCoord);
+    for (const auto& chunkIt : chunks) {
+        const Chunk* chunk = chunkIt.second.get();
+
         if (chunk == NULL) {
             continue;
         }
@@ -255,7 +251,7 @@ void World::draw() const {
         }
 
         chunk->drawTranslucent(terrainShader);
-    } while (iterateCircleIterator(&offsetIterator, &chunkOffset));
+    }
     glEnable(GL_CULL_FACE);
 }
 
@@ -336,66 +332,6 @@ void World::placeBox(glm::ivec3 start, glm::ivec3 size, Block block) {
     }
 }
 
-CircleIterator circleIteratorInit(int distance) {
-    return (CircleIterator) {
-        .distance = distance,
-        .row = 0,
-        .direction = static_cast<Direction>(DIRECTION_CARDINAL_COUNT),
-        .column = 0,
-        .side = 1,
-    };
-}
-
-static bool updateStateCircleIterator(CircleIterator* state) {
-    if (state->side == 1) {
-        state->side = -1;
-    } else if (state->side == -1) {
-        if (state->column != state->row) {
-            state->side = 1;
-            return true;
-        }
-    }
-
-    state->direction += 1;
-    if (state->direction < DIRECTION_CARDINAL_COUNT) {
-        return true;
-    }
-    state->direction = 0;
-
-    state->column += 1;
-
-    state->side = -1;
-    if (state->column < state->row + 1) {
-        return true;
-    }
-    state->column = 0;
-
-    state->row += 1;
-    state->side = 0;
-    if (state->row < state->distance + 1) {
-        return true;
-    }
-
-    return false;
-}
-
-bool iterateCircleIterator(CircleIterator* state, glm::ivec3* pointOut) {
-    if (!updateStateCircleIterator(state)) {
-        return false;
-    }
-
-    glm::ivec3 directionPoint = directionToPoint(static_cast<Direction>(state->direction));
-    glm::ivec3 rightAnglePoint = directionToPoint(directionCardinalRightAngle(static_cast<Direction>(state->direction)));
-
-    glm::ivec3 point = directionPoint * state->row;
-
-    glm::ivec3 offsetColumn = rightAnglePoint * state->side * state->column;
-    point = point + offsetColumn;
-
-    *pointOut = point;
-
-    return true;
-}
 
 Entity& World::spawnEntity(EntityType type, glm::vec3 position) {
     EntityID id = currentEntityID++;
