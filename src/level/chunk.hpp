@@ -141,6 +141,8 @@ class ChunkCache;
 
 enum class ChunkState {
     unloaded,
+    generating,
+    terrainGenerated,
     loaded,
 };
 
@@ -155,7 +157,7 @@ public:
     glm::ivec3 coords;
     std::optional<GPUMesh> mesh;
     std::optional<GPUMesh> translucentMesh;
-    bool dirty;
+    std::atomic_bool dirty;
     ChunkCache adjacentChunks{glm::ivec3{0}, this};
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
@@ -175,6 +177,7 @@ public:
     }
 
     void generateOrLoad();
+    void fillChunkCache();
 
     void unload();
     void tryPlaceBlock(glm::ivec3 local, Block block);

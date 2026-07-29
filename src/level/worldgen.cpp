@@ -240,5 +240,7 @@ void placeFeatures(Chunk* chunk) {
             chunk->tryPlaceBlock(x, y + 1, z, flowerType);
         }
     }
+
+    chunk->dirty = true;
 }
 

@@ -8,17 +8,21 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <format>
+#include <thread>
 #include <utility>
 #include <array>
 #include <stb_image.h>
 #include "engine/logger.hpp"
 
+std::thread::id mainThreadId = std::this_thread::get_id();
 
 GLuint uboGlobalsBlock;
 
 OpenGLObject::OpenGLObject(OpenGLObjectLifetimeFunction allocFunction, OpenGLObjectLifetimeFunction freeFunction) : freeFunction{freeFunction} {
+    if (std::this_thread::get_id() != mainThreadId) {
+        Logger::error("OpenGL resource allocated on thread other than main thread");
+    }
     allocFunction(1, &this->object);
-    Logger::trace("Allocating object");
 }
 
 OpenGLObject::OpenGLObject(OpenGLObject&& other) : freeFunction{other.freeFunction}, object{other.object} {
@@ -44,8 +48,10 @@ OpenGLObject& OpenGLObject::operator=(OpenGLObject&& other) {
 }
 
 OpenGLObject::~OpenGLObject() {
-    Logger::trace("Freeing object");
     if (object != InvalidValue) {
+        if (std::this_thread::get_id() != mainThreadId) {
+            Logger::error("OpenGL resource freed on thread other than main thread");
+        }
         freeFunction(1, &object);
     }
 }
@@ -519,7 +525,6 @@ static void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
         GLenum severity, GLsizei length, const char *message, const void *userParam
 ) {
     (void)length;
-    (void)userParam;
 
     static const std::map<GLenum, std::string_view> sources {
         {GL_DEBUG_SOURCE_API,             "API"},
@@ -555,8 +560,8 @@ static void openglDebugCallback(GLenum source, GLenum type, unsigned int id,
     }
 
     std::string text = std::format(
-        "OpenGL({}), source: {}, type: {}: {}",
-        id, sources.at(source), types.at(type), message
+        "OpenGL({}), source: {}, type: {}: {} {}",
+        id, sources.at(source), types.at(type), message, userParam
     );
 
     Logger::log(severities.at(severity), text);

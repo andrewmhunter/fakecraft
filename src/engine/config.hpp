@@ -30,6 +30,7 @@ public:
         bool saveChunks;
         bool loadChunks;
         float blockReach;
+        int threadCount;
     } game;
 
     struct {

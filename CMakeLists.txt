@@ -39,6 +39,7 @@ target_sources(fakecraft PRIVATE
     src/util/point.cpp
 	src/util/util.cpp
     src/util/timer.cpp
+    src/util/thread_pool.cpp
     
     src/entities/entity.cpp
     src/entities/entity_model.cpp

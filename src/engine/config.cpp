@@ -14,6 +14,7 @@ Config::Config(std::filesystem::path filePath) {
     game.saveChunks = ini.getBool("game", "save_chunks", true);
     game.loadChunks = ini.getBool("game", "load_chunks", true);
     game.blockReach = ini.getFloat("game", "block_reach", 8.f);
+    game.threadCount = ini.getInt("game", "thread_count", 4);
 
     world.saveFile = ini.getString("world", "save_file", "save/world0");
     world.superflat = ini.getBool("world", "superflat", false);

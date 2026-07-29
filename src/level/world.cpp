@@ -1,7 +1,6 @@
 #include <cmath>
 #include <filesystem>
 #include <format>
-#include <future>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -18,6 +17,7 @@
 #include "level/collision.hpp"
 #include "level/octree.hpp"
 #include "serialization/serialize.hpp"
+#include "util/thread_pool.hpp"
 #include "util/types.hpp"
 #include "util/util.hpp"
 #include "chunk.hpp"
@@ -28,9 +28,9 @@ static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
     return std::floorf(std::sqrtf(squaref(from.x - to.x) + squaref(from.z - to.z)));
 }
 
-
 World::World()
     : currentEntityID{0},
+    threadPool{Config::settings->game.threadCount},
     seed{Config::settings->world.setSeed.value_or(randomInt(10000))},
     renderDistance{Config::settings->graphics.renderDistance}
 {
@@ -53,8 +53,6 @@ World::~World() {
     serialize();
     chunks.clear();
 }
-
-#define ASYNC_GENERATION 1
 
 void World::update(float deltaTime) {
     static int lightDirection = 1;
@@ -88,17 +86,13 @@ void World::update(float deltaTime) {
     if (player) {
         int maxChunkLoads = 1024;
 
-        #if ASYNC_GENERATION
-            std::vector<std::future<void>> asyncGenerators{};
-        #endif
-
         for (int x = -renderDistance; x <= renderDistance; ++x) {
             for (int z = -renderDistance; z <= renderDistance; ++z) {
 
                 glm::ivec3 chunkCoord = glm::ivec3{x, 0, z} + worldToChunkV(player->position);
                 chunkCoord.y = 0;
-                Chunk* chunk = getChunk(chunkCoord);
-    
+                Chunk* chunk = getChunkRaw(chunkCoord);
+
                 if (chunk != nullptr) {
                     continue;
                 }
@@ -116,29 +110,24 @@ void World::update(float deltaTime) {
                 std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(this, chunkCoord);
                 chunks[chunkCoord] = std::move(newChunk);
                 auto& thisChunk = *chunks[chunkCoord];
-    
-                #if ASYNC_GENERATION
-                    asyncGenerators.push_back(std::async([&thisChunk](){
-                        thisChunk.generateOrLoad();
-                    }));
-                #else
+
+                threadPool.enqueueTask(-distance, [&thisChunk](){
                     thisChunk.generateOrLoad();
-                #endif
+                    thisChunk.state = ChunkState::terrainGenerated;
+                });
 
             }
         }
-
-        #if ASYNC_GENERATION
-            for (auto& handle : asyncGenerators) {
-                handle.get();
-            }
-        #endif
     }
 
     std::vector<Chunk*> toUnload{};
 
     for (auto& entry : chunks) {
         Chunk* chunk = entry.second.get();
+
+        if (chunk->state != ChunkState::loaded) {
+            continue;
+        }
 
         glm::ivec3 playerChunk = worldToChunkV(player->position);
 
@@ -155,8 +144,22 @@ void World::update(float deltaTime) {
 
     for (auto& entry : chunks) {
         Chunk* chunk = entry.second.get();
+        switch (chunk->state) {
+            case ChunkState::terrainGenerated: {
+                chunk->fillChunkCache();
+                chunk->state = ChunkState::loaded;
+                chunk->dirty = true;
+                break;
+            }
+            default:
+                break;
+        }  
+    }
 
-        if (chunk->dirty) {
+    for (auto& entry : chunks) {
+        Chunk* chunk = entry.second.get();
+
+        if (chunk->state == ChunkState::loaded && chunk->dirty) {
             chunkGenerateMesh(chunk);
         }
     }
@@ -184,10 +187,9 @@ void World::draw() const {
     Frustrum frustrum = globalCamera.getFrustrum();
     int chunksCulled = 0;
 
-    glm::ivec3 chunkOffset{0};
     for (const auto& chunkIt : chunks) {
         const Chunk* chunk = chunkIt.second.get();
-        if (chunk == NULL) {
+        if (chunk == nullptr || chunk->state != ChunkState::loaded) {
             continue;
         }
 
@@ -238,11 +240,10 @@ void World::draw() const {
     ResourceManager::instance().texture.terrain.bind();
 
     glDisable(GL_CULL_FACE);
-    chunkOffset = glm::ivec3{0};
     for (const auto& chunkIt : chunks) {
         const Chunk* chunk = chunkIt.second.get();
 
-        if (chunk == NULL) {
+        if (chunk == nullptr || chunk->state != ChunkState::loaded) {
             continue;
         }
 
@@ -272,18 +273,42 @@ void World::setBlock(glm::ivec3 worldPoint, Block block) {
     chunk->setBlock(worldToLocal(worldPoint), block);
 }
 
+Chunk* World::getChunkRaw(glm::ivec3 chunkCoords) {
+    if (chunks.count(chunkCoords) == 0) {
+        return nullptr;
+    }
+    Chunk* chunk = chunks.at(chunkCoords).get();
+    return chunk;
+}
+
+const Chunk* World::getChunkRaw(glm::ivec3 chunkCoords) const {
+    if (chunks.count(chunkCoords) == 0) {
+        return nullptr;
+    }
+    const Chunk* chunk = chunks.at(chunkCoords).get();
+    return chunk;
+}
+
 Chunk* World::getChunk(glm::ivec3 chunkCoords) {
     if (chunks.count(chunkCoords) == 0) {
         return nullptr;
     }
-    return chunks.at(chunkCoords).get();
+    Chunk* chunk = chunks.at(chunkCoords).get();
+    if (chunk->state != ChunkState::loaded) {
+        return nullptr;
+    }
+    return chunk;
 }
 
 const Chunk* World::getChunk(glm::ivec3 chunkCoords) const {
     if (chunks.count(chunkCoords) == 0) {
         return nullptr;
     }
-    return chunks.at(chunkCoords).get();
+    const Chunk* chunk = chunks.at(chunkCoords).get();
+    if (chunk->state != ChunkState::loaded) {
+        return nullptr;
+    }
+    return chunk;
 }
 
 void World::markDirty(glm::ivec3 worldPoint) {

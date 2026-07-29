@@ -7,17 +7,21 @@
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/vector_relational.hpp>
+#include <unordered_map>
 #include "chunk.hpp"
 #include "entities/entity.hpp"
 #include "graphics/graphics.hpp"
 #include "level/octree.hpp"
 #include "serialization/serialize.hpp"
 #include "util/point.hpp"
+#include "util/thread_pool.hpp"
 
 class World {
 private:
     EntityID currentEntityID;
     CollisionWorld collisionWorld{};
+
+    ThreadPool threadPool;
 
 public:
     std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>, HashIvec3XZOnly> chunks{};
@@ -36,6 +40,9 @@ public:
     void draw() const;
     Block getBlock(glm::ivec3 worldPoint) const;
     void setBlock(glm::ivec3 worldPoint, Block block);
+
+    Chunk* getChunkRaw(glm::ivec3 chunkCoords);
+    const Chunk* getChunkRaw(glm::ivec3 chunkCoords) const;
 
     Chunk* getChunk(glm::ivec3 chunkCoords);
     const Chunk* getChunk(glm::ivec3 chunkCoords) const;

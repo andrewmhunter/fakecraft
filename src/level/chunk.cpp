@@ -23,6 +23,31 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
 {
     Logger::assertion(world);
 
+}
+
+Chunk::~Chunk() {
+    if (state == ChunkState::loaded) {
+        unload();
+    }
+}
+
+Chunk::Chunk() {}
+
+void Chunk::generateOrLoad() {
+    state = ChunkState::generating;
+
+    if (deserialize()) {
+        Logger::trace(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
+        return;
+    }
+
+    generateTerrain(this);
+    placeFeatures(this);
+    
+    Logger::trace(std::format("Chunk {}, {} generated", coords.x, coords.z));
+}
+
+void Chunk::fillChunkCache() {
     for (int x = -1; x <= 1; ++x) {
         for (int z = -1; z <= 1; ++z) {
             if (x == 0 && z == 0) {
@@ -38,29 +63,6 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
             }
         }
     }
-}
-
-Chunk::~Chunk() {
-    if (state == ChunkState::loaded) {
-        unload();
-    }
-}
-
-Chunk::Chunk() {}
-
-void Chunk::generateOrLoad() {
-    if (deserialize()) {
-        Logger::trace(std::format("Chunk {}, {} loaded from file", coords.x, coords.z));
-        state = ChunkState::loaded;
-        return;
-    }
-
-    generateTerrain(this);
-    placeFeatures(this);
-
-    
-    Logger::trace(std::format("Chunk {}, {} generated", coords.x, coords.z));
-    state = ChunkState::loaded;
 }
 
 void Chunk::unload() {
@@ -122,10 +124,6 @@ void Chunk::markDirty(glm::ivec3 local) {
     Logger::assertion(blockInChunk(local));
 
     dirty = true;
-
-#ifdef USE_IGNORED
-    ignored[local.y] |= 1 << local.x;
-#endif
 }
 
 Block Chunk::getBlock(glm::ivec3 local) const {
@@ -138,8 +136,6 @@ Block Chunk::getBlock(glm::ivec3 local) const {
 void Chunk::drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const {
     glm::mat4 transform = glm::mat4{1.f};
     transform = glm::translate(transform, glm::vec3{coords * chunkSize});
-    //transform = glm::scale(transform, CHUNK_SIZE);
-    //transform = glm::translate(transform, pointToVector3(chunk->coords));
 
     if (state != ChunkState::loaded) {
         Logger::error(std::format("Drawing unloaded chunk with vao: {}", mesh.vertexArrayObject.object));
@@ -147,12 +143,6 @@ void Chunk::drawMesh(ShaderProgram& shader, const GPUMesh& mesh) const {
 
     shader.setModel(transform);
     mesh.draw();
-
-    if (world->showChunkBorders) {
-        wireframeEnable();
-        //DrawCubeWiresV(Vector3Multiply(Vector3AddValue(pointToVector3(chunk->coords), 0.5f), (Vector3)CHUNK_SIZE), (Vector3)CHUNK_SIZE, WHITE);
-        wireframeDisable();
-    }
 }
 
 void Chunk::draw(ShaderProgram& shader) const {
@@ -200,7 +190,7 @@ void Chunk::serialize() {
 
     serializeDeserialize(object);
 
-    object.setField("state", static_cast<u8>(state.load()));
+    // object.setField("state", static_cast<u8>(state.load()));
 
     std::vector<u8> savedBlocks{};
 
@@ -247,7 +237,7 @@ bool Chunk::deserialize() {
 
         serializeDeserialize(object);
 
-        state = static_cast<ChunkState>(object.getField<u8>("state"));
+        // state = static_cast<ChunkState>(object.getField<u8>("state"));
 
         std::vector<u8>& loadedBlocks = object.getField<ser::List>("blocks").getVector<u8>();
 
@@ -299,6 +289,7 @@ bool Chunk::blockInChunk(glm::ivec3 local) {
 ChunkCache::ChunkCache(glm::ivec3 centerPosition, Chunk* centerChunk)
     : centerPosition{centerPosition}
 {
+    chunks.fill(nullptr);
     chunks[getIndexLocal(glm::ivec3{0})] = centerChunk;
 }
 

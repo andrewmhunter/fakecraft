@@ -12,16 +12,6 @@ const Chunk dummyChunk{};
 void chunkGenerateMesh(Chunk* chunk) {
     Logger::assertion(chunk);
 
-    /*FCMesh mesh2{};
-    mesh2.pushTexturedPrism(glm::scale(glm::translate(glm::mat4{1.f}, {0.f, 0.5f, 0.f}), chunkSize),
-            {{0.f, 0.f}, {1.f, 1.f}});
-    chunk->mesh = mesh2.upload();
-
-    std::cout << "Mesh: " << chunk->mesh.vertexArrayObject << "\n";
-    chunk->dirty = false;
-
-    return;*/
-
     const Chunk* adjacentChunks[CHUNK_WIDTH][CHUNK_WIDTH][DIRECTION_CARDINAL_COUNT];
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -61,10 +51,6 @@ void chunkGenerateMesh(Chunk* chunk) {
     Mesh opaqueMesh{};
     Mesh translucentMesh{};
 
-#ifdef TIME_MESHER
-    double timeStart = GetTime();
-#endif
-
     for (int y = 0; y < CHUNK_HEIGHT; ++y) {
         for (int x = 0; x < CHUNK_WIDTH; ++x) {
             for (int z = 0; z < CHUNK_WIDTH; ++z) {
@@ -99,8 +85,6 @@ void chunkGenerateMesh(Chunk* chunk) {
                     }
                 }
 
-                
-
                 Block adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, -1, 0});
                 if (y != 0 && (getBlock(adjacentBlock).solidness != Solidness::solid && (properties.solidness == Solidness::solid || block != adjacentBlock))) {
                     meshFaceSmart(mesh, x, y, z, Direction::down,
@@ -117,21 +101,8 @@ void chunkGenerateMesh(Chunk* chunk) {
         }
     }
 
-    //printf("%d\n", mesh->vertexCount);
-
-#ifdef TIME_MESHER
-    double buildTime = GetTime() - timeStart;
-    timeStart = GetTime();
-#endif
-
     chunk->mesh = opaqueMesh.upload();
     chunk->translucentMesh = translucentMesh.upload();
-
-#ifdef TIME_MESHER
-    double uploadTime = GetTime() - timeStart;
-    printf("build %f, upload %f\nratio %f\n", buildTime, uploadTime, buildTime / uploadTime);
-#endif
-
 
     chunk->dirty = false;
 }
