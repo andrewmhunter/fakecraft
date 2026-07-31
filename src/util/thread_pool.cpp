@@ -1,8 +1,6 @@
 #include "thread_pool.hpp"
 #include "engine/logger.hpp"
-#include <cstddef>
 #include <mutex>
-#include <print>
 #include <thread>
 
 Task::Task(int priority, std::function<void()> function, u64 added)
@@ -46,15 +44,7 @@ ThreadPool::ThreadPool(int threadCount) {
 }
 
 ThreadPool::~ThreadPool() {
-    {
-        std::lock_guard lock{tasksMutex};
-        terminating = true;
-        alertThreads.notify_all();
-    }
-
-    for (std::thread& thread : threads) {
-        thread.join();
-    }
+    terminate();
 }
 
 void ThreadPool::enqueueTask(int priority, std::function<void()> function) {
@@ -69,4 +59,21 @@ void ThreadPool::enqueueTask(int priority, std::function<void()> function) {
         tasks.push(Task{priority, function, totalTasksAdded++});
         alertThreads.notify_one();
     }
+}
+
+void ThreadPool::terminate() {
+    if (terminating) {
+        return;
+    }
+
+    {
+        std::lock_guard lock{tasksMutex};
+        terminating = true;
+        alertThreads.notify_all();
+    }
+
+    for (std::thread& thread : threads) {
+        thread.join();
+    }
+    threads.clear();
 }

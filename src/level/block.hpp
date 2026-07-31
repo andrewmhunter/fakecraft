@@ -74,7 +74,7 @@ struct BlockProperties {
 
 extern std::optional<BlockProperties> blocks[blockCount];
 
-static inline const BlockProperties& getBlock(Block block) {
+static inline const BlockProperties& getBlockProperties(Block block) {
     return *blocks[static_cast<int>(block)];
 }
 

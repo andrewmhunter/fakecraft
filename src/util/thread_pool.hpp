@@ -46,6 +46,7 @@ public:
     ThreadPool& operator=(const ThreadPool& other) = delete;
 
     void enqueueTask(int priority, std::function<void()> function);
+    void terminate();
 };
 
 #endif

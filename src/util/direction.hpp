@@ -17,13 +17,29 @@ namespace Dir {
 
 using Direction = Dir::Direction;
 
+constexpr std::array<Direction, 4> cardinalDirections{
+    Direction::south,
+    Direction::east,
+    Direction::north,
+    Direction::west
+};
+
+constexpr std::array<Direction, 6> directions{
+    Direction::south,
+    Direction::east,
+    Direction::north,
+    Direction::west,
+    Direction::up,
+    Direction::down
+};
+
 constexpr int directionCount = static_cast<int>(Direction::down) + 1;
 
 #define DIRECTION_CARDINAL_COUNT 4
 #define DIRECTION_FIRST 0
 
 
-static inline glm::ivec3 directionToPoint(Direction direction) {
+constexpr glm::ivec3 directionToPoint(Direction direction) {
     switch (direction) {
     case Direction::east:
         return { 1, 0, 0};
@@ -41,7 +57,7 @@ static inline glm::ivec3 directionToPoint(Direction direction) {
     Logger::unreachable();
 }
 
-static inline glm::ivec2 directionToIvec2(Direction direction) {
+constexpr glm::ivec2 directionToIvec2(Direction direction) {
     switch (direction) {
     case Direction::east:
         return {1, 0};
@@ -59,7 +75,7 @@ static inline glm::ivec2 directionToIvec2(Direction direction) {
     Logger::unreachable();
 }
 
-static inline glm::ivec3 directionToIvec3(Direction direction) {
+constexpr glm::ivec3 directionToIvec3(Direction direction) {
     switch (direction) {
     case Direction::east:
         return {1, 0, 0};
@@ -77,7 +93,7 @@ static inline glm::ivec3 directionToIvec3(Direction direction) {
     Logger::unreachable();
 }
 
-static inline Direction invertDirection(Direction direction) {
+constexpr Direction invertDirection(Direction direction) {
     switch (direction) {
     case Direction::up:
         return Direction::down;
@@ -95,7 +111,7 @@ static inline Direction invertDirection(Direction direction) {
     Logger::unreachable();
 }
 
-static inline const char* directionName(Direction direction) {
+constexpr const char* directionName(Direction direction) {
     switch (direction) {
     case Direction::up:
         return "up";
@@ -113,7 +129,7 @@ static inline const char* directionName(Direction direction) {
     Logger::unreachable();
 }
 
-static inline Direction directionCardinalRightAngle(Direction direction) {
+constexpr Direction directionCardinalRightAngle(Direction direction) {
     switch (direction) {
     case Direction::south:
         return Direction::west;

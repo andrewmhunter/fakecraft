@@ -137,7 +137,7 @@ static constexpr bool overlapsAxis(BoundingBox boundingBox, glm::vec3 block, int
 }
 
 static bool isPassable(Block block) {
-    return getBlock(block).passability == Passability::passable;
+    return getBlockProperties(block).passability == Passability::passable;
 }
 
 static float aabbResolveAxisBlock(const ChunkCache& chunks, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {

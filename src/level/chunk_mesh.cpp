@@ -1,33 +1,30 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <optional>
 #include "block.hpp"
 #include "chunk.hpp"
 #include "graphics/mesh.hpp"
-#include "chunk_mesh.hpp"
-#include "engine/logger.hpp"
 
 // This relies on initialization of global variables to all 0s.
 const Chunk dummyChunk{};
 
-void chunkGenerateMesh(Chunk* chunk) {
-    Logger::assertion(chunk);
-
+void Chunk::generateMesh() {
     const Chunk* adjacentChunks[CHUNK_WIDTH][CHUNK_WIDTH][DIRECTION_CARDINAL_COUNT];
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_WIDTH; ++z) {
             for (int dir = 0; dir < DIRECTION_CARDINAL_COUNT; ++dir) {
-                adjacentChunks[x][z][dir] = chunk;
+                adjacentChunks[x][z][dir] = this;
             }
         }
     }
 
-    const Chunk* northChunk = chunk->adjacentChunks.getChunkDirection(Direction::north);
-    if (northChunk == NULL) {
+    const Chunk* northChunk = this->adjacentChunks.getChunkDirection(Direction::north);
+    if (northChunk == nullptr) {
         northChunk = &dummyChunk;
     }
-    const Chunk* southChunk = chunk->adjacentChunks.getChunkDirection(Direction::south);
-    if (southChunk == NULL) {
+    const Chunk* southChunk = this->adjacentChunks.getChunkDirection(Direction::south);
+    if (southChunk == nullptr) {
         southChunk = &dummyChunk;
     }
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -35,12 +32,12 @@ void chunkGenerateMesh(Chunk* chunk) {
         adjacentChunks[x][0][Direction::north] = northChunk;
     }
 
-    const Chunk* eastChunk = chunk->adjacentChunks.getChunkDirection(Direction::east);
-    if (eastChunk == NULL) {
+    const Chunk* eastChunk = this->adjacentChunks.getChunkDirection(Direction::east);
+    if (eastChunk == nullptr) {
         eastChunk = &dummyChunk;
     }
-    const Chunk* westChunk = chunk->adjacentChunks.getChunkDirection(Direction::west);
-    if (westChunk == NULL) {
+    const Chunk* westChunk = this->adjacentChunks.getChunkDirection(Direction::west);
+    if (westChunk == nullptr) {
         westChunk = &dummyChunk;
     }
     for (int z = 0; z < CHUNK_WIDTH; ++z) {
@@ -55,8 +52,8 @@ void chunkGenerateMesh(Chunk* chunk) {
         for (int x = 0; x < CHUNK_WIDTH; ++x) {
             for (int z = 0; z < CHUNK_WIDTH; ++z) {
                 glm::ivec3 point = {x, y, z};
-                Block block = chunk->blocks[x][y][z];
-                const BlockProperties& properties = getBlock(block);
+                Block block = blocks[x][y][z];
+                const BlockProperties& properties = getBlockProperties(block);
 
                 if (block == Block::air) {
                     continue;
@@ -76,7 +73,7 @@ void chunkGenerateMesh(Chunk* chunk) {
                         const Chunk* adjacentChunk = adjacentChunks[x][z][dir];
                         glm::ivec3 adjacentLocalPoint = worldToLocal(point + directionToPoint(static_cast<Direction>(dir)));
                         Block adjacentBlock = adjacentChunk->getBlockRaw(adjacentLocalPoint); 
-                        if (getBlock(adjacentBlock).solidness == Solidness::solid || ((properties.solidness == Solidness::transparent || properties.solidness == Solidness::translucent) && block == adjacentBlock)) {
+                        if (getBlockProperties(adjacentBlock).solidness == Solidness::solid || ((properties.solidness == Solidness::transparent || properties.solidness == Solidness::translucent) && block == adjacentBlock)) {
                             continue;
                         }
 
@@ -85,14 +82,14 @@ void chunkGenerateMesh(Chunk* chunk) {
                     }
                 }
 
-                Block adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, -1, 0});
-                if (y != 0 && (getBlock(adjacentBlock).solidness != Solidness::solid && (properties.solidness == Solidness::solid || block != adjacentBlock))) {
+                Block adjacentBlock = getBlockRaw(point + glm::ivec3{0, -1, 0});
+                if (y != 0 && (getBlockProperties(adjacentBlock).solidness != Solidness::solid && (properties.solidness == Solidness::solid || block != adjacentBlock))) {
                     meshFaceSmart(mesh, x, y, z, Direction::down,
                             sides[Direction::down].x, sides[Direction::down].y);
                 }
 
-                adjacentBlock = chunk->getBlockRaw(point + glm::ivec3{0, 1, 0});
-                if ((y == CHUNK_HEIGHT - 1 || getBlock(adjacentBlock).solidness != Solidness::solid) && (properties.solidness == Solidness::solid || block != adjacentBlock)) {
+                adjacentBlock = getBlockRaw(point + glm::ivec3{0, 1, 0});
+                if ((y == CHUNK_HEIGHT - 1 || getBlockProperties(adjacentBlock).solidness != Solidness::solid) && (properties.solidness == Solidness::solid || block != adjacentBlock)) {
                     meshFaceSmart(mesh, x, y, z, Direction::up,
                             sides[Direction::up].x, sides[Direction::up].y);
                 }
@@ -101,9 +98,16 @@ void chunkGenerateMesh(Chunk* chunk) {
         }
     }
 
-    chunk->mesh = opaqueMesh.upload();
-    chunk->translucentMesh = translucentMesh.upload();
+    cpuMesh = std::move(opaqueMesh);
+    cpuTranslucentMesh = std::move(translucentMesh);
 
-    chunk->dirty = false;
+    dirty = false;
+}
+
+void Chunk::uploadMesh() {
+    mesh = cpuMesh->upload();
+    cpuMesh = std::nullopt;
+    translucentMesh = cpuTranslucentMesh->upload();
+    cpuTranslucentMesh = std::nullopt;
 }
 

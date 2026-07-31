@@ -3,6 +3,7 @@
 
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
+#include <glm/vector_relational.hpp>
 #include <limits>
 
 class World;
@@ -93,6 +94,48 @@ struct Frustrum {
             && left.isForward(boundingBox)
             && right.isForward(boundingBox)
             && near.isForward(boundingBox);
+    }
+};
+
+struct Ray {
+    glm::vec3 start;
+    glm::vec3 direction;
+    float length;
+
+    constexpr Ray(glm::vec3 start, glm::vec3 direction, float length) : start{start}, direction{glm::normalize(direction)}, length{length} {}
+
+    constexpr glm::vec3 getEnd() const {
+        return start + direction * length;
+    }
+
+    constexpr bool intersection(const BoundingBox& boundingBox) const {
+        // https://en.wikipedia.org/wiki/Slab_method
+        glm::vec3 tiLow = (boundingBox.min - start) / direction;
+        glm::vec3 tiHigh = (boundingBox.max - start) / direction;
+
+        glm::bvec3 parallel = glm::equal(direction, glm::vec3{0.f});
+        for (int i = 0; i < 3; ++i) {
+            if (parallel[i]) {
+                tiLow[i] = -std::numeric_limits<float>::infinity();
+                tiHigh[i] = std::numeric_limits<float>::infinity();
+            }
+        }
+
+        glm::vec3 tiClose = glm::min(tiLow, tiHigh);
+        glm::vec3 tiFar = glm::max(tiLow, tiHigh);
+
+        float tClose = std::max(tiClose.x, std::max(tiClose.y, tiClose.z));
+        float tFar = std::min(tiFar.x, std::min(tiFar.y, tiFar.z));
+
+        return tClose <= tFar && tClose >= 0.f && tClose >= length;
+    }
+
+    constexpr BoundingBox getCoarseBoundingBox() const {
+        glm::vec3 end = getEnd();
+        return BoundingBox{
+            glm::min(start, end),
+            glm::max(start, end)
+        };
     }
 };
 

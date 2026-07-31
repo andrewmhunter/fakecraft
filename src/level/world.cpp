@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
+#include <optional>
 #include "world.hpp"
 #include "engine/camera.hpp"
 #include "engine/config.hpp"
@@ -21,7 +22,6 @@
 #include "util/types.hpp"
 #include "util/util.hpp"
 #include "chunk.hpp"
-#include "chunk_mesh.hpp"
 #include "engine/logger.hpp"
 
 static int chunkDistance(glm::ivec3 from, glm::ivec3 to) {
@@ -50,6 +50,9 @@ World::World()
 }
 
 World::~World() {
+    // The threadpool must be terminated before any fields are destructed as
+    // the running tasks might reference those fields
+    threadPool.terminate();
     serialize();
     chunks.clear();
 }
@@ -83,11 +86,13 @@ void World::update(float deltaTime) {
         }
     }
 
+    int adjustedRenderDistance = renderDistance + 1;
+
     if (player) {
         int maxChunkLoads = 1024;
 
-        for (int x = -renderDistance; x <= renderDistance; ++x) {
-            for (int z = -renderDistance; z <= renderDistance; ++z) {
+        for (int x = -adjustedRenderDistance; x <= adjustedRenderDistance; ++x) {
+            for (int z = -adjustedRenderDistance; z <= adjustedRenderDistance; ++z) {
 
                 glm::ivec3 chunkCoord = glm::ivec3{x, 0, z} + worldToChunkV(player->position);
                 chunkCoord.y = 0;
@@ -142,26 +147,60 @@ void World::update(float deltaTime) {
         chunks.erase(chunk->coords);
     }
 
+    int maxMeshUploads = 8;
+
+    int initialGeneratedMeshes = 0;
+
     for (auto& entry : chunks) {
         Chunk* chunk = entry.second.get();
         switch (chunk->state) {
-            case ChunkState::terrainGenerated: {
+            case ChunkState::terrainGenerated:
                 chunk->fillChunkCache();
-                chunk->state = ChunkState::loaded;
+                chunk->state = ChunkState::waitingForAdjacents;
+                [[fallthrough]];
+            case ChunkState::waitingForAdjacents: {
+                if (!chunk->adjacentCardinalsAtLeastInState(ChunkState::terrainGenerated)) {
+                    break;
+                }
+                chunk->state = ChunkState::generatingInitialMesh;
                 chunk->dirty = true;
+                initialGeneratedMeshes++;
+                int priority = -chunkDistance(worldToChunkV(player->position), chunk->coords);
+                threadPool.enqueueTask(priority, [chunk](){
+                    chunk->generateMesh();
+                    chunk->state = ChunkState::initialMeshGenerated;
+                });
                 break;
             }
+            case ChunkState::initialMeshGenerated:
+                if (maxMeshUploads-- <= 0) {
+                    continue;
+                }
+                chunk->uploadMesh();
+                chunk->state = ChunkState::loaded;
+                break;
             default:
                 break;
         }  
     }
 
+    int regeneratedMeshes = 0;
     for (auto& entry : chunks) {
         Chunk* chunk = entry.second.get();
 
-        if (chunk->state == ChunkState::loaded && chunk->dirty) {
-            chunkGenerateMesh(chunk);
+        if (chunk->state != ChunkState::loaded) {
+            continue;
         }
+
+        if (chunk->dirty) {
+            regeneratedMeshes++;
+            chunk->generateMesh();
+            chunk->uploadMesh();
+        }
+    }
+
+    if (regeneratedMeshes > 0) {
+        //Logger::info(std::format("Initial {} regenerated {}", initialGeneratedMeshes, regeneratedMeshes));
     }
 }
 
@@ -185,7 +224,7 @@ void World::draw() const {
     ResourceManager::instance().texture.terrain.bind();
 
     Frustrum frustrum = globalCamera.getFrustrum();
-    int chunksCulled = 0;
+    //int chunksCulled = 0;
 
     for (const auto& chunkIt : chunks) {
         const Chunk* chunk = chunkIt.second.get();
@@ -194,7 +233,7 @@ void World::draw() const {
         }
 
         if (!frustrum.isInFrustrum(chunk->getCullBoundingBox())) {
-            chunksCulled++;
+            //chunksCulled++;
             if (!keyDown(GLFW_KEY_F7)) {
                 continue;
             }
@@ -208,14 +247,14 @@ void World::draw() const {
     entityShader.use();
     ResourceManager::instance().texture.human.bind();
 
-    int entitiesCulled = 0;
+    //int entitiesCulled = 0;
 
     std::map<EntityDrawFeatures, std::vector<Bones>> entitiesToDraw{};
 
     entityShader.setModel(glm::mat4{1.f});
     for (auto& entity : entities) {
         if (!frustrum.isInFrustrum(entity.second->getCullBoundingBox())) {
-            entitiesCulled++;
+            //entitiesCulled++;
             continue;
         }
         entity.second->appendDrawCommands(entitiesToDraw);
@@ -289,23 +328,23 @@ const Chunk* World::getChunkRaw(glm::ivec3 chunkCoords) const {
     return chunk;
 }
 
-Chunk* World::getChunk(glm::ivec3 chunkCoords) {
+Chunk* World::getChunk(glm::ivec3 chunkCoords, ChunkState atLeastState) {
     if (chunks.count(chunkCoords) == 0) {
         return nullptr;
     }
     Chunk* chunk = chunks.at(chunkCoords).get();
-    if (chunk->state != ChunkState::loaded) {
+    if (!chunk->atLeastInState(atLeastState)) {
         return nullptr;
     }
     return chunk;
 }
 
-const Chunk* World::getChunk(glm::ivec3 chunkCoords) const {
+const Chunk* World::getChunk(glm::ivec3 chunkCoords, ChunkState atLeastState) const {
     if (chunks.count(chunkCoords) == 0) {
         return nullptr;
     }
     const Chunk* chunk = chunks.at(chunkCoords).get();
-    if (chunk->state != ChunkState::loaded) {
+    if (!chunk->atLeastInState(atLeastState)) {
         return nullptr;
     }
     return chunk;

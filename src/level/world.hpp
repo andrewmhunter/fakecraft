@@ -34,6 +34,8 @@ public:
     glm::vec4 skyColor = color::skyblue;
 
     explicit World();
+    World(const World&) = delete;
+    World& operator=(const World&) = delete;
     ~World();
 
     void update(float deltaTime);
@@ -44,8 +46,8 @@ public:
     Chunk* getChunkRaw(glm::ivec3 chunkCoords);
     const Chunk* getChunkRaw(glm::ivec3 chunkCoords) const;
 
-    Chunk* getChunk(glm::ivec3 chunkCoords);
-    const Chunk* getChunk(glm::ivec3 chunkCoords) const;
+    Chunk* getChunk(glm::ivec3 chunkCoords, ChunkState atLeastState = ChunkState::loaded);
+    const Chunk* getChunk(glm::ivec3 chunkCoords, ChunkState atLeastState = ChunkState::loaded) const;
 
     void markDirty(glm::ivec3 worldPoint);
     void tryPlaceBlock(glm::ivec3 worldPoint, Block block);

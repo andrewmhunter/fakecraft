@@ -3,6 +3,7 @@
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <utility>
 #include "engine/config.hpp"
 #include "engine/logger.hpp"
 #include "chunk.hpp"
@@ -22,7 +23,6 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
     adjacentChunks{coords, this}
 {
     Logger::assertion(world);
-
 }
 
 Chunk::~Chunk() {
@@ -55,11 +55,11 @@ void Chunk::fillChunkCache() {
             }
 
             glm::ivec3 localChunkPosition{x, 0, z};
-            Chunk* adjacent = world->getChunk(coords + localChunkPosition);
+            Chunk* adjacent = world->getChunk(coords + localChunkPosition, ChunkState::terrainGenerated);
             adjacentChunks.setChunk(localChunkPosition, adjacent);
             if (adjacent != nullptr) {
                 adjacent->adjacentChunks.setChunk(-localChunkPosition, this);
-                adjacent->dirty = true;
+                //adjacent->dirty = true;
             }
         }
     }
@@ -165,6 +165,36 @@ bool Chunk::verify() const {
         }
     }
     return true;    
+}
+
+bool Chunk::atLeastInState(ChunkState atLeastState) const {
+    return std::to_underlying(state.load()) >= std::to_underlying(atLeastState);
+}
+
+bool Chunk::adjacentCardinalsAtLeastInState(ChunkState atLeastState) const {
+    for (Direction direction : cardinalDirections) {
+        const Chunk* adjacent = adjacentChunks.getChunkDirection(direction);
+        if (!adjacent || !adjacent->atLeastInState(atLeastState)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Chunk::adjacentChunksAtLeastInState(ChunkState atLeastState) const {
+    if (!adjacentCardinalsAtLeastInState(atLeastState)) {
+        return false;
+    }
+
+    for (int x = -1; x <= 1; x += 2) {
+        for (int z = -1; z <= 1; z += 2) {
+            const Chunk* adjacent = adjacentChunks.getChunkLocal(glm::ivec3{x, 0, z});
+            if (!adjacent || !adjacent->atLeastInState(atLeastState)) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 void Chunk::computeLightValues() {

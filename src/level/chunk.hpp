@@ -143,6 +143,9 @@ enum class ChunkState {
     unloaded,
     generating,
     terrainGenerated,
+    waitingForAdjacents,
+    generatingInitialMesh,
+    initialMeshGenerated,
     loaded,
 };
 
@@ -155,15 +158,17 @@ private:
 public:
     World* world;
     glm::ivec3 coords;
+    std::optional<Mesh> cpuMesh;
     std::optional<GPUMesh> mesh;
+    std::optional<Mesh> cpuTranslucentMesh;
     std::optional<GPUMesh> translucentMesh;
-    std::atomic_bool dirty;
     ChunkCache adjacentChunks{glm::ivec3{0}, this};
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     LightValues light[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
-
-    std::atomic<ChunkState> state{ChunkState::unloaded};
+    
+    volatile std::atomic_bool dirty = false;
+    volatile std::atomic<ChunkState> state = ChunkState::unloaded;
 
     explicit Chunk(World* world, glm::ivec3 coords);
     Chunk();
@@ -178,6 +183,8 @@ public:
 
     void generateOrLoad();
     void fillChunkCache();
+    void generateMesh();
+    void uploadMesh();
 
     void unload();
     void tryPlaceBlock(glm::ivec3 local, Block block);
@@ -190,6 +197,9 @@ public:
     void drawTranslucent(ShaderProgram& shader) const;
     bool verify() const;
     void computeLightValues();
+    bool atLeastInState(ChunkState atLeastState) const;
+    bool adjacentCardinalsAtLeastInState(ChunkState atLeastState) const;
+    bool adjacentChunksAtLeastInState(ChunkState atLeastState) const;
 
     void serialize();
     bool deserialize();

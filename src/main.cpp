@@ -361,7 +361,7 @@ void runGame(GLFWwindow* window) {
             indicator = glm::rotate(indicator, glm::pi<float>() / 8.f, {1.f, 0.f, 0.f});
             indicator = glm::rotate(indicator, glm::pi<float>() / 4.f, {0.f, 1.f, 0.f});
             terrainShader.setModel(indicator);
-            getBlock(selectedBlock).mesh.draw();
+            getBlockProperties(selectedBlock).mesh.draw();
 
             glm::mat4 cornerTransform = glm::translate(glm::mat4{1.f}, {-screenMiddle.x, screenMiddle.y, 0.f});
             OrthoCamera cornerGUICamera{cornerTransform};
