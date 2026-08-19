@@ -1,33 +1,29 @@
 #include <stdbool.h>
 #include "timer.hpp"
 
-Timer timerInit(double startTime) {
-    return (Timer) {
-        .remainingTime = startTime,
-        .startTime = startTime,
-    };
-}
+Timer::Timer(double startTime) : remainingTime{startTime}, startTime{startTime}
+{}
 
-bool timerUpdate(Timer* timer, float deltaTime) {
-    if (timer->remainingTime <= 0) {
+bool Timer::update(float deltaTime) {
+    if (remainingTime <= 0) {
         return false;
     }
 
-    timer->remainingTime -= deltaTime;
+    remainingTime -= deltaTime;
 
-    return timer->remainingTime <= 0;
+    return remainingTime <= 0;
 }
 
-bool timerFinished(Timer* timer) {
-    return timer->remainingTime <= 0;
+bool Timer::finished() const {
+    return remainingTime <= 0;
 }
 
-void timerReset(Timer* timer) {
-    timer->remainingTime = timer->startTime;
+void Timer::reset() {
+    remainingTime = startTime;
 }
 
-void timerResetTime(Timer* timer, double startTime) {
-    timer->startTime = startTime;
-    timerReset(timer);
+void Timer::reset(double startTime) {
+    this->startTime = startTime;
+    reset();
 }
 

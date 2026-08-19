@@ -83,7 +83,7 @@ public:
     };
 
     CameraPerson cameraPerson = CameraPerson::first;
-    Timer breakTimer{timerInit(0.25)};
+    Timer breakTimer{};
 
     explicit Player(World* world, EntityID id, glm::vec3 position);
 
