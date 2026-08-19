@@ -216,9 +216,7 @@ static void aabbResolveAxis(const ChunkCache& chunks, BoundingBox& boundingBox, 
     boundingBox.max[axis] += velocity[axis];
 }
 
-glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, glm::vec3 bounds, glm::vec3 velocity) {
-    BoundingBox boundingBox = genBoundingBox(position, bounds);
-
+glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, BoundingBox boundingBox, glm::vec3 velocity) {
     const Chunk* chunk = world->getChunk(worldToChunkV(position));
     if (chunk == nullptr) {
         return glm::vec3{0.f};

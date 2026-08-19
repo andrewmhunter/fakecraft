@@ -154,7 +154,7 @@ struct WalkCollision {
 };
 
 WalkCollision ddaCastRay(const World* world, glm::vec3 start, glm::vec3 direction, float maxLength);
-glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, glm::vec3 bounds, glm::vec3 velocity);
+glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, BoundingBox boundingBox, glm::vec3 velocity);
 BoundingBox genBoundingBox(glm::vec3 position, glm::vec3 bounds);
 
 #endif

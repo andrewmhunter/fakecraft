@@ -51,7 +51,7 @@ void Entity::updatePosition(float deltaTime) {
 
     if (!noClip) {
         collisionBlockCount = glm::ivec3{0};
-        avgVelocity = aabbResolveCollisions(world, position, size, avgVelocity);
+        avgVelocity = aabbResolveCollisions(world, position, getBoundingBox(), avgVelocity);
         //Logger::info(std::format("Collision blocks: {}", collisionBlockCount));
     }
 
