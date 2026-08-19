@@ -216,23 +216,23 @@ void runGame(GLFWwindow* window) {
         if (rayCast.collided) {
             if (mouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
                 world.tryPlaceBlock(rayCast.blockBefore, static_cast<Block>(selectedBlock));
-                timerResetTime(&player->breakTimer, initialBreakTime);
+                player->breakTimer.reset(initialBreakTime);
             }
 
-            if (mouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT) && timerUpdate(&player->breakTimer, deltaTime)) {
+            if (mouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT) && player->breakTimer.update(deltaTime)) {
                 world.tryPlaceBlock(rayCast.blockBefore, static_cast<Block>(selectedBlock));
-                timerResetTime(&player->breakTimer, repeatedBreakTime);
+                player->breakTimer.reset(repeatedBreakTime);
             }
 
 
             if (mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
                 world.setBlock(rayCast.blockAt, Block::air);
-                timerResetTime(&player->breakTimer, initialBreakTime);
+                player->breakTimer.reset(initialBreakTime);
             }
 
-            if (mouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) && timerUpdate(&player->breakTimer, deltaTime)) {
+            if (mouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) && player->breakTimer.update(deltaTime)) {
                 world.setBlock(rayCast.blockAt, Block::air);
-                timerResetTime(&player->breakTimer, repeatedBreakTime);
+                player->breakTimer.reset(repeatedBreakTime);
             }
 
 
