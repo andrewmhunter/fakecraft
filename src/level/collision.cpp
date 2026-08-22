@@ -1,6 +1,7 @@
 #include "collision.hpp"
 #include "engine/logger.hpp"
 #include "level/chunk.hpp"
+#include "util/direction.hpp"
 #include "util/util.hpp"
 #include "util/point.hpp"
 #include "level/block.hpp"
@@ -140,13 +141,13 @@ static bool isPassable(Block block) {
     return getBlockProperties(block).passability == Passability::passable;
 }
 
-static float aabbResolveAxisBlock(const ChunkCache& chunks, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {
+static float aabbResolveAxisBlock(const World* world, const ChunkCache& chunks, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {
     const int axis1 = (axis + 1) % 3;
     const int axis2 = (axis + 2) % 3;
 
     // If the block can be walked through we don't
     // care if the bounding box is colliding
-    if (isPassable(chunks.getBlockRawGlobal(blockPosition))) {
+    if (isPassable(world->getBlock(blockPosition))) {
         return velocity[axis];
     }
 
@@ -190,7 +191,7 @@ static inline constexpr float absMinf(float a, float b) {
 
 glm::ivec3 collisionBlockCount{0};
 
-static void aabbResolveAxis(const ChunkCache& chunks, BoundingBox& boundingBox, glm::vec3& velocity, int axis) {
+static void aabbResolveAxis(const World* world, const ChunkCache& chunks, BoundingBox& boundingBox, glm::vec3& velocity, int axis) {
     if (velocity[axis] == 0.f) {
         return;
     }
@@ -206,7 +207,7 @@ static void aabbResolveAxis(const ChunkCache& chunks, BoundingBox& boundingBox, 
                 collisionBlockCount[axis]++;
                 // glm::ivec3 blockPosition = vector3ToPoint(position) + glm::ivec3{x, y, z};
                 glm::ivec3 blockPosition{x, y, z};
-                float resolved = aabbResolveAxisBlock(chunks, boundingBox, velocity, blockPosition, axis);
+                float resolved = aabbResolveAxisBlock(world, chunks, boundingBox, velocity, blockPosition, axis);
                 velocity[axis] = absMinf(velocity[axis], resolved);
             }
         }
@@ -217,16 +218,23 @@ static void aabbResolveAxis(const ChunkCache& chunks, BoundingBox& boundingBox, 
 }
 
 glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, BoundingBox boundingBox, glm::vec3 velocity) {
-    const Chunk* chunk = world->getChunk(worldToChunkV(position));
+    const Chunk* chunk = world->getChunk(worldToChunk(position));
     if (chunk == nullptr) {
+        Logger::warning("Outside of loaded chunks");
         return glm::vec3{0.f};
     }
 
     const ChunkCache& chunks = chunk->adjacentChunks;
+    for (Direction direction : directions) {
+        const Chunk* chunkInDirection = chunks.getChunkDirection(direction);
+        if (chunkInDirection == nullptr) {
+            Logger::warning(std::format("Chunk in direction {} is null", directionName(direction)));
+        }
+    }
 
-    aabbResolveAxis(chunks, boundingBox, velocity, 0);
-    aabbResolveAxis(chunks, boundingBox, velocity, 1);
-    aabbResolveAxis(chunks, boundingBox, velocity, 2);
+    aabbResolveAxis(world, chunks, boundingBox, velocity, 0);
+    aabbResolveAxis(world, chunks, boundingBox, velocity, 1);
+    aabbResolveAxis(world, chunks, boundingBox, velocity, 2);
 
     return velocity;
 }
