@@ -26,6 +26,8 @@ Chunk::Chunk(World* world, glm::ivec3 coords)
 }
 
 Chunk::~Chunk() {
+    unloadChunkCache();
+
     if (state == ChunkState::loaded) {
         unload();
     }
@@ -68,6 +70,11 @@ void Chunk::fillChunkCache() {
 void Chunk::unload() {
     state = ChunkState::unloaded;
 
+    serialize();
+    Logger::trace(std::format("Chunk {}, {} saved", coords.x, coords.z));
+}
+
+void Chunk::unloadChunkCache() {
     for (int x = -1; x <= 1; ++x) {
         for (int z = -1; z <= 1; ++z) {
             if (x == 0 && z == 0) {
@@ -82,9 +89,6 @@ void Chunk::unload() {
             }
         }
     }
-
-    serialize();
-    Logger::trace(std::format("Chunk {}, {} saved", coords.x, coords.z));
 }
 
 void Chunk::tryPlaceBlock(glm::ivec3 local, Block block) {
@@ -361,13 +365,17 @@ Chunk* ChunkCache::getChunkDirection(Direction direction) {
     return getChunkLocal(directionToPoint(direction));
 }
 
-Block ChunkCache::getBlockRawGlobal(glm::ivec3 globalBlockPosition) const {
-    if (globalBlockPosition.y >= CHUNK_HEIGHT || globalBlockPosition.y < 0) {
+Block ChunkCache::getBlockGlobal(glm::ivec3 globalBlockPosition) const {
+    return getBlockLocal(getLocalGlobal(globalBlockPosition));
+}
+
+Block ChunkCache::getBlockLocal(glm::ivec3 localBlockPosition) const {
+    if (localBlockPosition.y >= CHUNK_HEIGHT || localBlockPosition.y < 0) {
         return Block::air;
     }
-    const Chunk* chunk = getChunkGlobal(worldToChunk(globalBlockPosition));
+    const Chunk* chunk = getChunkLocal(worldToChunk(localBlockPosition));
     if (chunk == nullptr) {
         return Block::barrier;
     }
-    return chunk->getBlockRaw(worldToLocal(globalBlockPosition));
+    return chunk->getBlockRaw(worldToLocal(localBlockPosition));
 }

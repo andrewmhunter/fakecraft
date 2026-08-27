@@ -38,7 +38,7 @@ constexpr glm::ivec3 chunkSize{CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH};
 constexpr glm::ivec3 worldToChunk(glm::ivec3 worldPoint) {
     return glm::ivec3{
         floorDiv(worldPoint.x, CHUNK_WIDTH),
-        floorDiv(worldPoint.y, CHUNK_HEIGHT),
+        0,
         floorDiv(worldPoint.z, CHUNK_WIDTH)
     };
 }
@@ -120,7 +120,8 @@ public:
     const Chunk* getChunkDirection(Direction direction) const;
     Chunk* getChunkDirection(Direction direction);
     
-    Block getBlockRawGlobal(glm::ivec3 globalBlockPosition) const;
+    Block getBlockGlobal(glm::ivec3 globalBlockPosition) const;
+    Block getBlockLocal(glm::ivec3 localBlockPosition) const;
 };
 
 
@@ -129,11 +130,6 @@ public:
 struct LightValues {
     uint8_t blockLight;
     uint8_t skyLight;
-};
-
-struct BlockInstance {
-    Block block;
-    uint8_t surfaceHeight;
 };
 
 class World;
@@ -183,6 +179,7 @@ public:
 
     void generateOrLoad();
     void fillChunkCache();
+    void unloadChunkCache();
     void generateMesh();
     void uploadMesh();
 
