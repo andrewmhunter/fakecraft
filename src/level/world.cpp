@@ -149,8 +149,6 @@ void World::update(float deltaTime) {
 
     int maxMeshUploads = 8;
 
-    int initialGeneratedMeshes = 0;
-
     for (auto& entry : chunks) {
         Chunk* chunk = entry.second.get();
         switch (chunk->state) {
@@ -164,7 +162,6 @@ void World::update(float deltaTime) {
                 }
                 chunk->state = ChunkState::generatingInitialMesh;
                 chunk->dirty = true;
-                initialGeneratedMeshes++;
                 int priority = -chunkDistance(worldToChunkV(player->position), chunk->coords);
                 threadPool.enqueueTask(priority, [chunk](){
                     chunk->generateMesh();
@@ -297,7 +294,7 @@ void World::draw() const {
 
 Block World::getBlock(glm::ivec3 worldPoint) const {
     const Chunk* chunk = getChunk(worldToChunk(worldPoint));
-    if (chunk == nullptr) {
+    if (chunk == nullptr || worldPoint.y < 0 || worldPoint.y >= CHUNK_HEIGHT) {
         return Block::air;
     }
     return chunk->getBlockRaw(worldToLocal(worldPoint));

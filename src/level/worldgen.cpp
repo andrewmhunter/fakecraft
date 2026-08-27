@@ -1,6 +1,7 @@
 #include <stb_perlin.h>
 #include "block.hpp"
 #include "chunk.hpp"
+#include "engine/config.hpp"
 #include "world.hpp"
 #include "util/hash.hpp"
 #include "worldgen.hpp"
@@ -116,6 +117,7 @@ void generateTerrain(Chunk* chunk) {
             float biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, 2.f, 0.5f, 10) + 0.5f;
             biome *= 255.f;
 
+            bool useBiomes = !Config::settings->world.superflat;
             if (!Config::settings->world.superflat) {
                 float scale = 0.004f;
                 float stretch = 32.f;
@@ -133,11 +135,11 @@ void generateTerrain(Chunk* chunk) {
             Block topLayerBlock = Block::dirt;
             Block surfaceBlock = Block::grass;
 
-            if (biome < 64.0) {
+            if (useBiomes && biome < 64.0) {
                 surfaceBlock = Block::snowyGrass;
             }
 
-            if (surface < OCEAN_LEVEL + 3 || biome > 192.0) {
+            if (surface < OCEAN_LEVEL + 3 || (useBiomes && biome > 192.0)) {
                 topLayerBlock = Block::sand;
                 surfaceBlock = Block::sand;
             }
@@ -180,7 +182,7 @@ void generateTerrain(Chunk* chunk) {
                     }
 
                     Block waterBlock = Block::water;
-                    if (y == OCEAN_LEVEL && biome < 64.f) {
+                    if (y == OCEAN_LEVEL && useBiomes && biome < 64.f) {
                         waterBlock = Block::ice;
                     }
                     chunk->blocks[x][y][z] = waterBlock;

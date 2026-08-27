@@ -21,7 +21,7 @@ public:
     static void unloadResources();
 
     struct {
-        Texture terrain{"assets/resources/alphaTerrain.png"};
+        Texture terrain{"assets/resources/terrain.png"};
         Texture human{"assets/resources/mob/char.png"};
         Texture pigman{"assets/resources/mob/pigman.png"};
         Texture pig{"assets/resources/mob/pig.png"};

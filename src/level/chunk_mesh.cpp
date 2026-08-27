@@ -1,14 +1,72 @@
+#include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <optional>
 #include "block.hpp"
+#include "blocks/BlockModel.hpp"
 #include "chunk.hpp"
 #include "graphics/mesh.hpp"
 
+
+std::chrono::duration<double> averageDuration;
+int durationCount = 0;
+
+void Chunk::generateMesh() {
+    Mesh opaqueMesh{};
+    Mesh translucentMesh{};
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+        for (int x = 0; x < CHUNK_WIDTH; ++x) {
+            for (int z = 0; z < CHUNK_WIDTH; ++z) {
+                glm::ivec3 point = {x, y, z};
+                Block block = blocks[x][y][z];
+
+                if (block == Block::air) {
+                    continue;
+                }
+
+                const BlockInfo& model = getBlockModel(block);
+                model.appendGeometry(*this, opaqueMesh, translucentMesh, point, block);
+            }
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    averageDuration += duration;
+    durationCount += 1;
+    
+    Logger::info(std::format("Time: {}, Average: {}", duration, averageDuration / durationCount));
+
+    cpuMesh = std::move(opaqueMesh);
+    cpuTranslucentMesh = std::move(translucentMesh);
+
+    dirty = false;
+}
+
+void Chunk::uploadMesh() {
+    mesh = cpuMesh->upload();
+    cpuMesh = std::nullopt;
+    translucentMesh = cpuTranslucentMesh->upload();
+    cpuTranslucentMesh = std::nullopt;
+}
+
+
+
+/*
 // This relies on initialization of global variables to all 0s.
 const Chunk dummyChunk{};
 
 void Chunk::generateMesh() {
+    Mesh opaqueMesh{};
+    Mesh translucentMesh{};
+
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+
     const Chunk* adjacentChunks[CHUNK_WIDTH][CHUNK_WIDTH][DIRECTION_CARDINAL_COUNT];
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -45,8 +103,6 @@ void Chunk::generateMesh() {
         adjacentChunks[CHUNK_WIDTH - 1][z][Direction::east] = eastChunk;
     }
 
-    Mesh opaqueMesh{};
-    Mesh translucentMesh{};
 
     for (int y = 0; y < CHUNK_HEIGHT; ++y) {
         for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -64,10 +120,10 @@ void Chunk::generateMesh() {
                 const glm::ivec3* sides = properties.model.sides;
 
                 if (properties.solidness == Solidness::cross) {
-                    meshCross(mesh, x, y, z, properties.model.sides[0].x, properties.model.sides[0].y);
+                    meshCross(mesh, point, properties.model.sides[0]);
                     continue;
                 } else if (properties.solidness == Solidness::cactus) {
-                    meshCactus(mesh, x, y, z, properties.model.sides[0].x, properties.model.sides[0].y);
+                    meshCactus(mesh, point, properties.model.sides[0]);
                 } else {
                     for (int dir = 0; dir < DIRECTION_CARDINAL_COUNT; ++dir) {
                         const Chunk* adjacentChunk = adjacentChunks[x][z][dir];
@@ -77,37 +133,41 @@ void Chunk::generateMesh() {
                             continue;
                         }
 
-                        meshFaceSmart(mesh, x, y, z, static_cast<Direction>(dir),
-                                sides[dir].x, sides[dir].y);
+                        meshFaceSmart(mesh, point, static_cast<Direction>(dir),
+                                sides[dir]);
                     }
                 }
 
                 Block adjacentBlock = getBlockRaw(point + glm::ivec3{0, -1, 0});
                 if (y != 0 && (getBlockProperties(adjacentBlock).solidness != Solidness::solid && (properties.solidness == Solidness::solid || block != adjacentBlock))) {
-                    meshFaceSmart(mesh, x, y, z, Direction::down,
-                            sides[Direction::down].x, sides[Direction::down].y);
+                    meshFaceSmart(mesh, point, Direction::down,
+                            sides[Direction::down]);
                 }
 
                 adjacentBlock = getBlockRaw(point + glm::ivec3{0, 1, 0});
                 if ((y == CHUNK_HEIGHT - 1 || getBlockProperties(adjacentBlock).solidness != Solidness::solid) && (properties.solidness == Solidness::solid || block != adjacentBlock)) {
-                    meshFaceSmart(mesh, x, y, z, Direction::up,
-                            sides[Direction::up].x, sides[Direction::up].y);
+                    meshFaceSmart(mesh, point, Direction::up,
+                            sides[Direction::up]);
                 }
 
             }
         }
     }
 
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    averageDuration += duration;
+    durationCount += 1;
+    
+    Logger::info(std::format("Time: {}, Average: {}", duration, averageDuration / durationCount));
+
+
+
     cpuMesh = std::move(opaqueMesh);
     cpuTranslucentMesh = std::move(translucentMesh);
 
     dirty = false;
 }
-
-void Chunk::uploadMesh() {
-    mesh = cpuMesh->upload();
-    cpuMesh = std::nullopt;
-    translucentMesh = cpuTranslucentMesh->upload();
-    cpuTranslucentMesh = std::nullopt;
-}
+*/
 

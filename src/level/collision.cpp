@@ -1,4 +1,5 @@
 #include "collision.hpp"
+#include "blocks/BlockModel.hpp"
 #include "engine/logger.hpp"
 #include "level/chunk.hpp"
 #include "util/direction.hpp"
@@ -138,7 +139,7 @@ static constexpr bool overlapsAxis(BoundingBox boundingBox, glm::vec3 block, int
 }
 
 static bool isPassable(Block block) {
-    return getBlockProperties(block).passability == Passability::passable;
+    return getBlockModel(block).getPassability(0) == Passability::passable;
 }
 
 static float aabbResolveAxisBlock(const World* world, const ChunkCache& chunks, BoundingBox boundingBox, glm::vec3 velocity, glm::ivec3 blockPosition, int axis) {
@@ -220,7 +221,6 @@ static void aabbResolveAxis(const World* world, const ChunkCache& chunks, Boundi
 glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, BoundingBox boundingBox, glm::vec3 velocity) {
     const Chunk* chunk = world->getChunk(worldToChunk(position));
     if (chunk == nullptr) {
-        Logger::warning("Outside of loaded chunks");
         return glm::vec3{0.f};
     }
 

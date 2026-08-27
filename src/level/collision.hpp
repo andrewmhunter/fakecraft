@@ -26,34 +26,20 @@ struct BoundingBox {
             && min.z < other.max.z && max.z > other.min.z;
     }
 
-    constexpr BoundingBox transformed(glm::mat4 transformation) const {
-        glm::vec3 finalMin{std::numeric_limits<float>::infinity()};
-        glm::vec3 finalMax{-std::numeric_limits<float>::infinity()};
-
-        for (int x = 0; x <= 1; ++x) {
-            for (int y = 0; y <= 1; ++y) {
-                for (int z = 0; z <= 1; ++z) {
-                    glm::vec3 minAxis{x, y, z};
-                    glm::vec3 maxAxis = (minAxis - glm::vec3{1.f}) * -1.f;
-
-                    glm::vec3 position = minAxis * min + maxAxis * max;
-
-                    glm::vec3 transformed = transformation * glm::vec4{position, 1.f};
-                    
-                    finalMin = glm::min(finalMin, transformed);
-                    finalMax = glm::max(finalMax, transformed);
-                }
-            }
-        }
-        return BoundingBox{finalMin, finalMax};
-    }
-
     constexpr glm::vec3 getCenter() const {
         return (min + max) / 2.f;
     }
 
     constexpr glm::vec3 getExtents() const {
         return max - getCenter();
+    }
+
+    constexpr BoundingBox operator+(glm::vec3 offset) {
+        return BoundingBox{min + offset, max + offset};
+    }
+
+    constexpr BoundingBox operator-(glm::vec3 offset) {
+        return BoundingBox{min - offset, max - offset};
     }
 };
 

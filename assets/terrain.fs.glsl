@@ -35,9 +35,9 @@ void main()
 	float fog = 1.0 - (fragDepth - fogDropoff) / fogDistance;
 	fog = clamp(fog, 0.0, 1.0);
 
-	float lighting = fragColor.r + fragColor.g * skyLight;
-	shade *= lighting;
-	finalColor = texColor * vec4(shade, shade, shade, 1.0) * color;
+	//float lighting = fragColor.r + fragColor.g * skyLight;
+	//shade *= lighting;
+	finalColor = texColor * vec4(shade, shade, shade, 1.0) * color * fragColor;
 
 
 	//finalColor = mix(fogColor, finalColor, fog);

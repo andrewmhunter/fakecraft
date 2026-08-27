@@ -17,6 +17,8 @@ else()
 endif()
 
 target_sources(fakecraft PRIVATE
+    src/blocks/BlockModel.cpp
+
     src/level/block.cpp
     src/level/chunk.cpp
     src/level/world.cpp

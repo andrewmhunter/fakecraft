@@ -114,6 +114,11 @@ void registerBlocks() {
     regBlock(Block::cobweb, "cobweb", Solidness::cross, Passability::passable, blockModelDefault(11, 0));
     regBlock(Block::rose, "rose", Solidness::cross, Passability::passable, blockModelDefault(12, 0));
     regBlock(Block::dandelion, "dandelion", Solidness::cross, Passability::passable, blockModelDefault(13, 0));
+
+    regBlock(Block::tallGrass, "dandelion", Solidness::cross, Passability::passable, blockModelDefault(7, 2));
+
+    regBlock(Block::smoothStoneSlab, "slab", Solidness::solid, Passability::impassable, blockModelDefault(6, 0));
+    regBlock(Block::torch, "torch", Solidness::solid, Passability::passable, blockModelDefault(0, 5));
 }
 
 void unregisterBlocks() {

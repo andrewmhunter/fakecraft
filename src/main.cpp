@@ -12,6 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/fwd.hpp>
 
+#include "blocks/BlockModel.hpp"
 #include "engine/camera.hpp"
 #include "engine/input.hpp"
 #include "level/block.hpp"
@@ -121,6 +122,7 @@ void runGame(GLFWwindow* window) {
     Block selectedBlock = Block::planks;
 
     registerBlocks();
+    generateBlockModels();
 
     randomizeSeed();
 
