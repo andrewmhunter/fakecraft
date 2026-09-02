@@ -124,6 +124,34 @@ void Chunk::setBlock(glm::ivec3 local, Block block) {
     }
 }
 
+void Chunk::tryPlaceBox(glm::ivec3 start, glm::ivec3 size, Block block) {
+    glm::ivec3 end = start + size;
+    glm::ivec3 realStart = glm::min(start, end);
+    glm::ivec3 realEnd = glm::max(start, end);
+
+    for (int x = realStart.x; x < realEnd.x; ++x) {
+        for (int y = realStart.y; y < realEnd.y; ++y) {
+            for (int z = realStart.z; z < realEnd.z; ++z) {
+                tryPlaceBlock(glm::ivec3{x, y, z}, block);
+            }
+        }
+    }
+}
+
+void Chunk::placeBox(glm::ivec3 start, glm::ivec3 size, Block block) {
+    glm::ivec3 end = start + size;
+    glm::ivec3 realStart = glm::min(start, end);
+    glm::ivec3 realEnd = glm::max(start, end);
+
+    for (int x = realStart.x; x < realEnd.x; ++x) {
+        for (int y = realStart.y; y < realEnd.y; ++y) {
+            for (int z = realStart.z; z < realEnd.z; ++z) {
+                setBlock(glm::ivec3{x, y, z}, block);
+            }
+        }
+    }
+}
+
 void Chunk::markDirty(glm::ivec3 local) {
     Logger::assertion(blockInChunk(local));
 

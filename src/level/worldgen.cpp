@@ -1,4 +1,6 @@
+#include <cstring>
 #include <stb_perlin.h>
+#include <utility>
 #include "block.hpp"
 #include "chunk.hpp"
 #include "engine/config.hpp"
@@ -20,33 +22,30 @@ int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
     return (number % (max - min)) + min;
 }
 
-void placeDungeon(World* world, glm::ivec3 worldPoint) {
-    Logger::assertion(world);
-
-    world->placeBox(worldPoint, {10, 6, 10}, Block::cobblestone);
-    world->placeBox(worldPoint + 1, {8, 4, 8}, Block::air);
+void placeDungeon(Chunk& chunk, glm::ivec3 local) {
+    chunk.placeBox(local, {10, 6, 10}, Block::cobblestone);
+    chunk.placeBox(local + 1, {8, 4, 8}, Block::air);
 }
 
-static void placeCactus(World* world, glm::ivec3 worldPoint) {
+static void placeCactus(Chunk& chunk, glm::ivec3 local) {
     int cactusHeight = randomRange(1, 4);
-    worldPoint += glm::ivec3{0, 1, 0};
-    if (world->getBlock(worldPoint) != Block::air) {
+    local += glm::ivec3{0, 1, 0};
+    if (chunk.getBlock(local) != Block::air) {
         return;
     }
 
     for (int i = 0; i < cactusHeight; ++i) {
-        world->setBlock(worldPoint + glm::ivec3{0, i, 0}, Block::cactus);
+        chunk.setBlock(local + glm::ivec3{0, i, 0}, Block::cactus);
     }
 }
 
-void placeTree(World* world, glm::ivec3 worldPoint) {
-    Logger::assertion(world);
+void placeTree(Chunk& chunk, glm::ivec3 local) {
     Logger::debug("Placing Tree");
 
-    Block surfaceBlock = world->getBlock(worldPoint);
+    Block surfaceBlock = chunk.getBlock(local);
 
     if (surfaceBlock == Block::sand) {
-        placeCactus(world, worldPoint);
+        placeCactus(chunk, local);
         return;
     }
 
@@ -61,16 +60,16 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
         {1, 0, -1},
     };
 
-    world->setBlock(worldPoint, Block::dirt);
-    worldPoint += glm::ivec3{0, 1, 0};
+    chunk.setBlock(local, Block::dirt);
+    local += glm::ivec3{0, 1, 0};
 
     int height = randomRange(5, 7);
-    world->placeBox(worldPoint, {1, height, 1}, Block::log);
+    chunk.placeBox(local, {1, height, 1}, Block::log);
 
     //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), Block::leaves);
 
-    world->tryPlaceBox(worldPoint + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, Block::leaves);
-    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, Block::leaves);
+    chunk.tryPlaceBox(local + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, Block::leaves);
+    chunk.tryPlaceBox(local + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, Block::leaves);
 
     for (int i = 0; i < 4; ++i) {
         glm::ivec3 scaledCorner = corners[i] * 2;
@@ -78,19 +77,19 @@ void placeTree(World* world, glm::ivec3 worldPoint) {
             if (!randomChance(1, 2)) {
                 continue;
             }
-            world->tryPlaceBlock(worldPoint + scaledCorner + glm::ivec3{0, j, 0}, Block::leaves);
+            chunk.tryPlaceBlock(local + scaledCorner + glm::ivec3{0, j, 0}, Block::leaves);
         }
     }
 
-    world->tryPlaceBox(worldPoint + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, Block::leaves);
-    world->tryPlaceBox(worldPoint + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, Block::leaves);
+    chunk.tryPlaceBox(local + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, Block::leaves);
+    chunk.tryPlaceBox(local + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, Block::leaves);
 
     for (int i = 0; i < 4; ++i) {
         if (!randomChance(1, 2)) {
             continue;
         }
 
-        world->tryPlaceBlock(worldPoint + corners[i] + glm::ivec3{0, height - 1, 0}, Block::leaves);
+        chunk.tryPlaceBlock(local + corners[i] + glm::ivec3{0, height - 1, 0}, Block::leaves);
     }
 }
 
@@ -102,7 +101,6 @@ void generateTerrain(Chunk* chunk) {
 
     ITERATE_CHUNK(x, y, z) {
         chunk->blocks[x][y][z] = Block::air;
-        chunk->light[x][y][z] = (LightValues){0x0, 0xff};
     }
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -113,16 +111,20 @@ void generateTerrain(Chunk* chunk) {
 
             float wx = x + CHUNK_WIDTH * coords.x;
             float wz = z + CHUNK_WIDTH * coords.z;
-
-            float biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, 2.f, 0.5f, 10) + 0.5f;
-            biome *= 255.f;
-
+            
             bool useBiomes = !Config::settings->world.superflat;
+
+            float biome = 0.f;
+            if (useBiomes) {
+                biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, -100.f, 0.5f, 10) + 0.5f;
+                biome *= 255.f;
+            }
+
             if (!Config::settings->world.superflat) {
                 float scale = 0.004f;
                 float stretch = 32.f;
                 int octaves = 15;
-                float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, 1.f, 2.f, 0.5f, octaves);
+                float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, -200.f, 2.f, 0.5f, octaves);
                 surface = noise * stretch + SURFACE_OFFSET;
             }
 
@@ -219,11 +221,11 @@ void placeFeatures(Chunk* chunk) {
         glm::ivec3 point = {x, 0, z};
         point.y = chunk->surfaceHeight[point.x][point.z];
 
-        placeTree(chunk->world, localToWorld(chunk->coords, point));
+        placeTree(*chunk, point);
     }
 
     if (randomChance(1, 20)) {
-        placeDungeon(chunk->world, localToWorld(chunk->coords, {randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10)}));
+        placeDungeon(*chunk, {randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10)});
     }
 
     Hash flowerSeed = featureSeed(chunkSeed, FEATURE_FLOWER_PATCH);

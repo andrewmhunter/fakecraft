@@ -188,12 +188,18 @@ public:
     void tryPlaceBlock(int x, int y, int z, Block block);
     void setBlockRaw(glm::ivec3 local, Block block);
     void setBlock(glm::ivec3 local, Block block);
+    void tryPlaceBox(glm::ivec3 start, glm::ivec3 size, Block block);
+    void placeBox(glm::ivec3 start, glm::ivec3 size, Block block);
+
     void markDirty(glm::ivec3 local);
     Block getBlock(glm::ivec3 local) const;
+
     void draw(ShaderProgram& shader) const;
     void drawTranslucent(ShaderProgram& shader) const;
+
     bool verify() const;
     void computeLightValues();
+
     bool atLeastInState(ChunkState atLeastState) const;
     bool adjacentCardinalsAtLeastInState(ChunkState atLeastState) const;
     bool adjacentChunksAtLeastInState(ChunkState atLeastState) const;
