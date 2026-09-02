@@ -147,7 +147,7 @@ bool AirBlockModel::masksSide(BlockInstance blockInstance, Direction side, Block
     return false;
 }
 
-void AirBlockModel::appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void AirBlockModel::appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
 }
 
 
@@ -175,7 +175,7 @@ FullBlockModel::FullBlockModel(TexturePositions texturePositions, Transparency t
     passability{passability}
 {}
 
-void FullBlockModel::appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void FullBlockModel::appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
     for (Direction side : directions) {
         if (shouldDrawSide(chunk, blockInstance, position, side)) {
             appendGeometrySide(opaqueMesh, translucentMesh, position, blockInstance, side);
@@ -190,9 +190,9 @@ bool FullBlockModel::masksSide(BlockInstance blockInstance, Direction side, Bloc
     return blockInstance.id == otherBlock.id;
 }
 
-void FullBlockModel::appendGeometrySide(Mesh& opaqueMesh, Mesh& translucentMesh, glm::vec3 offset, BlockInstance blockInstance, Direction side) const {
+void FullBlockModel::appendGeometrySide(ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::vec3 offset, BlockInstance blockInstance, Direction side) const {
     glm::ivec2 sideTexturePosition = texturePositions[side];
-    Mesh& mesh = transparency == Transparency::translucent ? translucentMesh : opaqueMesh;
+    ChunkMesh& mesh = transparency == Transparency::translucent ? translucentMesh : opaqueMesh;
     meshFaceSmart(mesh, offset, side, sideTexturePosition);
 }
 
@@ -228,7 +228,7 @@ Passability PlantBlockModel::getPassability(BlockState blockState) const {
     return Passability::passable;
 }
 
-void PlantBlockModel::appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void PlantBlockModel::appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
     meshCross(opaqueMesh, position, texturePosition, tint);
 }
 
@@ -239,7 +239,7 @@ CactusBlockModel::CactusBlockModel(glm::ivec2 top, glm::ivec2 bottom, glm::ivec2
     sideTexture{side}
 {}
 
-void CactusBlockModel::appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void CactusBlockModel::appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
     if (shouldDrawSide(chunk, blockInstance, position, Direction::up)) {
         meshFaceSmart(opaqueMesh, position, Direction::up, topTexture);
     }
@@ -268,7 +268,7 @@ GrassBlockModel::GrassBlockModel(glm::ivec2 top, glm::ivec2 bottom, glm::ivec2 s
     tint{tint}
 {}
 
-void GrassBlockModel::appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void GrassBlockModel::appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
     if (shouldDrawSide(chunk, blockInstance, position, Direction::up)) {
         meshFaceSmart(opaqueMesh, position, Direction::up, topTexture, tint);
     }
@@ -290,7 +290,7 @@ SlabBlockModel::SlabBlockModel(TexturePositions texturePositions)
 {}
 
 
-void SlabBlockModel::appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void SlabBlockModel::appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
     if (shouldDrawSide(chunk, blockInstance, position, Direction::down)) {
         meshFaceSmart(opaqueMesh, position, Direction::down, texturePositions[Direction::down]);
     }
@@ -324,7 +324,7 @@ TorchBlockModel::TorchBlockModel(glm::ivec2 texturePosition)
 {}
 
 
-void TorchBlockModel::appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+void TorchBlockModel::appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
     glm::vec3 center = glm::vec3{position} + glm::vec3{0.5f, 5._px, 0.5f};
     glm::vec3 size{2._px, 10._px, 2._px};
 

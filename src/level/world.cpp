@@ -275,7 +275,7 @@ void World::draw() const {
     terrainShader.use();
     ResourceManager::instance().texture.terrain.bind();
 
-    glDisable(GL_CULL_FACE);
+    setCullFaces(false);
     for (const auto& chunkIt : chunks) {
         const Chunk* chunk = chunkIt.second.get();
 
@@ -289,7 +289,7 @@ void World::draw() const {
 
         chunk->drawTranslucent(terrainShader);
     }
-    glEnable(GL_CULL_FACE);
+    setCullFaces(true);
 }
 
 Block World::getBlock(glm::ivec3 worldPoint) const {

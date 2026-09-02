@@ -304,75 +304,26 @@ void GPUMesh::draw() const {
  * Mesh
  */
 
-Mesh::Mesh(GLenum primative) : primative{primative} {}
-
-Mesh::Mesh() {}
-
-GPUMesh Mesh::upload() const {
-    GPUMesh gpuMesh{primative};
-    gpuMesh.bind();
-    gpuMesh.elementCount = indicies.elementLength();
-
-    std::size_t vertexBufferSize = positions.sizeBytes() + normals.sizeBytes()
-        + texcoords.sizeBytes() + colors.sizeBytes() + boneIds.sizeBytes();
-
-    glGenBuffers(1, &gpuMesh.vertexBufferObject.object);
-    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vertexBufferObject.object);
-    glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, nullptr, GL_DYNAMIC_DRAW);
-
-    std::size_t offset = 0;
-    offset = positions.bufferData(0, offset);
-    offset = texcoords.bufferData(1, offset);
-    offset = normals.bufferData(2, offset);
-    offset = colors.bufferData(3, offset);
-    offset = boneIds.bufferData(4, offset);
-
-    glGenBuffers(1, &gpuMesh.elementBufferObject.object);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.elementBufferObject.object);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.sizeBytes(), indicies.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(0);
-    return gpuMesh;
-}
-
-void Mesh::pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color, int boneId) {
-    positions.pushVec(position);
-    normals.pushVec(normal);
-    texcoords.pushVec(texcoord);
-    colors.pushVec(color);
-    boneIds.push(boneId);
-}
-
-void Mesh::pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
+void ChunkMesh::pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
     glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal, int boneId
 ) {
-    pushVertex(position0, normal, texcoord0, color, boneId);
-    pushVertex(position1, normal, {texcoord0.x, texcoord1.y}, color, boneId);
-    pushVertex(position2, normal, texcoord1, color, boneId);
-    pushVertex(position3, normal, {texcoord1.x, texcoord0.y}, color, boneId);
-
-    makeTriangle(-3, -2, 0);
-    makeTriangle(-2, -1, 0);
+    pushQuad(
+        std::make_tuple(position0, texcoord0, normal, color, glm::ivec1{boneId}),
+        std::make_tuple(position1, glm::vec2{texcoord0.x, texcoord1.y}, normal, color, glm::ivec1{boneId}),
+        std::make_tuple(position2, texcoord1, normal, color, glm::ivec1{boneId}),
+        std::make_tuple(position3, glm::vec2{texcoord1.x, texcoord0.y}, normal, color, glm::ivec1{boneId})
+    );
 }
 
-void Mesh::pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
-    std::pair<glm::vec2, glm::vec2> texcoords, glm::vec4 color, glm::vec3 normal, int boneId
+void ChunkMesh::pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
+    std::pair<glm::vec2, glm::vec2> texcoord, glm::vec4 color, glm::vec3 normal, int boneId
 ) {
-    pushFace(position0, position1, position2, position3, texcoords.first, texcoords.second, color, normal, boneId);
+    pushFace(position0, position1, position2, position3, texcoord.first, texcoord.second, color, normal, boneId);
 }
 
-void Mesh::makeTriangle(int offset0, int offset1, int offset2) {
-    std::size_t currentIndex = positions.vertexLength() - 1;
-    indicies.push(currentIndex + offset0);
-    indicies.push(currentIndex + offset1);
-    indicies.push(currentIndex + offset2);
-}
-
-void Mesh::pushTexturedPrism(glm::mat4 transformation,
-        std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords, int boneId
+void ChunkMesh::pushTexturedPrism(glm::mat4 transformation,
+    std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords, int boneId
 ) {
-    assert(texcoords.size() == 6);
-
     glm::vec4 color = color::white;
 
     glm::vec3 vlbb = transformation * glm::vec4{-0.5, -0.5f, -0.5f, 1.f};
@@ -394,8 +345,8 @@ void Mesh::pushTexturedPrism(glm::mat4 transformation,
     pushFace(vlbf, vlbb, vrbb, vrbf, texcoords[5], color, {0.f, -1.f, 0.f}, boneId);
 }
 
-void Mesh::pushTexturedPrism(glm::mat4 transformation,
-        std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords, int boneId
+void ChunkMesh::pushTexturedPrism(glm::mat4 transformation,
+    std::span<const std::pair<glm::vec2, glm::vec2>, 3> texcoords, int boneId
 ) {
     std::array<std::pair<glm::vec2, glm::vec2>, 6> texcoords6{
         texcoords[0], texcoords[0],
@@ -406,13 +357,12 @@ void Mesh::pushTexturedPrism(glm::mat4 transformation,
     pushTexturedPrism(transformation, texcoords6, boneId);
 }
 
-void Mesh::pushTexturedPrism(glm::mat4 transformation,
-        std::pair<glm::vec2, glm::vec2> texcoords, int boneId
+void ChunkMesh::pushTexturedPrism(glm::mat4 transformation,
+    std::pair<glm::vec2, glm::vec2> texcoords, int boneId
 ) {
     std::array<std::pair<glm::vec2, glm::vec2>, 3> texcoords3{texcoords, texcoords, texcoords};
     pushTexturedPrism(transformation, texcoords3, boneId);
 }
-
 
 /*
  * Util
@@ -439,11 +389,11 @@ void initMeshes() {
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, uboGlobalsBlock);
 
-    Mesh cubeCpuMesh{};
+    ChunkMesh cubeCpuMesh{};
     cubeCpuMesh.pushTexturedPrism(glm::mat4{1.f}, {{0.f, 0.f}, {1.f, 1.f}});
     cubeMesh = cubeCpuMesh.upload();
 
-    Mesh rectangleCpuMesh{};
+    ChunkMesh rectangleCpuMesh{};
     rectangleCpuMesh.pushFace(
         {-0.5, 0.5, 0.},
         {-0.5, -0.5, 0},
@@ -501,6 +451,14 @@ void blendModeNormal() {
 void blendModeReplace() {
     glBlendFunc(GL_ONE, GL_ZERO);
     glBlendEquation(GL_FUNC_ADD);
+}
+
+void setCullFaces(bool shouldCull) {
+    if (shouldCull) {
+        glEnable(GL_CULL_FACE);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
 }
 
 void drawCube(ShaderProgram& shader, glm::vec3 position, glm::vec3 size) {

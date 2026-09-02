@@ -3,6 +3,9 @@
 
 #include <format>
 #include <glm/glm.hpp>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 template<int Length, typename T>
 struct std::formatter<glm::vec<Length, T>> : std::formatter<T> {
@@ -96,6 +99,37 @@ constexpr long double operator ""_px(unsigned long long value) {
 }
 
 void saveScreenshot();
+
+template<typename... Args>
+constexpr void executeArgs(Args...) {}
+
+template<typename Fn, typename... Tuples, std::size_t Index>
+constexpr void innerTupleForEach(Fn fn, std::index_sequence<Index>, Tuples&... tuples) {
+    fn(std::get<Index>(tuples)...);
+}
+
+template<typename Fn, typename... Tuples, std::size_t First, std::size_t Second, std::size_t... Indicies>
+constexpr void innerTupleForEach(Fn fn, std::index_sequence<First, Second, Indicies...>, Tuples&... tuples) {
+    innerTupleForEach(fn, std::index_sequence<First>{}, tuples...);
+    innerTupleForEach(fn, std::index_sequence<Second, Indicies...>{}, tuples...);
+
+    // executeArgs(std::get<Indicies>(tuples...)...);
+}
+
+template<typename Fn, typename... Tuples>
+constexpr void tupleForEach(Fn fn, Tuples&... tuples) {
+    constexpr std::size_t maxTupleSize = std::max<std::size_t>({std::tuple_size_v<std::remove_cvref_t<decltype(tuples)>>...});
+    innerTupleForEach(fn, std::make_index_sequence<maxTupleSize>(), tuples...);
+}
+
+template<typename Fn, typename Return, typename... Tuples>
+constexpr Return tupleReduce(Fn fn, Return defaultValue, Tuples&... tuples) {
+    tupleForEach([fn, &defaultValue](const auto&... elements) {
+        defaultValue = fn(defaultValue, elements...);
+    }, tuples...);
+    return defaultValue;
+}
+
 
 #endif
 

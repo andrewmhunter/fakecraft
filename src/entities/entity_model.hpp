@@ -2,7 +2,6 @@
 #define ENTITY_MODEL_HPP
 
 #include "graphics/graphics.hpp"
-#include <functional>
 #include <glm/fwd.hpp>
 #include <span>
 
@@ -19,7 +18,7 @@ private:
 
 public:
 
-    void generateMesh(Mesh& mesh) const;
+    void generateMesh(EntityMesh& mesh) const;
 
     EntityModelPart(glm::vec3 origin, glm::vec3 size, glm::ivec2 textureSize,
         std::array<TextureCoords<int>, 6> texCoords, int boneId

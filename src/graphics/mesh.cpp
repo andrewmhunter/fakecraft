@@ -6,7 +6,7 @@
 #include <glm/fwd.hpp>
 
 void meshFace(
-        Mesh& mesh,
+        ChunkMesh& mesh,
         glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,
         glm::ivec2 textureCoords,
         glm::vec3 normal,
@@ -19,7 +19,7 @@ void meshFace(
     mesh.pushFace(a, b, c, d, texCoord0, texCoord1, color, normal);
 }
 
-void meshFaceSmart(Mesh& mesh,
+void meshFaceSmart(ChunkMesh& mesh,
     glm::vec3 position,
     glm::vec3 size,
     Direction side,
@@ -64,7 +64,7 @@ void meshFaceSmart(Mesh& mesh,
     mesh.pushFace(offsets[0], offsets[1], offsets[2], offsets[3], texCoord0, texCoord1, color::white, normal);
 }
 
-void meshFaceSmart(Mesh& mesh, glm::ivec3 position, Direction side, glm::ivec2 textureCoords, color::Color color) {
+void meshFaceSmart(ChunkMesh& mesh, glm::ivec3 position, Direction side, glm::ivec2 textureCoords, color::Color color) {
     int x = position.x;
     int y = position.y;
     int z = position.z;
@@ -97,7 +97,7 @@ void meshFaceSmart(Mesh& mesh, glm::ivec3 position, Direction side, glm::ivec2 t
     meshFace(mesh, offsets[0], offsets[1], offsets[2], offsets[3], textureCoords, normal, color);
 }
 
-void meshAddCube(Mesh& mesh, glm::ivec3 position, Block block) {
+void meshAddCube(ChunkMesh& mesh, glm::ivec3 position, Block block) {
     const glm::ivec3* sides = getBlockProperties(block).model.sides;
 
     for (int dir = 0; dir < directionCount; ++dir) {
@@ -106,13 +106,13 @@ void meshAddCube(Mesh& mesh, glm::ivec3 position, Block block) {
 }
 
 GPUMesh blockMesh(Block block) {
-    Mesh mesh{};
+    ChunkMesh mesh{};
     meshAddCube(mesh, glm::ivec3{0}, block);
 
     return mesh.upload();
 }
 
-void meshCross(Mesh& mesh, glm::ivec3 position, glm::ivec2 textureCoords, color::Color color) {
+void meshCross(ChunkMesh& mesh, glm::ivec3 position, glm::ivec2 textureCoords, color::Color color) {
     int x = position.x;
     int y = position.y;
     int z = position.z;
@@ -135,7 +135,7 @@ void meshCross(Mesh& mesh, glm::ivec3 position, glm::ivec2 textureCoords, color:
 }
 
 static void meshFaceOffset(
-        Mesh& mesh,
+        ChunkMesh& mesh,
         glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,
         glm::ivec2 textureCoords,
         glm::vec3 normal,
@@ -145,7 +145,7 @@ static void meshFaceOffset(
     meshFace(mesh, a + offset, b + offset, c + offset, d + offset, textureCoords, normal, color);
 }
 
-void meshCactus(Mesh& mesh, glm::ivec3 position, glm::ivec2 textureCoords) {
+void meshCactus(ChunkMesh& mesh, glm::ivec3 position, glm::ivec2 textureCoords) {
     int x = position.x;
     int y = position.y;
     int z = position.z;

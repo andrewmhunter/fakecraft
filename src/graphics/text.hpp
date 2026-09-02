@@ -22,7 +22,7 @@ public:
 class TextBatch {
 private:
     std::reference_wrapper<const Font> font;
-    Mesh mesh{GL_TRIANGLES};
+    ChunkMesh mesh{};
     glm::ivec2 offset{0};
 
 public:

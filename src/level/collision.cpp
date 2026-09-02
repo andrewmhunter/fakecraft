@@ -228,7 +228,7 @@ glm::vec3 aabbResolveCollisions(const World* world, glm::vec3 position, Bounding
     for (Direction direction : directions) {
         const Chunk* chunkInDirection = chunks.getChunkDirection(direction);
         if (chunkInDirection == nullptr) {
-            Logger::warning(std::format("Chunk in direction {} is null", directionName(direction)));
+            //Logger::warning(std::format("Chunk in direction {} is null", directionName(direction)));
         }
     }
 

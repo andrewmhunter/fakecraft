@@ -43,7 +43,7 @@ public:
     virtual Transparency getTransparency(BlockState blockState) const;
     virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const;
 
-    virtual void appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const = 0;
+    virtual void appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const = 0;
 };
 
 class AirBlockModel final : public BlockInfo {
@@ -51,7 +51,7 @@ public:
     virtual Transparency getTransparency(BlockState blockState) const override;
     virtual Passability getPassability(BlockState blockState) const override;
     virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const override;
-    virtual void appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual void appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
 };
 
 
@@ -75,8 +75,8 @@ public:
     explicit FullBlockModel(TexturePositions texturePositions, Transparency transparency = Transparency::solid, Passability passability = Passability::impassable);
 
     virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const override;
-    void appendGeometrySide(Mesh& opaqueMesh, Mesh& translucentMesh, glm::vec3 offset, BlockInstance blockInstance, Direction side) const;
-    virtual void appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    void appendGeometrySide(ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::vec3 offset, BlockInstance blockInstance, Direction side) const;
+    virtual void appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
     virtual Transparency getTransparency(BlockState blockState) const override;
     virtual Passability getPassability(BlockState blockState) const override;
 };
@@ -96,7 +96,7 @@ public:
     virtual Transparency getTransparency(BlockState blockState) const override;
     virtual Passability getPassability(BlockState blockState) const override;
 
-    virtual void appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual void appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
 };
 
 class CactusBlockModel final : public BlockInfo {
@@ -108,7 +108,7 @@ private:
 public:
     explicit CactusBlockModel(glm::ivec2 top, glm::ivec2 bottom, glm::ivec2 side);
 
-    virtual void appendGeometry(const Chunk& chunk, Mesh& opaqueMesh, Mesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual void appendGeometry(const Chunk& chunk, ChunkMesh& opaqueMesh, ChunkMesh& translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
     virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const override;
     virtual Transparency getTransparency(BlockState blockState) const override;
 };
@@ -125,7 +125,7 @@ private:
 public:
     explicit GrassBlockModel(glm::ivec2 top, glm::ivec2 bottom, glm::ivec2 side, glm::ivec2 sideOverlay, color::Color tint);
 
-    virtual void appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual void appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
 };
 
 class SlabBlockModel final : public BlockInfo {
@@ -134,7 +134,7 @@ private:
 
 public:
     explicit SlabBlockModel(TexturePositions texturePositions);
-    virtual void appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual void appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
     virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const override;
     virtual BoundingBox getBoundingBox(BlockState blockState) const override;
 };
@@ -146,7 +146,7 @@ private:
 public:
     explicit TorchBlockModel(glm::ivec2 texturePosition);
 
-    virtual void appendGeometry(const Chunk &chunk, Mesh &opaqueMesh, Mesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual void appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
     virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const override;
     virtual Passability getPassability(BlockState blockState) const override;
     virtual BoundingBox getBoundingBox(BlockState blockState) const override;

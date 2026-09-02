@@ -1,20 +1,26 @@
 #ifndef GRAPHICS_HPP
 #define GRAPHICS_HPP
 
+#include "util/util.hpp"
 #include <cstddef>
 #include <glad/glad.h>
 #include <glm/detail/qualifier.hpp>
+#include <glm/ext/scalar_constants.hpp>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <map>
 #include <span>
 #include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 #include <vector>
 #include <cassert>
 #include <span>
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <print>
 
 namespace color {
     using Color = glm::vec4;
@@ -238,6 +244,12 @@ public:
         contents.push_back(value);
     }
 
+    void push(glm::vec<L, T> vec) {
+        for (int i = 0; i < T::length(); ++i) {
+            this->push(vec[i]);
+        }
+    }
+
     const T* data() const {
         return contents.data();
     }
@@ -273,7 +285,7 @@ public:
         }
 
         glBufferSubData(GL_ARRAY_BUFFER, offset, sizeBytes(), data());
-        if (std::is_integral_v<T>) {
+        if constexpr (std::is_integral_v<T>) {
             glVertexAttribIPointer(attributeIndex, L, getGLEnumType<T>(), stride(), (void*)offset);
         } else {
             glVertexAttribPointer(attributeIndex, L, getGLEnumType<T>(), false, stride(), (void*)offset);
@@ -293,32 +305,152 @@ public:
     }
 };
 
-
 constexpr int maxBones = 8;
 
-class Mesh {
+template<GLenum Primative, typename... Args>
+class CPUMesh {
+private:
+    int vertexCount{0};
+    std::tuple<VecVertexData<Args>...> vertexData;
+    VertexData<GLuint> indicies;
+
+    void bufferVertexData() const {
+        GLuint attributeIndex = 0;
+        std::size_t offset = 0;
+    
+        tupleForEach([&attributeIndex, &offset](const auto& data) {
+            offset = data.bufferData(attributeIndex, offset);
+            attributeIndex++;
+        }, vertexData);
+    }
+
 public:
-    GLenum primative{GL_TRIANGLES};
+    using Vertex = std::tuple<Args...>;
 
-    VecVertexData<glm::vec3> positions;
-    VecVertexData<glm::vec3> normals;
-    VecVertexData<glm::vec2> texcoords;
-    VecVertexData<glm::vec4> colors;
-    VertexData<int> boneIds;
-    VecVertexData<glm::uvec3> indicies;
+    CPUMesh() {}
 
-    Mesh(GLenum primative);
-    Mesh();
+    int getVertexCount() const {
+        return vertexCount;
+    }
 
-    GPUMesh upload() const;
+    int getElementCount() const {
+        return indicies.elementLength();
+    }
 
-    void pushVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texcoord, glm::vec4 color, int boneId = 0);
+    std::size_t getVertexBufferSize() const {
+        return tupleReduce([](std::size_t last, const auto& data) {
+            return last + data.sizeBytes();            
+        }, 0, vertexData);
+    }
+
+    GPUMesh upload() const {
+        GPUMesh gpuMesh{Primative};
+        gpuMesh.bind();
+        gpuMesh.elementCount = getElementCount();
+
+        std::size_t vertexBufferSize = getVertexBufferSize();
+
+        glGenBuffers(1, &gpuMesh.vertexBufferObject.object);
+        glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vertexBufferObject.object);
+        glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, nullptr, GL_DYNAMIC_DRAW);
+
+        bufferVertexData();
+
+        glGenBuffers(1, &gpuMesh.elementBufferObject.object);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.elementBufferObject.object);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.sizeBytes(), indicies.data(), GL_STATIC_DRAW);
+
+        glBindVertexArray(0);
+        return gpuMesh;
+    }
+
+    void pushVertex(Vertex vertex) {
+        tupleForEach([](auto& vertexBuffer, const auto& vertex) {
+            vertexBuffer.pushVec(vertex);
+        }, vertexData, vertex);
+        vertexCount++;
+    }
+
+    void pushVertex(const Args&... vertexData) {
+        pushVertex(std::make_tuple(vertexData...));
+    }
+
+    void pushIndex(int index) {
+        indicies.push(index);
+    }
+
+    void pushOffsetIndex(int offset) {
+        pushIndex(vertexCount - 1 + offset);
+    }
+
+    void print() const {
+        tupleForEach([](const auto& buffer) {
+            const auto& span = buffer.getSpan();
+            for (const auto& element : span) {
+                std::print("{},", element);
+            }
+            std::println();
+        }, vertexData);
+    }
+};
+
+template<typename... Args>
+class TriangleMesh : public CPUMesh<GL_TRIANGLES, Args...> {
+private:
+    using Self = TriangleMesh<Args...>;
+
+public:
+    void pushTriangle(typename Self::Vertex v0, typename Self::Vertex v1, typename Self::Vertex v2) {
+        int firstVertex = Self::getVertexCount();
+        Self::pushVertex(v0);
+        Self::pushVertex(v1);
+        Self::pushVertex(v2);
+
+        Self::pushIndex(firstVertex);
+        Self::pushIndex(firstVertex + 1);
+        Self::pushIndex(firstVertex + 2);
+    }
+
+    void pushQuad(typename Self::Vertex v0, typename Self::Vertex v1, typename Self::Vertex v2, typename Self::Vertex v3) {
+        int firstVertex = Self::getVertexCount();
+        Self::pushVertex(v0);
+        Self::pushVertex(v1);
+        Self::pushVertex(v2);
+        Self::pushVertex(v3);
+    
+        Self::pushIndex(firstVertex);
+        Self::pushIndex(firstVertex + 1);
+        Self::pushIndex(firstVertex + 3);
+    
+        Self::pushIndex(firstVertex + 1);
+        Self::pushIndex(firstVertex + 2);
+        Self::pushIndex(firstVertex + 3);
+    }
+};
+
+template<typename... Args>
+class LineMesh : public CPUMesh<GL_LINES, Args...> {
+private:
+    using Self = LineMesh<Args...>;
+
+public:
+    void pushLine(typename Self::Vertex v0, typename Self::Vertex v1) {
+        int firstVertex = Self::getVertexCount;
+
+        Self::pushVertex(v0);
+        Self::pushVertex(v1);
+
+        Self::pushIndex(firstVertex);
+        Self::pushIndex(firstVertex + 1);
+    }
+};
+
+class ChunkMesh : public TriangleMesh<glm::vec3, glm::vec2, glm::vec3, glm::vec4, glm::ivec1> {
+public:
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
         glm::vec2 texcoord0, glm::vec2 texcoord1, glm::vec4 color, glm::vec3 normal, int boneId = 0);
     void pushFace(glm::vec3 position0, glm::vec3 position1, glm::vec3 position2, glm::vec3 position3,
         std::pair<glm::vec2, glm::vec2> texcoord, glm::vec4 color, glm::vec3 normal, int boneId = 0);
-
-    void makeTriangle(int offset0, int offset1, int offset2);
 
     void pushTexturedPrism(glm::mat4 transformation,
         std::span<const std::pair<glm::vec2, glm::vec2>, 6> texcoords, int boneId = 0);
@@ -330,8 +462,14 @@ public:
         std::pair<glm::vec2, glm::vec2> texcoords, int boneId = 0);
 };
 
+using EntityMesh = ChunkMesh;
+
+using SimpleMesh = TriangleMesh<glm::vec3, glm::vec2>;
+
 void wireframeEnable();
 void wireframeDisable();
+
+void setCullFaces(bool shouldCull);
 
 void blendModeInvert();
 void blendModeNormal();

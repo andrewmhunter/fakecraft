@@ -105,7 +105,7 @@ void runGame(GLFWwindow* window) {
     framebufferSizeCallback(window, Camera::windowSize.x, Camera::windowSize.y);
 
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    setCullFaces(true);
     glEnable(GL_BLEND);
 
     blendModeNormal();
@@ -324,7 +324,7 @@ void runGame(GLFWwindow* window) {
 
             if (world.showChunkBorders) {
                 simpleShader.setColor(color::white);
-                glDisable(GL_CULL_FACE);
+                setCullFaces(false);
                 wireframeEnable();
                 glm::ivec3 chunkPosition = worldToChunkV(player->position);
                 chunkPosition += glm::ivec3{1, 0, 1};
@@ -338,8 +338,7 @@ void runGame(GLFWwindow* window) {
                         );
                 }
                 wireframeDisable();
-                glEnable(GL_CULL_FACE);
-                
+                setCullFaces(true);                
             }
         }
 

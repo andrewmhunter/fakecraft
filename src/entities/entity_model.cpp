@@ -2,7 +2,6 @@
 #include "util/direction.hpp"
 #include "graphics/graphics.hpp"
 #include <cstddef>
-#include <functional>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -10,7 +9,7 @@
 #include <vector>
 #include "util/util.hpp"
 
-void EntityModelPart::generateMesh(Mesh& mesh) const {
+void EntityModelPart::generateMesh(EntityMesh& mesh) const {
     glm::mat4 baseTransform{1.f};
     baseTransform = glm::scale(baseTransform, size);
     baseTransform = glm::translate(baseTransform, -origin);
@@ -42,8 +41,8 @@ EntityModelPart::EntityModelPart(glm::vec3 origin, glm::ivec3 sizePixels, glm::i
     }, boneId)
 {}
 
-static Mesh generateMeshFromParts(std::span<const EntityModelPart> parts) {
-    Mesh mesh{};
+static EntityMesh generateMeshFromParts(std::span<const EntityModelPart> parts) {
+    EntityMesh mesh{};
     for (const EntityModelPart& part : parts) {
         part.generateMesh(mesh);
     }

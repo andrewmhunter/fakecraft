@@ -154,9 +154,9 @@ private:
 public:
     World* world;
     glm::ivec3 coords;
-    std::optional<Mesh> cpuMesh;
+    std::optional<ChunkMesh> cpuMesh;
     std::optional<GPUMesh> mesh;
-    std::optional<Mesh> cpuTranslucentMesh;
+    std::optional<ChunkMesh> cpuTranslucentMesh;
     std::optional<GPUMesh> translucentMesh;
     ChunkCache adjacentChunks{glm::ivec3{0}, this};
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
