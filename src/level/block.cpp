@@ -120,6 +120,8 @@ void registerBlocks() {
     regBlock(Block::smoothStoneSlab, "slab", Solidness::solid, Passability::impassable, blockModelDefault(6, 0));
     regBlock(Block::torch, "torch", Solidness::solid, Passability::passable, blockModelDefault(0, 5));
     regBlock(Block::gravel, "gravel", Solidness::solid, Passability::impassable, blockModelDefault(3, 1));
+
+    regBlock(Block::deadBush, "dead_bush", Solidness::cross, Passability::passable, blockModelDefault(7, 3));
 }
 
 void unregisterBlocks() {

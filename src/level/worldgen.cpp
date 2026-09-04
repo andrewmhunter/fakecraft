@@ -404,6 +404,17 @@ void placeFeatures(Chunk* chunk) {
         }
     }
 
+    if (chunk->averageHumidity < 0.f && chunk->averageTemperature > 0.f) {
+        int bushCount = rng.getInt(-2, 3);
+        for (int i = 0; i < bushCount; ++i) {
+            glm::ivec3 bushPosition = rng.getSurfacePosition(chunk);
+
+            if (chunk->getBlock(bushPosition) == Block::sand) {
+                chunk->tryPlaceBlockRaw(bushPosition + glm::ivec3{0, 1, 0}, Block::deadBush);
+            }
+        }
+    }
+
     chunk->dirty = true;
 }
 

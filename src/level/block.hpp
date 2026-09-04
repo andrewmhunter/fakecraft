@@ -5,7 +5,6 @@
 #include <optional>
 #include "util/direction.hpp"
 #include "graphics/graphics.hpp"
-#include "util/types.hpp"
 
 // Barrier must be 0 so the chunk mesher
 // detects blocks outside the loaded chunks as
@@ -42,6 +41,7 @@ enum class Block : char {
     smoothStoneSlab,
     torch,
     gravel,
+    deadBush,
 
     // must be last
     blockCount,

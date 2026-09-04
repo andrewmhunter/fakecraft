@@ -70,6 +70,8 @@ void generateBlockModels() {
 
     newBlock<FullBlockModel>(Block::gravel, glm::ivec2{3, 1});
 
+    newBlock<PlantBlockModel>(Block::deadBush, glm::ivec2{7, 3}, glm::vec3{0.5f});
+
 
 
     for (int i = 0; i < blockCount; ++i) {
