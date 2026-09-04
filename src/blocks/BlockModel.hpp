@@ -152,6 +152,18 @@ public:
     virtual BoundingBox getBoundingBox(BlockState blockState) const override;
 };
 
+class LeavesBlockModel final : public BlockInfo {
+private:
+    glm::ivec2 texturePosition;
+    color::Color tint;
+
+public:
+    explicit LeavesBlockModel(glm::ivec2 texturePosition, color::Color tint);
+
+    virtual void appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const override;
+    virtual bool masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const override;
+};
+
 void generateBlockModels();
 const BlockInfo& getBlockModel(Block block);
 

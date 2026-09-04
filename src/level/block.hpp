@@ -41,6 +41,7 @@ enum class Block : char {
     tallGrass,
     smoothStoneSlab,
     torch,
+    gravel,
 
     // must be last
     blockCount,

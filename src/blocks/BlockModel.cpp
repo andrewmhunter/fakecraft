@@ -23,6 +23,9 @@ static void newBlock(Block blockId, Args&&... args) {
 
 void generateBlockModels() {
     color::Color grassColor = glm::vec4{0.749f, 1.253f, 0.418f, 1.0f};
+    color::Color leavesColor = color::fromRGB(0x62ff40);
+    //color::Color leavesColor = color::fromRGB(0x00ff00);
+
 
     newBlock<FullBlockModel>(Block::barrier, glm::ivec2{0, 0});
     newBlock<AirBlockModel>(Block::air);
@@ -39,9 +42,9 @@ void generateBlockModels() {
     newBlock<FullBlockModel>(Block::glass, glm::ivec2{1, 3}, Transparency::transparent);
 
     if (Config::settings->graphics.fastLeaves) {
-        newBlock<FullBlockModel>(Block::leaves, glm::ivec2{5, 3});
+        newBlock<LeavesBlockModel>(Block::leaves, glm::ivec2{5, 3}, leavesColor);
     } else {
-        newBlock<FullBlockModel>(Block::leaves, glm::ivec2{4, 3}, Transparency::transparent);
+        newBlock<LeavesBlockModel>(Block::leaves, glm::ivec2{4, 3}, leavesColor);
     }
 
     newBlock<FullBlockModel>(Block::log, TexturePositions{{5, 1}, {5, 1}, {4, 1}});
@@ -64,6 +67,8 @@ void generateBlockModels() {
     newBlock<SlabBlockModel>(Block::smoothStoneSlab, TexturePositions{{6, 0}, {6, 0}, {5, 0}});
 
     newBlock<TorchBlockModel>(Block::torch, glm::ivec2{0, 5});
+
+    newBlock<FullBlockModel>(Block::gravel, glm::ivec2{3, 1});
 
 
 
@@ -375,6 +380,22 @@ BoundingBox TorchBlockModel::getBoundingBox(BlockState blockState) const {
     return BoundingBox{glm::vec3{0.5f - 1._px, 0.f, 0.5f - 1._px}, glm::vec3{0.5f + 1._px, 10._px, 0.5f + 1._px}};
 }
 
+LeavesBlockModel::LeavesBlockModel(glm::ivec2 texturePosition, color::Color tint)
+    : texturePosition{texturePosition},
+    tint{tint}
+{}
+
+void LeavesBlockModel::appendGeometry(const Chunk &chunk, ChunkMesh &opaqueMesh, ChunkMesh &translucentMesh, glm::ivec3 position, BlockInstance blockInstance) const {
+    for (Direction side : directions) {
+        if (shouldDrawSide(chunk, blockInstance, position, side)) {
+            meshFaceSmart(opaqueMesh, position, side, texturePosition, tint);
+        }
+    }
+}
+
+bool LeavesBlockModel::masksSide(BlockInstance blockInstance, Direction side, BlockInstance otherBlock) const {
+    return true;
+}
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
