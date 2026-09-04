@@ -17,6 +17,7 @@
 #include "engine/input.hpp"
 #include "level/collision.hpp"
 #include "level/octree.hpp"
+#include "level/worldgen.hpp"
 #include "serialization/serialize.hpp"
 #include "util/thread_pool.hpp"
 #include "util/types.hpp"
@@ -161,6 +162,7 @@ void World::update(float deltaTime) {
                     break;
                 }
                 chunk->state = ChunkState::generatingInitialMesh;
+                //placeFeatures(chunk);
                 chunk->dirty = true;
                 int priority = -chunkDistance(worldToChunkV(player->position), chunk->coords);
                 threadPool.enqueueTask(priority, [chunk](){
@@ -349,7 +351,7 @@ const Chunk* World::getChunk(glm::ivec3 chunkCoords, ChunkState atLeastState) co
 
 void World::markDirty(glm::ivec3 worldPoint) {
     Chunk* chunk = getChunk(worldToChunk(worldPoint));
-    if (chunk == NULL) {
+    if (chunk == nullptr) {
         return;
     }
     chunk->markDirty(worldToLocal(worldPoint));

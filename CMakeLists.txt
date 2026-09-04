@@ -36,8 +36,6 @@ target_sources(fakecraft PRIVATE
     src/graphics/mesh.cpp
     src/graphics/graphics.cpp
     src/graphics/text.cpp
-    
-    src/util/hash.cpp
     src/util/point.cpp
 	src/util/util.cpp
     src/util/timer.cpp

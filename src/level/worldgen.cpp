@@ -1,58 +1,104 @@
-#include <cstring>
+#include <bit>
+#include <glm/ext/vector_int3.hpp>
 #include <stb_perlin.h>
-#include <utility>
 #include "block.hpp"
 #include "chunk.hpp"
 #include "engine/config.hpp"
+#include "util/direction.hpp"
+#include "util/types.hpp"
 #include "world.hpp"
-#include "util/hash.hpp"
 #include "worldgen.hpp"
 #include "engine/logger.hpp"
 
-#define DIRT_LAYER 2
-#define SURFACE_OFFSET 65
-#define OCEAN_LEVEL 60
+constexpr int dirtLayer = 3;
+constexpr int surfaceOffset = 65;
+constexpr int seaLevel = 60;
 
-Hash featureSeed(Hash seed, FeatureId feature) {
-    return hashChar(seed, feature);
-}
 
-int seededNumber(Hash chunkSeed, FeatureId feature, int min, int max) {
-    unsigned int number = featureSeed(chunkSeed, feature);
-    return (number % (max - min)) + min;
-}
+class WorldGenRNG {
+private:
+    u32 seed;
+
+public:
+    WorldGenRNG(int worldSeed, glm::ivec3 chunkPosition)
+        : seed{std::rotl(static_cast<u32>(worldSeed), 2) ^ std::rotl(static_cast<u32>(chunkPosition.x), 1) ^ chunkPosition.z}
+    {}
+
+    // https://en.wikipedia.org/wiki/Xorshift
+    u32 next() {
+        seed ^= seed << 14;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        return seed;
+    }
+
+    i32 getInt(i32 max) {
+        if (max <= 0) {
+            return 0;
+        }
+        return next() % max;
+    }
+
+    i32 getInt(i32 min, i32 max) {
+        return getInt(max - min) + min;
+    }
+
+    glm::ivec3 getSurfacePosition(Chunk* chunk, int border = 0) {
+        i32 x = getInt(border, CHUNK_WIDTH - border);
+        i32 z = getInt(border, CHUNK_WIDTH - border);
+        i32 y = chunk->surfaceHeight[x][z];
+
+        return glm::ivec3{x, y, z};
+    }
+
+    bool chance(int numerator, int demominator) {
+        return getInt(demominator) < numerator;
+    }
+};
+
+
+
+constexpr int biomeLookupResolution = 5;
+
+// biomeLookup[temp][humidity]
+constexpr Biome biomeLookup[biomeLookupResolution][biomeLookupResolution] = {
+    {Biome::tundra, Biome::tundra, Biome::tundra, Biome::taiga, Biome::taiga},
+    {Biome::tundra, Biome::tundra, Biome::taiga, Biome::taiga, Biome::taiga},
+    {Biome::plains, Biome::plains, Biome::meadow, Biome::forest, Biome::forest},
+    {Biome::desert, Biome::plains, Biome::forest, Biome::forest, Biome::jungle},
+    {Biome::desert, Biome::desert, Biome::plains, Biome::jungle, Biome::jungle},
+};
+
+struct BiomeProperties {
+    Block surfaceBlock;
+    Block undergroundBlock;
+
+    int beachSize;
+
+    int minTrees;
+    int maxTrees;
+};
+
+
 
 void placeDungeon(Chunk& chunk, glm::ivec3 local) {
-    chunk.placeBox(local, {10, 6, 10}, Block::cobblestone);
-    chunk.placeBox(local + 1, {8, 4, 8}, Block::air);
+    chunk.placeBoxRaw(local, {10, 6, 10}, Block::cobblestone);
+    chunk.placeBoxRaw(local + 1, {8, 4, 8}, Block::air);
 }
 
-static void placeCactus(Chunk& chunk, glm::ivec3 local) {
-    int cactusHeight = randomRange(1, 4);
+static void placeCactus(Chunk& chunk, WorldGenRNG& rng, glm::ivec3 local) {
+    int cactusHeight = rng.getInt(1, 4);
     local += glm::ivec3{0, 1, 0};
     if (chunk.getBlock(local) != Block::air) {
         return;
     }
 
     for (int i = 0; i < cactusHeight; ++i) {
-        chunk.setBlock(local + glm::ivec3{0, i, 0}, Block::cactus);
+        chunk.setBlockRaw(local + glm::ivec3{0, i, 0}, Block::cactus);
     }
 }
 
-void placeTree(Chunk& chunk, glm::ivec3 local) {
-    Logger::debug("Placing Tree");
-
-    Block surfaceBlock = chunk.getBlock(local);
-
-    if (surfaceBlock == Block::sand) {
-        placeCactus(chunk, local);
-        return;
-    }
-
-    if (surfaceBlock != Block::grass) {
-        return;
-    }
-
+void placeOakTree(Chunk& chunk, WorldGenRNG& rng, glm::ivec3 local) {
     static const glm::ivec3 corners[4] = {
         {1, 0, 1},
         {-1, 0, 1},
@@ -60,37 +106,96 @@ void placeTree(Chunk& chunk, glm::ivec3 local) {
         {1, 0, -1},
     };
 
-    chunk.setBlock(local, Block::dirt);
+    chunk.setBlockRaw(local, Block::dirt);
     local += glm::ivec3{0, 1, 0};
 
-    int height = randomRange(5, 7);
-    chunk.placeBox(local, {1, height, 1}, Block::log);
+    int height = rng.getInt(5, 7);
+    chunk.placeBoxRaw(local, {1, height, 1}, Block::log);
 
     //worldTryPlaceBox(world, pointAddValue(worldPoint, -2, 2, -2), point(5, 2, 5), Block::leaves);
 
-    chunk.tryPlaceBox(local + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, Block::leaves);
-    chunk.tryPlaceBox(local + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, Block::leaves);
+    chunk.tryPlaceBoxRaw(local + glm::ivec3{-2, height - 3, -1}, {5, 2, 3}, Block::leaves);
+    chunk.tryPlaceBoxRaw(local + glm::ivec3{-1, height - 3, -2}, {3, 2, 5}, Block::leaves);
 
     for (int i = 0; i < 4; ++i) {
         glm::ivec3 scaledCorner = corners[i] * 2;
         for (int j = height - 3; j < height - 1; ++j) {
-            if (!randomChance(1, 2)) {
+            if (!rng.chance(1, 2)) {
                 continue;
             }
-            chunk.tryPlaceBlock(local + scaledCorner + glm::ivec3{0, j, 0}, Block::leaves);
+            chunk.tryPlaceBlockRaw(local + scaledCorner + glm::ivec3{0, j, 0}, Block::leaves);
         }
     }
 
-    chunk.tryPlaceBox(local + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, Block::leaves);
-    chunk.tryPlaceBox(local + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, Block::leaves);
+    chunk.tryPlaceBoxRaw(local + glm::ivec3{-1, height - 1, 0}, {3, 2, 1}, Block::leaves);
+    chunk.tryPlaceBoxRaw(local + glm::ivec3{0, height - 1, -1}, {1, 2, 3}, Block::leaves);
 
     for (int i = 0; i < 4; ++i) {
-        if (!randomChance(1, 2)) {
+        if (!rng.chance(1, 2)) {
             continue;
         }
 
-        chunk.tryPlaceBlock(local + corners[i] + glm::ivec3{0, height - 1, 0}, Block::leaves);
+        chunk.tryPlaceBlockRaw(local + corners[i] + glm::ivec3{0, height - 1, 0}, Block::leaves);
     }
+}
+
+void placeSpruceTree(Chunk& chunk, WorldGenRNG& rng, glm::ivec3 local) {
+    chunk.setBlockRaw(local, Block::dirt);
+    local += glm::ivec3{0, 1, 0};
+
+    Block trunk = Block::log;
+    Block leaves = Block::leaves;
+
+    int layerCount = rng.getInt(1, 5);
+
+    int height = layerCount * 2 + 2 + rng.getInt(1, 3);
+
+    chunk.placeBoxRaw(local, {1, height, 1}, trunk);
+    chunk.tryPlaceBlockRaw(local + glm::ivec3{0, height, 0}, leaves);
+    for (Direction direction : cardinalDirections) {
+        chunk.tryPlaceBlockRaw(local + glm::ivec3{0, height - 1, 0} + directionToIvec3(direction), leaves);
+    }
+
+    for (int i = 0; i < layerCount; ++i) {
+        int y = height - 3 - i * 2;
+
+        for (Direction direction : cardinalDirections) {
+            chunk.tryPlaceBlockRaw(local + glm::ivec3{0, y, 0} + directionToIvec3(direction), leaves);
+        }
+
+        chunk.tryPlaceBoxRaw(local + glm::ivec3{-1, y - 1, -2}, glm::ivec3{3, 1, 5}, leaves);
+        for (int z = -1; z <= 1; ++z) {
+            chunk.tryPlaceBlockRaw(local + glm::ivec3{-2, y - 1, z}, leaves);
+            chunk.tryPlaceBlockRaw(local + glm::ivec3{2, y - 1, z}, leaves);
+        }
+    }
+}
+
+void placeTree(Chunk& chunk, WorldGenRNG& rng, glm::ivec3 local) {
+    Logger::debug("Placing Tree");
+
+    Block surfaceBlock = chunk.getBlock(local);
+
+    switch (surfaceBlock) {
+        case Block::sand:
+            placeCactus(chunk, rng, local);
+            break;
+        case Block::grass:
+            placeOakTree(chunk, rng, local);
+            break;
+        case Block::snowyGrass:
+            placeSpruceTree(chunk, rng, local);
+            break;
+        default:
+            break;
+    }
+}
+
+static inline float noiseLayer2D(int worldSeed, glm::ivec3 position, int layerIndex, float scale, int octaves) {
+    glm::vec3 scaledPosition = glm::vec3{position} / scale;
+    float ySeed = -100.f * layerIndex - worldSeed;
+
+    return stb_perlin_fbm_noise3(scaledPosition.x, ySeed, scaledPosition.z, 2.f, 0.5f, octaves);
 }
 
 void generateTerrain(Chunk* chunk) {
@@ -99,33 +204,73 @@ void generateTerrain(Chunk* chunk) {
     //World* world = chunk->world;
     glm::ivec3 coords = chunk->coords;
 
+    int worldSeed = chunk->world->seed;
+
     ITERATE_CHUNK(x, y, z) {
         chunk->blocks[x][y][z] = Block::air;
     }
 
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_WIDTH; ++z) {
-            int surface = SURFACE_OFFSET;
+            int layerIndex = 1;
 
-            float biomeScale = 0.001f;
+            int surface = surfaceOffset;
+
+            //float biomeScale = 0.001f;
 
             float wx = x + CHUNK_WIDTH * coords.x;
             float wz = z + CHUNK_WIDTH * coords.z;
+            glm::ivec3 position = localToWorld(coords, glm::ivec3{x, 0, z});
             
             bool useBiomes = !Config::settings->world.superflat;
 
-            float biome = 0.f;
+            float temperature = 0.f;
+            float humidity = 0.f;
             if (useBiomes) {
-                biome = stb_perlin_fbm_noise3(wx * biomeScale, 2.f, wz * biomeScale, -100.f, 0.5f, 10) + 0.5f;
-                biome *= 255.f;
+                temperature = noiseLayer2D(worldSeed, position, layerIndex++, 1000, 10);
+                humidity = noiseLayer2D(worldSeed, position, layerIndex++, 1000, 10);
             }
 
+            chunk->averageTemperature += temperature;
+            chunk->averageHumidity += humidity;
+
             if (!Config::settings->world.superflat) {
-                float scale = 0.004f;
+                float scale = 250.f;
                 float stretch = 32.f;
                 int octaves = 15;
-                float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, -200.f, 2.f, 0.5f, octaves);
-                surface = noise * stretch + SURFACE_OFFSET;
+                float noise = noiseLayer2D(worldSeed, position, layerIndex++, scale, octaves);
+                // float noise = stb_perlin_fbm_noise3(wx * scale, wz * scale, -200.f - worldSeed, 2.f, 0.5f, octaves);
+                surface = noise * stretch + surfaceOffset;
+            }
+            
+
+            float riverNoise = noiseLayer2D(worldSeed, position, layerIndex++, 500, 8);
+            bool isRiver = riverNoise > 0.1f && riverNoise < 0.2f;
+            float riverAmount = (0.05f - std::abs(riverNoise - 0.15f)) / 0.05f * 20.f;
+
+            if (isRiver) {
+                surface = std::min(surface, static_cast<int>(surface - riverAmount));
+            }
+            
+            
+            float mountainThreshold = 0.5f;
+            float mountainScale = 100.f;
+            float mountainNoise = noiseLayer2D(worldSeed, position, layerIndex++, 1000, 8);
+            chunk->averageGeology += mountainNoise;
+            
+            surface = (surface - surfaceOffset) * std::max(0.5f, 1.f + mountainNoise) + surfaceOffset;
+            
+            if (mountainNoise > mountainThreshold) {
+                float mountainAmount = (mountainNoise - mountainThreshold) / mountainThreshold * mountainScale;
+                surface += mountainAmount;
+            }
+            
+            float plateauThreshold = 0.5f;
+            int plateauHeight = 10;
+            float plateauNoise = noiseLayer2D(worldSeed, position, layerIndex++, 125, 2);
+            
+            if (plateauNoise > plateauThreshold) {
+                surface += plateauHeight;
             }
 
             surface = clampInt(surface, 1, CHUNK_HEIGHT - 1);
@@ -136,21 +281,37 @@ void generateTerrain(Chunk* chunk) {
 
             Block topLayerBlock = Block::dirt;
             Block surfaceBlock = Block::grass;
+            Block underwaterBlock = Block::sand;
 
-            if (useBiomes && biome < 64.0) {
-                surfaceBlock = Block::snowyGrass;
+            if (temperature < 0) {
+                if (humidity > 0) {
+                    surfaceBlock = Block::snowyGrass;
+                } else {
+                    surfaceBlock = Block::grass;
+                }
+                underwaterBlock = Block::gravel;
+            } else {
+                if (humidity > 0) {
+                    surfaceBlock = Block::grass;
+                } else {
+                    topLayerBlock = Block::sand;
+                    surfaceBlock = Block::sand;
+                }
             }
 
-            if (surface < OCEAN_LEVEL + 3 || (useBiomes && biome > 192.0)) {
-                topLayerBlock = Block::sand;
-                surfaceBlock = Block::sand;
+
+            int beachSize = std::max(0.f, -humidity * 6);
+
+            if (surface < seaLevel + beachSize) {
+                topLayerBlock = underwaterBlock;
+                surfaceBlock = underwaterBlock;
             }
 
             for (int y = 1; y <= surface; ++y) {
                 if (Config::settings->world.generateCaves) {
                     float caveThreshold = -0.5f;
                     float caveScale = 0.05;
-                    float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale, wx * caveScale, 2.f, 0.5f, 4);
+                    float caveNoise = stb_perlin_fbm_noise3(y * caveScale, wz * caveScale + worldSeed, wx * caveScale, 2.f, 0.5f, 4);
 
                     if (caveNoise < caveThreshold) {
                         continue;
@@ -158,7 +319,7 @@ void generateTerrain(Chunk* chunk) {
                 }
 
                 Block block = topLayerBlock;
-                if (y < surface - DIRT_LAYER) {
+                if (y < surface - dirtLayer) {
                     block = Block::stone;
                 }
 
@@ -177,14 +338,14 @@ void generateTerrain(Chunk* chunk) {
                 chunk->blocks[x][y][z] = Block::lava;
             }
 
-            if (surface < OCEAN_LEVEL) {
-                for (int y = OCEAN_LEVEL; y > 0; --y) {
+            if (surface < seaLevel) {
+                for (int y = seaLevel; y > 0; --y) {
                     if (chunk->blocks[x][y][z] != Block::air) {
                         break;
                     }
 
                     Block waterBlock = Block::water;
-                    if (y == OCEAN_LEVEL && useBiomes && biome < 64.f) {
+                    if (y == seaLevel && useBiomes && temperature < 0.f && humidity > 0.f) {
                         waterBlock = Block::ice;
                     }
                     chunk->blocks[x][y][z] = waterBlock;
@@ -196,6 +357,10 @@ void generateTerrain(Chunk* chunk) {
         }
     }
 
+    chunk->averageTemperature /= CHUNK_WIDTH * CHUNK_WIDTH;
+    chunk->averageHumidity /= CHUNK_WIDTH * CHUNK_WIDTH;
+    chunk->averageGeology /= CHUNK_WIDTH * CHUNK_WIDTH;
+
     chunk->dirty = true;
 }
 
@@ -204,44 +369,38 @@ void placeFeatures(Chunk* chunk) {
         return;
     }
 
-    Hash chunkSeed = hashInt(FNV_OFFSET, chunk->world->seed);
-    chunkSeed = hashInt(chunkSeed, chunk->coords.x);
-    chunkSeed = hashInt(chunkSeed, chunk->coords.z);
+    WorldGenRNG rng{chunk->world->seed, chunk->coords};
 
-    Hash treeSeed = featureSeed(chunkSeed, FEATURE_TREE);
-    int treeCount = seededNumber(treeSeed, FEATURE_NUMBER, 0, 7);
+    int maxTrees = (chunk->averageHumidity + 1.f) * 7;
+    int treeCount = rng.getInt(0, maxTrees);
 
-    Hash treeIndexSeed = featureSeed(treeSeed, FEATURE_INDEX);
     for (int i = 0; i < treeCount; ++i) {
-        Hash treeIndex = hashChar(treeIndexSeed, i);
+        glm::ivec3 point = rng.getSurfacePosition(chunk, 2);
 
-        int x = seededNumber(treeIndex, FEATURE_X, 2, CHUNK_WIDTH - 4);
-        int z = seededNumber(treeIndex, FEATURE_Z, 2, CHUNK_WIDTH - 4);
-
-        glm::ivec3 point = {x, 0, z};
-        point.y = chunk->surfaceHeight[point.x][point.z];
-
-        placeTree(*chunk, point);
+        placeTree(*chunk, rng, point);
     }
 
-    if (randomChance(1, 20)) {
-        placeDungeon(*chunk, {randomInt(CHUNK_WIDTH - 10), 10, randomInt(CHUNK_WIDTH - 10)});
+    if (rng.chance(1, 20)) {
+        placeDungeon(*chunk, {rng.getInt(CHUNK_WIDTH - 10), 10, rng.getInt(CHUNK_WIDTH - 10)});
     }
 
-    Hash flowerSeed = featureSeed(chunkSeed, FEATURE_FLOWER_PATCH);
-    int flowerCount = seededNumber(flowerSeed, FEATURE_NUMBER, -10, 10);
+    int grassCount = rng.getInt(0, 150);
+    for (int i = 0; i < grassCount; ++i) {
+        glm::ivec3 grassPosition = rng.getSurfacePosition(chunk);
 
-    Block flowerType = seededNumber(flowerSeed, FEATURE_FLAG, 0, 2) ? Block::rose : Block::dandelion;
-    Hash flowerIndexSeed = featureSeed(flowerSeed, FEATURE_INDEX);
+        if (chunk->getBlock(grassPosition) == Block::grass) {
+            chunk->tryPlaceBlockRaw(grassPosition + glm::ivec3{0, 1, 0}, Block::tallGrass);
+        }
+    }
+
+    int flowerCount = rng.getInt(-10, 10);
+
+    Block flowerType = rng.chance(1, 2) ? Block::rose : Block::dandelion;
     for (int i = 0; i < flowerCount; ++i) {
-        Hash flowerIndex = hashChar(flowerIndexSeed, i);
+        glm::ivec3 flowerPosition = rng.getSurfacePosition(chunk);
 
-        int x = seededNumber(flowerIndex, FEATURE_X, 0, CHUNK_WIDTH);
-        int z = seededNumber(flowerIndex, FEATURE_Z, 0, CHUNK_WIDTH);
-        int y = chunk->surfaceHeight[x][z];
-
-        if (chunk->getBlock(glm::ivec3{x, y, z}) == Block::grass) {
-            chunk->tryPlaceBlock(x, y + 1, z, flowerType);
+        if (chunk->getBlock(flowerPosition) == Block::grass) {
+            chunk->tryPlaceBlockRaw(flowerPosition + glm::ivec3{0, 1, 0}, flowerType);
         }
     }
 

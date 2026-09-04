@@ -91,6 +91,14 @@ void Chunk::unloadChunkCache() {
     }
 }
 
+void Chunk::tryPlaceBlockRaw(glm::ivec3 local, Block block) {
+    if (getBlockRaw(local) != Block::air) {
+        return;
+    }
+
+    setBlockRaw(local, block);
+}
+
 void Chunk::tryPlaceBlock(glm::ivec3 local, Block block) {
     if (getBlock(local) != Block::air) {
         return;
@@ -104,52 +112,32 @@ void Chunk::tryPlaceBlock(int x, int y, int z, Block block) {
 }
 
 
-void Chunk::setBlockRaw(glm::ivec3 local, Block block) {
+void Chunk::setBlock(glm::ivec3 local, Block block) {
     if (!blockInChunk(local)) {
         Logger::warning("Block placed outside of chunk");
         return;
     }
 
-    blocks[local.x][local.y][local.z] = block;
-    markDirty(local);
-}
-
-void Chunk::setBlock(glm::ivec3 local, Block block) {
     setBlockRaw(local, block);
-
+    
     glm::ivec3 worldPoint = localToWorld(coords, local);
-
+    
+    markDirty(local);
     for (int i = 0; i < directionCount; ++i) {
         world->markDirty(worldPoint + directionToPoint(static_cast<Direction>(i)));
     }
 }
 
-void Chunk::tryPlaceBox(glm::ivec3 start, glm::ivec3 size, Block block) {
-    glm::ivec3 end = start + size;
-    glm::ivec3 realStart = glm::min(start, end);
-    glm::ivec3 realEnd = glm::max(start, end);
-
-    for (int x = realStart.x; x < realEnd.x; ++x) {
-        for (int y = realStart.y; y < realEnd.y; ++y) {
-            for (int z = realStart.z; z < realEnd.z; ++z) {
-                tryPlaceBlock(glm::ivec3{x, y, z}, block);
-            }
-        }
-    }
+void Chunk::tryPlaceBoxRaw(glm::ivec3 start, glm::ivec3 size, Block block) {
+    placeBox(start, size, [this, block](glm::ivec3 position) {
+        tryPlaceBlockRaw(position, block);
+    });
 }
 
-void Chunk::placeBox(glm::ivec3 start, glm::ivec3 size, Block block) {
-    glm::ivec3 end = start + size;
-    glm::ivec3 realStart = glm::min(start, end);
-    glm::ivec3 realEnd = glm::max(start, end);
-
-    for (int x = realStart.x; x < realEnd.x; ++x) {
-        for (int y = realStart.y; y < realEnd.y; ++y) {
-            for (int z = realStart.z; z < realEnd.z; ++z) {
-                setBlock(glm::ivec3{x, y, z}, block);
-            }
-        }
-    }
+void Chunk::placeBoxRaw(glm::ivec3 start, glm::ivec3 size, Block block) {
+    placeBox(start, size, [this, block](glm::ivec3 position) {
+        setBlockRaw(position, block);
+    });
 }
 
 void Chunk::markDirty(glm::ivec3 local) {

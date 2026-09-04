@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include "block.hpp"
@@ -162,6 +163,10 @@ public:
     int surfaceHeight[CHUNK_WIDTH][CHUNK_WIDTH];
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     LightValues light[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
+
+    float averageTemperature;
+    float averageHumidity;
+    float averageGeology;
     
     volatile std::atomic_bool dirty = false;
     volatile std::atomic<ChunkState> state = ChunkState::unloaded;
@@ -177,6 +182,10 @@ public:
         return blocks[local.x][local.y][local.z];
     }
 
+    inline void setBlockRaw(glm::ivec3 local, Block block) {    
+        blocks[local.x][local.y][local.z] = block;
+    }
+
     void generateOrLoad();
     void fillChunkCache();
     void unloadChunkCache();
@@ -184,12 +193,12 @@ public:
     void uploadMesh();
 
     void unload();
+    void tryPlaceBlockRaw(glm::ivec3 local, Block block);
     void tryPlaceBlock(glm::ivec3 local, Block block);
     void tryPlaceBlock(int x, int y, int z, Block block);
-    void setBlockRaw(glm::ivec3 local, Block block);
     void setBlock(glm::ivec3 local, Block block);
-    void tryPlaceBox(glm::ivec3 start, glm::ivec3 size, Block block);
-    void placeBox(glm::ivec3 start, glm::ivec3 size, Block block);
+    void tryPlaceBoxRaw(glm::ivec3 start, glm::ivec3 size, Block block);
+    void placeBoxRaw(glm::ivec3 start, glm::ivec3 size, Block block);
 
     void markDirty(glm::ivec3 local);
     Block getBlock(glm::ivec3 local) const;
@@ -211,6 +220,21 @@ public:
 
     static bool blockInChunk(glm::ivec3 local);
 };
+
+
+static inline void placeBox(glm::ivec3 start, glm::ivec3 size, std::function<void(glm::ivec3 position)> placeFn) {
+    glm::ivec3 end = start + size;
+    glm::ivec3 realStart = glm::min(start, end);
+    glm::ivec3 realEnd = glm::max(start, end);
+
+    for (int x = realStart.x; x < realEnd.x; ++x) {
+        for (int y = realStart.y; y < realEnd.y; ++y) {
+            for (int z = realStart.z; z < realEnd.z; ++z) {
+                placeFn(glm::ivec3{x, y, z});
+            }
+        }
+    }
+}
 
 
 #endif
